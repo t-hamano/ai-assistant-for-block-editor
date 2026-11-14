@@ -3,7 +3,11 @@
  */
 import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/editor';
 import { __ } from '@wordpress/i18n';
-import { comment } from '@wordpress/icons';
+
+/**
+ * Internal dependencies
+ */
+import icon from './icon';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
@@ -12,10 +16,10 @@ export default function Sidebar() {
 
 	return (
 		<>
-			<PluginSidebarMoreMenuItem target={ SIDEBAR_NAME } icon={ comment }>
+			<PluginSidebarMoreMenuItem target={ SIDEBAR_NAME } icon={ icon }>
 				{ title }
 			</PluginSidebarMoreMenuItem>
-			<PluginSidebar name={ SIDEBAR_NAME } title={ title } icon={ comment } />
+			<PluginSidebar name={ SIDEBAR_NAME } title={ title } icon={ icon } />
 		</>
 	);
 }
