@@ -22,3 +22,7 @@ defined( 'ABSPATH' ) || exit;
 define( 'AABE_NAMESPACE', 'ai-assistant-for-block-editor' );
 define( 'AABE_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) );
 define( 'AABE_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
+
+require_once __DIR__ . '/classes/class-enqueue.php';
+
+new AI_Assistant_For_Block_Editor\Enqueue();

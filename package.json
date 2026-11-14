@@ -20,12 +20,19 @@
 		"npm": ">=11.19.1"
 	},
 	"files": [
+		"classes",
 		"src",
 		"build",
 		"ai-assistant-for-block-editor.php"
 	],
 	"devDependencies": {
+		"@types/react": "18.3.31",
+		"@wordpress/editor": "16.1.0",
+		"@wordpress/element": "10.1.0",
 		"@wordpress/env": "^12.1.0",
+		"@wordpress/i18n": "7.1.0",
+		"@wordpress/plugins": "8.1.0",
+		"@wordpress/primitives": "5.1.0",
 		"@wordpress/scripts": "^37.1.0",
 		"husky": "^9.1.7",
 		"lint-staged": "17.6.0",
