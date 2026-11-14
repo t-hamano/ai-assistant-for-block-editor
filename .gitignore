@@ -1,15 +1,8 @@
-# Dependencies
-node_modules
-vendor
-
-# Build output
-build
-
-# Logs
-*.log
-
-# Editor and OS files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
+*.zip
+.vscode
+artifacts/
+build/
+node_modules/
+vendor/
+.wp-env.override.json
+*.tsbuildinfo
