@@ -1,0 +1,50 @@
+{
+	"name": "ai-assistant-for-block-editor",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Select blocks or text in the block editor and edit them by chatting with AI.",
+	"author": "Aki Hamano",
+	"license": "GPL-2.0-or-later",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/t-hamano/ai-assistant-for-block-editor.git"
+	},
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "wp-scripts build",
+		"start": "wp-scripts start",
+		"lint:js": "eslint .",
+		"lint:js:fix": "eslint . --fix",
+		"lint:php": "composer run lint",
+		"lint:php:fix": "composer run lint:fix",
+		"lint": "npm run lint:js && npm run lint:php",
+		"type-check": "tsc --noEmit",
+		"format": "prettier --write .",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{js,mjs,cjs,ts,tsx,json,yml,yaml,md}": [
+			"prettier --write"
+		],
+		"*.{js,mjs,cjs,ts,tsx}": [
+			"eslint --fix"
+		],
+		"*.php": [
+			"composer run lint:fix --"
+		]
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^21.2.4",
+		"@commitlint/config-conventional": "^21.2.4",
+		"@wordpress/eslint-plugin": "^28.1.0",
+		"@wordpress/prettier-config": "^5.1.0",
+		"@wordpress/scripts": "^37.1.0",
+		"eslint": "^10.15.0",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.6.0",
+		"prettier": "npm:wp-prettier@^3.9.6",
+		"typescript": "~6.0.3"
+	}
+}

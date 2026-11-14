@@ -1,0 +1,15 @@
+# Dependencies
+node_modules
+vendor
+
+# Build output
+build
+
+# Logs
+*.log
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
