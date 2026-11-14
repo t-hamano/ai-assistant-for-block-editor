@@ -25,6 +25,9 @@
 		"build",
 		"ai-assistant-for-block-editor.php"
 	],
+	"dependencies": {
+		"diff": "9.0.0"
+	},
 	"devDependencies": {
 		"@types/react": "18.3.31",
 		"@wordpress/editor": "16.1.0",
