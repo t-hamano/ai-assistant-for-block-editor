@@ -3,7 +3,6 @@
  */
 import { SVG, Path } from '@wordpress/primitives';
 
-// Sparkles, the common symbol for AI. `@wordpress/icons` has none.
 const icon = (
 	<SVG xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
 		<Path d="M10 6c.9 3.75 3.75 6.6 7.5 7.5c-3.75 .9-6.6 3.75-7.5 7.5c-.9-3.75-3.75-6.6-7.5-7.5c3.75-.9 6.6-3.75 7.5-7.5z" />
