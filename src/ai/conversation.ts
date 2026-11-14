@@ -46,20 +46,11 @@ export type AssistantChatMessage = {
 	usage?: AiUsage;
 	error?: string;
 	/**
-	 * The document when the answer ended, with the answer's edits in it,
-	 * and the editor mode it was read in. The next message tells the model
-	 * what changed since. Omitted when the document was not available then,
-	 * for example after switching editor modes.
+	 * The document when the answer ended, with the answer's edits in it.
+	 * The next message tells the model what changed since. Omitted when the
+	 * document was not available then.
 	 */
-	documentAfter?: DocumentSnapshot;
-};
-
-/**
- * The document as an editor mode wrote it as Markdown.
- */
-export type DocumentSnapshot = {
-	editorMode: string;
-	document: string;
+	documentAfter?: string;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -82,7 +73,7 @@ export type ConversationAction =
 			type: 'FINISH';
 			status: 'done' | 'stopped' | 'error';
 			error?: string;
-			documentAfter?: DocumentSnapshot;
+			documentAfter?: string;
 	  }
 	| { type: 'RESET' };
 
@@ -200,14 +191,12 @@ export function toUserText( text: string, context?: string ): string {
 /**
  * Returns the document as the model last saw it: when the answer to the
  * last message still sent to the model ended. `null` when the model has
- * not seen the document, the answer ended without it, or it was read in
- * another editor mode, which writes the Markdown differently.
+ * not seen the document, or the answer ended without it.
  *
- * @param messages   The conversation's messages.
- * @param editorMode The active editor mode.
+ * @param messages The conversation's messages.
  * @return The document, or `null`.
  */
-export function getLastSeenDocument( messages: ChatMessage[], editorMode: string ): string | null {
+export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
 	for ( let index = messages.length - 1; index >= 0; index-- ) {
 		const message = messages[ index ];
 		if ( message.role !== 'user' ) {
@@ -218,8 +207,7 @@ export function getLastSeenDocument( messages: ChatMessage[], editorMode: string
 		if ( answer?.role === 'assistant' && answer.status === 'error' ) {
 			continue;
 		}
-		const snapshot = answer?.role === 'assistant' ? answer.documentAfter : undefined;
-		return snapshot?.editorMode === editorMode ? snapshot.document : null;
+		return ( answer?.role === 'assistant' ? answer.documentAfter : undefined ) ?? null;
 	}
 	return null;
 }

@@ -166,11 +166,6 @@ describe( 'toAiMessages', () => {
 } );
 
 describe( 'document context', () => {
-	const snapshot = ( document: string ) => ( {
-		editorMode: 'visual',
-		document,
-	} );
-
 	it( 'sends the context before the message, as it was sent', () => {
 		const { messages } = run(
 			{ type: 'START', text: 'Rewrite this', context: '<document>' },
@@ -190,16 +185,16 @@ describe( 'document context', () => {
 			{
 				type: 'FINISH',
 				status: 'done',
-				documentAfter: snapshot( 'First.\n' ),
+				documentAfter: 'First.\n',
 			},
 			{ type: 'START', text: 'Two', context: 'B' },
 			{
 				type: 'FINISH',
 				status: 'stopped',
-				documentAfter: snapshot( 'Second.\n' ),
+				documentAfter: 'Second.\n',
 			}
 		);
-		expect( getLastSeenDocument( messages, 'visual' ) ).toBe( 'Second.\n' );
+		expect( getLastSeenDocument( messages ) ).toBe( 'Second.\n' );
 	} );
 
 	it( 'skips an exchange whose answer failed', () => {
@@ -209,29 +204,19 @@ describe( 'document context', () => {
 			{
 				type: 'FINISH',
 				status: 'done',
-				documentAfter: snapshot( 'First.\n' ),
+				documentAfter: 'First.\n',
 			},
 			{ type: 'START', text: 'Two', context: 'B' },
 			{ type: 'FINISH', status: 'error', error: 'Failed' }
 		);
-		expect( getLastSeenDocument( messages, 'visual' ) ).toBe( 'First.\n' );
+		expect( getLastSeenDocument( messages ) ).toBe( 'First.\n' );
 	} );
 
-	it( 'returns null without a document from the same editor mode', () => {
-		const { messages } = run(
-			{ type: 'START', text: 'One', context: 'A' },
-			{
-				type: 'FINISH',
-				status: 'done',
-				documentAfter: snapshot( 'First.\n' ),
-			}
-		);
-		expect( getLastSeenDocument( messages, 'text' ) ).toBeNull();
-		expect( getLastSeenDocument( [], 'visual' ) ).toBeNull();
+	it( 'returns null without a document', () => {
+		expect( getLastSeenDocument( [] ) ).toBeNull();
 		expect(
 			getLastSeenDocument(
-				run( { type: 'START', text: 'One' }, { type: 'FINISH', status: 'done' } ).messages,
-				'visual'
+				run( { type: 'START', text: 'One' }, { type: 'FINISH', status: 'done' } ).messages
 			)
 		).toBeNull();
 	} );

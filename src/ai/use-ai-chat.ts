@@ -13,21 +13,16 @@ import {
 	toAiMessages,
 	toUserText,
 	type Conversation,
-	type DocumentSnapshot,
 } from './conversation';
 import { applyChange, buildMessageContext } from './document-context';
 import type { EditTarget } from './edit-target';
 import { buildSystemPrompt } from './prompt';
 import type { AiEditResult, AiPlatform } from '../platform';
 
-type EditorMode = 'visual' | 'text';
-
 type UseAiChatArgs = {
 	ai: AiPlatform | undefined;
-	editorMode: EditorMode;
 	/**
-	 * Creates the edit target for the active editor mode from the current
-	 * selection, or returns `null` when the editor cannot provide one.
+	 * Creates the edit target from the current selection, or returns `null` when the editor cannot provide one.
 	 */
 	createTarget: () => EditTarget | null;
 };
@@ -43,8 +38,6 @@ export type AiChat = {
 /**
  * Runs a conversation with the AI assistant. The selection is captured when
  * a message is sent, and the model's edits are applied to it as they arrive.
- * An edit is dropped when the editor mode changed after the message was
- * sent.
  *
  * The first message carries the whole document, and later ones only the
  * lines the user changed since the last answer, so the conversation grows
@@ -52,26 +45,23 @@ export type AiChat = {
  *
  * @param args              Arguments.
  * @param args.ai           The host's connection to the model.
- * @param args.editorMode   The active editor mode.
- * @param args.createTarget Creates the edit target for the active mode.
+ * @param args.createTarget Creates the edit target.
  * @return The conversation and the actions on it.
  */
-export function useAiChat( { ai, editorMode, createTarget }: UseAiChatArgs ): AiChat {
+export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 	const [ conversation, dispatch ] = useReducer(
 		conversationReducer,
 		undefined,
 		createConversation
 	);
 	const messagesRef = useRef( conversation.messages );
-	const editorModeRef = useRef( editorMode );
-	// Keep the latest values for the callbacks, which run after rendering.
+	// Keep the latest messages for the callbacks, which run after rendering.
 	useLayoutEffect( () => {
 		messagesRef.current = conversation.messages;
-		editorModeRef.current = editorMode;
 	} );
 	const controllerRef = useRef< AbortController | null >( null );
 	// Reads the document when the answer being streamed ends.
-	const readDocumentRef = useRef< ( () => DocumentSnapshot | undefined ) | null >( null );
+	const readDocumentRef = useRef< ( () => string | undefined ) | null >( null );
 
 	const send = useCallback(
 		( text: string ) => {
@@ -80,10 +70,9 @@ export function useAiChat( { ai, editorMode, createTarget }: UseAiChatArgs ): Ai
 				return;
 			}
 			const target = createTarget();
-			const mode = editorModeRef.current;
 			const context = target?.getContext() ?? null;
 			const messageContext = context
-				? buildMessageContext( context, getLastSeenDocument( messagesRef.current, mode ) )
+				? buildMessageContext( context, getLastSeenDocument( messagesRef.current ) )
 				: undefined;
 			const messages = [
 				...toAiMessages( messagesRef.current ),
@@ -98,8 +87,7 @@ export function useAiChat( { ai, editorMode, createTarget }: UseAiChatArgs ): Ai
 			// edits. Changes the user makes while the answer streams are left
 			// out, so the next message tells the model about them.
 			let seenDocument = context?.document;
-			const readDocument = () =>
-				seenDocument === undefined ? undefined : { editorMode: mode, document: seenDocument };
+			const readDocument = () => seenDocument;
 			readDocumentRef.current = readDocument;
 			dispatch( {
 				type: 'START',
@@ -134,12 +122,9 @@ export function useAiChat( { ai, editorMode, createTarget }: UseAiChatArgs ): Ai
 						} );
 						return;
 					}
-					const canApply = target && editorModeRef.current === mode;
-					const before = canApply ? target.getDocument() : '';
-					const result: AiEditResult = canApply
-						? target.apply( event.edit )
-						: { status: 'dropped' };
-					if ( canApply && result.status === 'applied' && seenDocument !== undefined ) {
+					const before = target ? target.getDocument() : '';
+					const result: AiEditResult = target ? target.apply( event.edit ) : { status: 'dropped' };
+					if ( target && result.status === 'applied' && seenDocument !== undefined ) {
 						// When the edit does not fit, the next message sends
 						// the whole document.
 						seenDocument = applyChange( seenDocument, before, target.getDocument() ) ?? undefined;
