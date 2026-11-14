@@ -1,0 +1,69 @@
+{
+	"name": "ai-assistant-for-block-editor",
+	"version": "0.1.0",
+	"description": "Select blocks or text in the block editor and edit them by chatting with AI.",
+	"author": "Aki Hamano",
+	"license": "GPL-2.0-or-later",
+	"keywords": [
+		"gutenberg",
+		"block",
+		"ai",
+		"assistant"
+	],
+	"homepage": "https://github.com/t-hamano/ai-assistant-for-block-editor",
+	"repository": "git+https://github.com/t-hamano/ai-assistant-for-block-editor.git",
+	"bugs": {
+		"url": "https://github.com/t-hamano/ai-assistant-for-block-editor/issues"
+	},
+	"engines": {
+		"node": ">=24.22.1",
+		"npm": ">=11.19.1"
+	},
+	"files": [
+		"src",
+		"build",
+		"ai-assistant-for-block-editor.php"
+	],
+	"devDependencies": {
+		"@wordpress/scripts": "^37.1.0",
+		"husky": "^9.1.7",
+		"lint-staged": "17.6.0",
+		"prettier": "npm:wp-prettier@3.9.6",
+		"typescript": "6.0.3"
+	},
+	"scripts": {
+		"start": "wp-scripts start",
+		"build": "wp-scripts build",
+		"plugin-zip": "npm run build && wp-scripts plugin-zip",
+		"check-licenses": "wp-scripts check-licenses",
+		"lint": "npm run lint:css && npm run lint:js && npm run lint:types && npm run lint:php && npm run lint:md-docs && npm run lint:pkg-json",
+		"lint:css": "wp-scripts lint-style",
+		"lint:js": "wp-scripts lint-js",
+		"lint:types": "tsc",
+		"lint:php": "vendor/bin/phpcs",
+		"lint:md-docs": "wp-scripts lint-md-docs",
+		"lint:pkg-json": "wp-scripts lint-pkg-json",
+		"format": "wp-scripts format",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{js,ts,tsx,json,yml,yaml}": [
+			"wp-scripts format"
+		],
+		"*.{js,ts,tsx}": [
+			"wp-scripts lint-js"
+		],
+		"*.scss": [
+			"wp-scripts lint-style"
+		],
+		"*.php": [
+			"vendor/bin/phpcs"
+		],
+		"*.md": [
+			"wp-scripts lint-md-docs"
+		],
+		"package.json": [
+			"wp-scripts lint-pkg-json"
+		]
+	}
+}

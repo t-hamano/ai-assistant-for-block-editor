@@ -1,0 +1,26 @@
+{
+	"name": "t-hamano/ai-assistant-for-block-editor",
+	"description": "Select blocks or text in the block editor and edit them by chatting with AI.",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "Aki Hamano"
+		}
+	],
+	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.2",
+		"squizlabs/php_codesniffer": "*",
+		"wp-coding-standards/wpcs": "^3.4",
+		"phpcompatibility/phpcompatibility-wp": "^3.0@alpha",
+		"phpcompatibility/php-compatibility": "^10.0@alpha",
+		"phpcompatibility/phpcompatibility-paragonie": "^2.0@alpha"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		},
+		"platform": {
+			"php": "8.3"
+		}
+	}
+}
