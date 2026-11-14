@@ -1,0 +1,17 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/wp-admin/post-new.php",
+	"steps": [
+		{
+			"step": "login",
+			"username": "admin"
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "url",
+				"url": "{{ARTIFACT_URL:ai-assistant-for-block-editor}}"
+			}
+		}
+	]
+}

@@ -1,0 +1,25 @@
+name: PR Preview - Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  # Cancel the preview build of an older push, so its publish is skipped instead of failing.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-build.yml@1b15093d61b5e98cdfeb31466f34ade495762cd7 # v4
+    with:
+      artifacts: ai-assistant-for-block-editor=ai-assistant-for-block-editor.zip
+      # The reusable workflow has no check-latest input, so pin a version that satisfies the engines field.
+      node-version: '24.22.1'
+      build-command: |
+        npm ci
+        npm run plugin-zip
+      # The plugin is not on WordPress.org, so the blueprint always installs the built ZIP.
+      blueprint-from-build: .github/blueprint.json
