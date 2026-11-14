@@ -26,7 +26,8 @@
 		"ai-assistant-for-block-editor.php"
 	],
 	"dependencies": {
-		"diff": "9.0.0"
+		"diff": "9.0.0",
+		"uuid": "14.0.3"
 	},
 	"devDependencies": {
 		"@types/react": "18.3.31",
