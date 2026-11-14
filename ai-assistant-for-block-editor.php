@@ -3,7 +3,7 @@
  * Plugin Name: AI Assistant for Block Editor
  * Description: Select blocks or text in the block editor and edit them by chatting with AI.
  * Requires at least: 7.1
- * Requires PHP: 8.2
+ * Requires PHP: 8.3
  * Version: 0.1.0
  * Author: Aki Hamano
  * Author URI: https://github.com/t-hamano
