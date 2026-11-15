@@ -66,7 +66,7 @@ The editor rebuilds each block from its attributes and compares the result with 
 
 - Prefer the theme's presets over fixed values: `textColor`, `backgroundColor`, and `fontSize` with a slug, and `var:preset|spacing|<slug>` for spacing.
 - Use only slugs that are in the site information or already in the document. Do not guess slugs.
-- Use a fixed value, such as `#1e73be` or `28px`, only when no preset fits what the user asked for, and only for settings the block supports.
+- Use a fixed value, such as `#1e73be` or `28px`, only when no preset fits what the user asked for, only for settings the block supports, and only when the site information allows custom values of that kind.
 
 ## Nesting
 
