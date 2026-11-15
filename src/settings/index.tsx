@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useSelect } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __, isRTL } from '@wordpress/i18n';
 import { chevronLeft, chevronRight } from '@wordpress/icons';
@@ -11,8 +11,7 @@ import { IconButton, Notice, SelectControl, Spinner, Stack, Text } from '@wordpr
 /**
  * Internal dependencies
  */
-import { listProviderOptions, type ProviderOption } from '../platform/select';
-import { readModelChoice, setModelChoice } from './model-choice';
+import { listProviderOptions, type ModelChoice, type ProviderOption } from '../platform/select';
 import './style.scss';
 
 type Item = { label: string; value: string | null };
@@ -32,7 +31,19 @@ type Props = {
  * @param props.onClose Called when the user goes back to the chat.
  */
 export function ModelSettings( { onClose }: Props ) {
-	const choice = useSelect( ( select ) => readModelChoice( select( preferencesStore ).get ), [] );
+	// Preferences are kept in the user's meta, so the choice follows the
+	// user to other posts and browsers. `null` means automatic.
+	const choice = useSelect(
+		( select ) =>
+			select( preferencesStore ).get(
+				'ai-content-editing-assistant',
+				'model'
+			) as ModelChoice | null,
+		[]
+	);
+	const { set } = useDispatch( preferencesStore );
+	const setModelChoice = ( value: ModelChoice | null ) =>
+		set( 'ai-content-editing-assistant', 'model', value );
 	const [ providers, setProviders ] = useState< ProviderOption[] | null >( null );
 	const [ hasError, setHasError ] = useState( false );
 

@@ -6,6 +6,7 @@ import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { cog, plus } from '@wordpress/icons';
+import { store as preferencesStore } from '@wordpress/preferences';
 import { IconButton } from '@wordpress/ui';
 
 /**
@@ -15,15 +16,18 @@ import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
 import { createSelectionTarget } from './editor/text-target';
 import icon from './icon';
-import { createAutoPlatform } from './platform/select';
+import { createAutoPlatform, type ModelChoice } from './platform/select';
 import { ModelSettings } from './settings';
-import { getModelChoice } from './settings/model-choice';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
 const ai = createAutoPlatform(
 	() => selectStore( editorStore ).getCurrentPostId() as number,
-	getModelChoice
+	() =>
+		( selectStore( preferencesStore ).get(
+			'ai-content-editing-assistant',
+			'model'
+		) as ModelChoice | null ) ?? null
 );
 
 export default function Sidebar() {
