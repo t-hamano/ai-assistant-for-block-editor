@@ -16,9 +16,11 @@ use WP_REST_Server;
  * Passes chat requests from the editor on to the AI provider, adding the
  * site's API key on the server.
  *
- * The request body is built by the editor and is not read here. Requests
- * only go to the fixed address of each provider and do not follow redirects,
- * so the key cannot be sent anywhere else.
+ * The request body is built by the editor. Only the fields the editor sends
+ * are passed on, with the editor's own tools and a fixed token limit, so the
+ * key cannot be used for other features of the provider. Requests only go to
+ * the fixed address of each provider and do not follow redirects, so the key
+ * cannot be sent anywhere else.
  */
 class Relay {
 
@@ -35,15 +37,20 @@ class Relay {
 	 * A provider with `stream_url` takes streamed requests there instead of
 	 * with `stream` in the body. `{model}` in either address is replaced with
 	 * the body's `model`, which is then taken out of the body.
+	 *
+	 * `body` lists the fields of the body that are passed on, and
+	 * `max_tokens` is the path to the field that limits the answer's tokens.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
-			'url'     => 'https://api.anthropic.com/v1/messages',
-			'models'  => 'https://api.anthropic.com/v1/models?limit=1000',
-			'headers' => array(
+			'url'        => 'https://api.anthropic.com/v1/messages',
+			'models'     => 'https://api.anthropic.com/v1/models?limit=1000',
+			'headers'    => array(
 				'anthropic-version' => '2023-06-01',
 			),
-			'key'     => 'x-api-key',
+			'key'        => 'x-api-key',
+			'body'       => array( 'model', 'max_tokens', 'cache_control', 'system', 'tools', 'messages' ),
+			'max_tokens' => array( 'max_tokens' ),
 		),
 		'openai'    => array(
 			'url'        => 'https://api.openai.com/v1/responses',
@@ -51,6 +58,8 @@ class Relay {
 			'headers'    => array(),
 			'key'        => 'authorization',
 			'key_prefix' => 'Bearer ',
+			'body'       => array( 'model', 'max_output_tokens', 'instructions', 'tools', 'input', 'store', 'include' ),
+			'max_tokens' => array( 'max_output_tokens' ),
 		),
 		'google'    => array(
 			'url'        => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
@@ -58,6 +67,8 @@ class Relay {
 			'models'     => 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
 			'headers'    => array(),
 			'key'        => 'x-goog-api-key',
+			'body'       => array( 'model', 'systemInstruction', 'contents', 'tools', 'generationConfig' ),
+			'max_tokens' => array( 'generationConfig', 'maxOutputTokens' ),
 		),
 	);
 	// phpcs:enable PluginCheck.CodeAnalysis.AIProvider.DirectIntegration
@@ -66,6 +77,11 @@ class Relay {
 	 * How long to wait for the provider, in seconds
 	 */
 	const TIMEOUT = 300;
+
+	/**
+	 * The most tokens one answer may use, including the model's thinking
+	 */
+	const MAX_TOKENS = 64000;
 
 	/**
 	 * Constructor
@@ -154,7 +170,7 @@ class Relay {
 		}
 
 		$provider = self::PROVIDERS[ $provider_id ];
-		$body     = $request->get_param( 'body' );
+		$body     = self::check_body( $provider_id, $request->get_param( 'body' ) );
 		$stream   = (bool) $request->get_param( 'stream' );
 		$headers  = array_merge(
 			$provider['headers'],
@@ -163,6 +179,10 @@ class Relay {
 				$provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key,
 			)
 		);
+
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
 
 		$url = $stream && isset( $provider['stream_url'] ) ? $provider['stream_url'] : $provider['url'];
 
@@ -221,5 +241,59 @@ class Relay {
 			json_decode( wp_remote_retrieve_body( $response ), true ),
 			wp_remote_retrieve_response_code( $response )
 		);
+	}
+
+	/**
+	 * Checks that the body only asks for what the editor sends
+	 *
+	 * The editor sends the fields listed for the provider, and only its own
+	 * function tools. The token limit is set here, whatever the body asks for.
+	 *
+	 * @param string $provider_id The provider ID.
+	 * @param array  $body        The request body.
+	 * @return array|WP_Error The body to send, or an error.
+	 */
+	private static function check_body( string $provider_id, array $body ) {
+		$provider = self::PROVIDERS[ $provider_id ];
+
+		// The relay sets or takes out `stream` itself.
+		unset( $body['stream'] );
+
+		$valid = ! array_diff( array_keys( $body ), $provider['body'] );
+
+		foreach ( (array) ( $body['tools'] ?? array() ) as $tool ) {
+			if ( ! is_array( $tool ) ) {
+				$valid = false;
+			} elseif ( 'anthropic' === $provider_id ) {
+				// Tools with a type, such as web search, run on Anthropic's side.
+				$valid = $valid && ( ! isset( $tool['type'] ) || 'custom' === $tool['type'] );
+			} elseif ( 'openai' === $provider_id ) {
+				$valid = $valid && 'function' === ( $tool['type'] ?? null );
+			} else {
+				$valid = $valid && array( 'functionDeclarations' ) === array_keys( $tool );
+			}
+		}
+
+		if ( 'google' === $provider_id && isset( $body['generationConfig'] ) ) {
+			$valid = $valid && is_array( $body['generationConfig'] ) && ! array_diff( array_keys( $body['generationConfig'] ), array( 'maxOutputTokens', 'thinkingConfig' ) );
+		}
+
+		if ( ! $valid ) {
+			return new WP_Error(
+				'ai_content_editing_assistant_invalid_body',
+				__( 'The request asks for something the assistant does not use.', 'ai-content-editing-assistant' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		list( $field, $inner ) = array_pad( $provider['max_tokens'], 2, null );
+
+		if ( $inner ) {
+			$body[ $field ][ $inner ] = self::MAX_TOKENS;
+		} else {
+			$body[ $field ] = self::MAX_TOKENS;
+		}
+
+		return $body;
 	}
 }
