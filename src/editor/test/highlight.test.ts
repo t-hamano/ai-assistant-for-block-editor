@@ -240,6 +240,14 @@ describe( 'highlightChanges', () => {
 		expect( speak ).toHaveBeenCalledWith( 'The AI changed 2 blocks.' );
 	} );
 
+	it( 'announces removed blocks, without their inner blocks', () => {
+		const { one, group } = setUp();
+		const before = takeBlockSnapshot();
+		dispatch( blockEditorStore ).removeBlocks( [ one, group ], false );
+		highlightChanges( before );
+		expect( speak ).toHaveBeenCalledWith( 'The AI removed 2 blocks.' );
+	} );
+
 	it( 'announces nothing when nothing changed', () => {
 		setUp();
 		highlightChanges( takeBlockSnapshot() );

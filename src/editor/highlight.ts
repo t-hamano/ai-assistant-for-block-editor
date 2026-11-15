@@ -307,6 +307,7 @@ export function highlightBlocks(
 export function highlightChanges( before: BlockSnapshot ) {
 	const clientIds = findChangedBlocks( before );
 	if ( ! clientIds.length ) {
+		announceRemoved( before );
 		return;
 	}
 	const texts = new Map< string, string >();
@@ -327,6 +328,36 @@ export function highlightChanges( before: BlockSnapshot ) {
 				'ai-content-editing-assistant'
 			),
 			clientIds.length
+		)
+	);
+}
+
+/**
+ * Announces the blocks that were removed since the snapshot, when an edit
+ * only removed blocks and there is nothing to highlight. A removed block's
+ * inner blocks are not counted.
+ *
+ * @param before The snapshot taken before the edit.
+ */
+function announceRemoved( before: BlockSnapshot ) {
+	const { getBlock } = select( blockEditorStore );
+	const removed = new Set( [ ...before.keys() ].filter( ( clientId ) => ! getBlock( clientId ) ) );
+	const count = [ ...removed ].filter(
+		( clientId ) => ! removed.has( before.get( clientId )?.parent ?? '' )
+	).length;
+	if ( ! count ) {
+		return;
+	}
+	speak(
+		sprintf(
+			/* translators: %d: The number of blocks. */
+			_n(
+				'The AI removed %d block.',
+				'The AI removed %d blocks.',
+				count,
+				'ai-content-editing-assistant'
+			),
+			count
 		)
 	);
 }
