@@ -8,6 +8,7 @@ import { buildSystemPrompt } from '../../src/ai/prompt';
 import { getSiteInfo } from '../../src/editor/site-info';
 import type { AiPlatform, AiUsage } from '../../src/platform';
 import { getBlockNames, setUpCase, type EvaluationCase } from './editor';
+import { takeEditCalls } from './relay';
 
 /**
  * How an answer ended:
@@ -112,6 +113,9 @@ export async function runCase(
 		requestSize: { system: system.length, message: message.length },
 	};
 
+	// Edits that come back without changing the document, because the selection is gone.
+	let dropped = 0;
+	takeEditCalls();
 	const started = Date.now();
 	try {
 		await platform.chat( {
@@ -135,6 +139,8 @@ export async function runCase(
 				} else if ( edited.status === 'applied' ) {
 					result.applied++;
 					result.autoFixed += edited.autoFix ? 1 : 0;
+				} else {
+					dropped++;
 				}
 				return edited;
 			},
@@ -150,6 +156,18 @@ export async function runCase(
 		}
 	}
 	result.seconds = ( Date.now() - started ) / 1000;
+	// The platforms send calls with invalid JSON or arguments back to the
+	// model without passing them on, so they are counted from the
+	// conversation. The calls of an answer that gave up are never sent back.
+	const rejected = takeEditCalls() - result.applied - result.failed - dropped;
+	if ( rejected > 0 ) {
+		result.failed += rejected;
+		result.failures.push(
+			...Array( rejected ).fill(
+				'The call had invalid JSON, or arguments that do not match the tool.'
+			)
+		);
+	}
 	result.firstTry = result.outcome === 'edited' && result.failed === 0;
 	if ( result.outcome !== 'dry-run' && result.outcome !== 'error' ) {
 		result.unmet = checkExpectations( evaluationCase, target.getDocument() );

@@ -35,7 +35,8 @@ export type Summary = {
 	noEdit: number;
 	errors: number;
 	/**
-	 * The share of runs whose document has what the case expects.
+	 * The share of runs that edited the document, and whose document has
+	 * what the case expects.
 	 */
 	expectedRate: number;
 	inputTokens: number;
@@ -65,7 +66,9 @@ export function summarize( results: CaseResult[] ): Summary {
 		gaveUp: count( ( result ) => result.outcome === 'gave-up' ),
 		noEdit: count( ( result ) => result.outcome === 'no-edit' ),
 		errors: results.length - runs,
-		expectedRate: runs ? count( ( result ) => ! result.unmet.length ) / runs : 0,
+		expectedRate: runs
+			? count( ( result ) => result.outcome === 'edited' && ! result.unmet.length ) / runs
+			: 0,
 		inputTokens: sum( ( result ) => result.usage.inputTokens ),
 		outputTokens: sum( ( result ) => result.usage.outputTokens ),
 	};

@@ -35,7 +35,7 @@ function sse( event: string, data: object ) {
  * @param markup The markup to edit the selection with.
  * @return The response.
  */
-function answer( markup?: string ) {
+function answer( markup?: string | { json: string } ) {
 	const events = [
 		sse( 'message_start', { message: { usage: { input_tokens: 10, output_tokens: 1 } } } ),
 		...( markup === undefined
@@ -52,7 +52,10 @@ function answer( markup?: string ) {
 						index: 0,
 						delta: {
 							type: 'input_json_delta',
-							partial_json: JSON.stringify( { action: 'replace', markup } ),
+							partial_json:
+								typeof markup === 'string'
+									? JSON.stringify( { action: 'replace', markup } )
+									: markup.json,
 						},
 					} ),
 				] ),
@@ -65,7 +68,7 @@ function answer( markup?: string ) {
 	return new Response( events.join( '' ), { headers: { 'content-type': 'text/event-stream' } } );
 }
 
-function mockAnswers( ...markups: ( string | undefined )[] ) {
+function mockAnswers( ...markups: Parameters< typeof answer >[ 0 ][] ) {
 	const fetch = vi.fn();
 	for ( const markup of markups ) {
 		fetch.mockResolvedValueOnce( answer( markup ) );
@@ -147,6 +150,19 @@ describe( 'runCase', () => {
 
 		expect( result ).toMatchObject( { outcome: 'edited', firstTry: false, applied: 1, failed: 1 } );
 		expect( result.failures ).toHaveLength( 1 );
+	} );
+
+	it( 'counts the calls that the platform sent back for invalid JSON', async () => {
+		mockAnswers(
+			{ json: '{"action":"replace","markup":' },
+			'<!-- wp:paragraph -->\n<p>Changed.</p>\n<!-- /wp:paragraph -->',
+			undefined
+		);
+		setUpRelay( { dryRun: false } );
+
+		const result = await runCase( CASE, platform() );
+
+		expect( result ).toMatchObject( { outcome: 'edited', firstTry: false, applied: 1, failed: 1 } );
 	} );
 
 	it( 'tells when the model gave up, and what the document lacks', async () => {

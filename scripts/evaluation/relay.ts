@@ -49,6 +49,53 @@ export function getKeyVariable( provider: string ): string {
 	return found.env;
 }
 
+/**
+ * The `edit_blocks` calls the model made in the conversation of the request
+ * sent last. Each request has the whole conversation, with every call the
+ * model made before it.
+ */
+let editCalls = 0;
+
+/**
+ * Counts the model's `edit_blocks` calls in the conversation of a request.
+ *
+ * @param provider The provider ID.
+ * @param body     The request body.
+ * @return The calls.
+ */
+export function countEditCalls( provider: string, body: Record< string, unknown > ): number {
+	type Item = Record< string, any >;
+	const list = ( value: unknown ): Item[] => ( Array.isArray( value ) ? value : [] );
+	const isEdit = ( name: unknown ) => name === 'edit_blocks';
+	if ( provider === 'anthropic' ) {
+		return list( body.messages )
+			.filter( ( message ) => message.role === 'assistant' )
+			.flatMap( ( message ) => list( message.content ) )
+			.filter( ( block ) => block.type === 'tool_use' && isEdit( block.name ) ).length;
+	}
+	if ( provider === 'openai' ) {
+		return list( body.input ).filter(
+			( item ) => item.type === 'function_call' && isEdit( item.name )
+		).length;
+	}
+	return list( body.contents )
+		.filter( ( content ) => content.role === 'model' )
+		.flatMap( ( content ) => list( content.parts ) )
+		.filter( ( part ) => isEdit( part.functionCall?.name ) ).length;
+}
+
+/**
+ * Returns the `edit_blocks` calls the model made in the requests sent since
+ * the last time, and starts counting again.
+ *
+ * @return The calls.
+ */
+export function takeEditCalls(): number {
+	const calls = editCalls;
+	editCalls = 0;
+	return calls;
+}
+
 type ChatData = { provider: string; stream: boolean; body: Record< string, unknown > };
 
 /**
@@ -76,6 +123,7 @@ export function setUpRelay( {
 			onDryRun?.( data );
 			throw new DryRun( 'The request was not sent.' );
 		}
+		editCalls = Math.max( editCalls, countEditCalls( data.provider, data.body ) );
 		const provider = PROVIDERS[ data.provider ];
 		const key = process.env[ getKeyVariable( data.provider ) ];
 		if ( ! key ) {

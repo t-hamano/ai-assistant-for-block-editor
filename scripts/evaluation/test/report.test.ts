@@ -38,21 +38,23 @@ const RESULTS = [
 		unmet: [ 'has no core/table' ],
 	} ),
 	result( { id: 'd', outcome: 'error', firstTry: false, applied: 0, error: 'Overloaded' } ),
+	result( { id: 'e', outcome: 'no-edit', firstTry: false, applied: 0 } ),
 ];
 
 describe( 'summarize', () => {
-	it( 'leaves the runs whose request failed out of the rates', () => {
+	it( 'leaves the runs whose request failed out of the rates, and counts only runs that edited as done', () => {
 		expect( summarize( RESULTS ) ).toEqual( {
-			runs: 3,
-			firstTryRate: 1 / 3,
-			retriesPerRun: 2,
+			runs: 4,
+			firstTryRate: 1 / 4,
+			retriesPerRun: 1.5,
 			autoFixed: 1,
 			gaveUp: 1,
-			noEdit: 0,
+			noEdit: 1,
 			errors: 1,
-			expectedRate: 2 / 3,
-			inputTokens: 400,
-			outputTokens: 40,
+			// A run without an edit did not do what was asked, even when the document already has what is expected.
+			expectedRate: 2 / 4,
+			inputTokens: 500,
+			outputTokens: 50,
 		} );
 	} );
 } );
@@ -68,7 +70,7 @@ describe( 'formatReport', () => {
 
 	it( 'lists the figures and the runs to look at', () => {
 		const report = formatReport( evaluation );
-		expect( report ).toContain( '| First-try pass rate | 33.3% |' );
+		expect( report ).toContain( '| First-try pass rate | 25.0% |' );
 		expect( report ).toContain( '- `b`: edited; 2 failed' );
 		expect( report ).toContain( '- `c`: gave-up; 4 failed; has no core/table' );
 		expect( report ).toContain( '- `d`: error; Overloaded' );
@@ -78,7 +80,7 @@ describe( 'formatReport', () => {
 	it( 'compares with an earlier evaluation', () => {
 		const before = { ...evaluation, results: [ result( { firstTry: false, failed: 1 } ) ] };
 		expect( formatReport( evaluation, before ) ).toContain(
-			'| First-try pass rate | 0.0% | 33.3% |'
+			'| First-try pass rate | 0.0% | 25.0% |'
 		);
 	} );
 } );
