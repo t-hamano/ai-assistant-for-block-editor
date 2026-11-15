@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
+import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { readSse } from './sse';
 
 /**
@@ -35,6 +36,15 @@ export const GEMINI_EDIT_TOOL = {
 	description: EDIT_TOOL.description,
 	parameters: EDIT_TOOL.input_schema,
 };
+
+/**
+ * The read tools, as function declarations of Google's Gemini API.
+ */
+export const GEMINI_READ_TOOLS = READ_TOOLS.map( ( tool ) => ( {
+	name: tool.name,
+	description: tool.description,
+	parameters: tool.input_schema,
+} ) );
 
 /**
  * A part of a Gemini message: text, the model's thought, a function call, or
@@ -112,7 +122,7 @@ export function buildGeminiBody( system: string, contents: GeminiContent[], mode
 		model,
 		systemInstruction: { parts: [ { text: system } ] },
 		contents,
-		tools: [ { functionDeclarations: [ GEMINI_EDIT_TOOL ] } ],
+		tools: [ { functionDeclarations: [ GEMINI_EDIT_TOOL, ...GEMINI_READ_TOOLS ] } ],
 		generationConfig: {
 			maxOutputTokens: MAX_OUTPUT_TOKENS,
 			// Summaries of the thoughts arrive, so the user sees that the model is thinking.
@@ -256,7 +266,7 @@ export async function readGeminiStream(
 				}
 			} else if ( part.functionCall ) {
 				thinking = false;
-				onEvent( { type: 'activity', activity: 'editing' } );
+				onEvent( { type: 'activity', activity: getToolActivity( part.functionCall.name ) } );
 			} else if ( part.text ) {
 				thinking = false;
 				onEvent( { type: 'text', text: part.text } );
@@ -287,17 +297,31 @@ export async function readGeminiStream(
 }
 
 /**
- * Applies the edits the model asked for, and builds the responses to send
- * back.
+ * Applies the edits the model asked for, runs its reads, and builds the
+ * responses to send back.
  *
  * @param answer  The answer.
  * @param onEvent Applies each edit.
- * @return The responses, and how many edits failed.
+ * @param read    Reads the document.
+ * @return The responses, and how many calls failed.
  */
-function runTools( answer: GeminiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
+function runTools(
+	answer: GeminiAnswer,
+	onEvent: AiChatRequest[ 'onEvent' ],
+	read: AiChatRequest[ 'read' ]
+) {
 	let failures = 0;
 	const results = answer.calls.map( ( { functionCall } ): GeminiPart => {
 		const { id, name = '', args } = functionCall ?? {};
+		const found = runRead( name, args, read );
+		if ( found ) {
+			if ( found.status === 'failed' ) {
+				failures++;
+			}
+			const response =
+				found.status === 'failed' ? { error: found.reason } : { output: found.content };
+			return { functionResponse: { ...( id ? { id } : {} ), name, response } };
+		}
 		const edit = name === EDIT_TOOL.name ? toEdit( args ) : null;
 		const result: AiEditResult = edit
 			? ( onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' } )
@@ -331,7 +355,7 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
-		async chat( { system, messages, onEvent, signal } ) {
+		async chat( { system, messages, onEvent, read, signal } ) {
 			const contents = toGeminiContents( messages );
 			let failures = 0;
 			for (;;) {
@@ -361,7 +385,7 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 				if ( ! answer.calls.length ) {
 					return;
 				}
-				const tools = runTools( answer, onEvent );
+				const tools = runTools( answer, onEvent, read );
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

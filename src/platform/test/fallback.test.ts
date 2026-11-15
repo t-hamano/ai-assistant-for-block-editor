@@ -15,6 +15,7 @@ import type { AiStreamEvent } from '..';
 import { EDIT_TOOL } from '../anthropic';
 import {
 	FALLBACK_EDIT_TOOL,
+	FALLBACK_READ_TOOLS,
 	createFallbackPlatform,
 	readFallbackAnswer,
 	toFallbackMessages,
@@ -180,7 +181,7 @@ describe( 'createFallbackPlatform', () => {
 			post_id: 1,
 			system: 'System',
 			messages: [ { role: 'user', parts: [ { text: 'Rewrite this' } ] } ],
-			tools: [ FALLBACK_EDIT_TOOL ],
+			tools: [ FALLBACK_EDIT_TOOL, ...FALLBACK_READ_TOOLS ],
 			models: [ [ 'anthropic', 'claude-opus-5-5' ] ],
 		} );
 		expect( onEvent ).toHaveBeenCalledWith( { type: 'text', text: 'Done.' } );
