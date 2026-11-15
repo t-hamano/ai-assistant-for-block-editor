@@ -22,10 +22,6 @@ define( 'AI_CONTENT_EDITING_ASSISTANT_NAMESPACE', 'ai-content-editing-assistant'
 define( 'AI_CONTENT_EDITING_ASSISTANT_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) );
 define( 'AI_CONTENT_EDITING_ASSISTANT_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
 
-// Requests are sent with the site's API keys. On a multisite network the keys
-// can be shared by every site, so only super admins can use the assistant.
-define( 'AI_CONTENT_EDITING_ASSISTANT_CAPABILITY', is_multisite() ? 'manage_network_options' : 'manage_options' );
-
 require_once __DIR__ . '/classes/class-api-key.php';
 require_once __DIR__ . '/classes/class-enqueue.php';
 require_once __DIR__ . '/classes/class-fallback.php';
