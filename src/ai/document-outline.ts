@@ -178,16 +178,6 @@ function describeBlock( block: OutlineBlock, indent = true ): string {
 }
 
 /**
- * Lists the blocks, one per line, indented by their depth.
- *
- * @param blocks The blocks.
- * @return The lines.
- */
-function formatLines( blocks: OutlineBlock[] ): string {
-	return blocks.map( ( block ) => describeBlock( block ) ).join( '\n' );
-}
-
-/**
  * Lists a block and its nested blocks.
  *
  * @param block The block.
@@ -288,30 +278,18 @@ export function formatOutline( document: string, selection: string, textIn?: str
 					match[ 1 ].toLowerCase()
 				)
 	);
-	const parts = [ [ '<outline>', formatLines( blocks ), '</outline>' ].join( '\n' ) ];
+	const parts = [
+		[
+			'<outline>',
+			blocks.map( ( block ) => describeBlock( block ) ).join( '\n' ),
+			'</outline>',
+		].join( '\n' ),
+	];
 	const nearby = findNearby( blocks, document, refs, !! textIn );
 	if ( nearby.length ) {
 		parts.push( [ '<nearby>', ...nearby, '</nearby>' ].join( '\n' ) );
 	}
 	return parts.join( '\n\n' );
-}
-
-/**
- * Returns the block's markup with each of its nested blocks replaced by a
- * comment that names it, so its own attributes and content can be read.
- *
- * @param document The document.
- * @param block    The block.
- * @return The markup.
- */
-function withoutChildren( document: string, block: OutlineBlock ): string {
-	let markup = '';
-	let end = block.start;
-	for ( const child of block.children ) {
-		markup += `${ document.slice( end, child.start ) }<!-- nested block ${ child.ref || child.name } -->`;
-		end = child.end;
-	}
-	return markup + document.slice( end, block.end );
 }
 
 /**
@@ -334,15 +312,29 @@ function readBlocks( document: string, refs: string[] ): AiReadResult {
 			continue;
 		}
 		const markup = document.slice( block.start, block.end );
+		// A block without nested blocks can only be read as a whole.
+		if ( markup.length <= LONG_DOCUMENT || ! block.children.length ) {
+			parts.push( markup );
+			continue;
+		}
+		// Its own markup, with each nested block replaced by a comment that
+		// names it, so its own attributes and content can be read.
+		let ownMarkup = '';
+		let end = block.start;
+		for ( const child of block.children ) {
+			ownMarkup += `${ document.slice( end, child.start ) }<!-- nested block ${ child.ref || child.name } -->`;
+			end = child.end;
+		}
+		ownMarkup += document.slice( end, block.end );
 		parts.push(
-			// A block without nested blocks can only be read as a whole.
-			markup.length > LONG_DOCUMENT && block.children.length
-				? [
-						`Block ${ block.ref } is too long to read at once. This is its own markup, with each nested block in a <!-- nested block ... --> comment, and the outline of its nested blocks after it. Read the nested blocks separately.`,
-						withoutChildren( document, block ),
-						formatLines( flatten( block ).slice( 1 ) ),
-					].join( '\n' )
-				: markup
+			[
+				`Block ${ block.ref } is too long to read at once. This is its own markup, with each nested block in a <!-- nested block ... --> comment, and the outline of its nested blocks after it. Read the nested blocks separately.`,
+				ownMarkup,
+				flatten( block )
+					.slice( 1 )
+					.map( ( child ) => describeBlock( child ) )
+					.join( '\n' ),
+			].join( '\n' )
 		);
 	}
 	const note = missing.length

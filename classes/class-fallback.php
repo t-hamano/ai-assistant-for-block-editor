@@ -9,7 +9,6 @@ namespace AI_Content_Editing_Assistant;
 
 use InvalidArgumentException;
 use WordPress\AiClient\Messages\DTO\Message;
-use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 use WP_Error;
 use WP_REST_Request;
@@ -133,7 +132,18 @@ class Fallback {
 	 */
 	public function chat( WP_REST_Request $request ) {
 		try {
-			$messages = array_map( array( $this, 'to_message' ), $request->get_param( 'messages' ) );
+			$messages = array_map(
+				static function ( array $message ): Message {
+					foreach ( $message['parts'] as $part ) {
+						if ( ! array_intersect( array_keys( $part ), self::PART_KEYS ) || isset( $part['file'] ) ) {
+							throw new InvalidArgumentException( esc_html__( 'Messages may only contain text, tool calls, and tool results.', 'ai-content-editing-assistant' ) );
+						}
+					}
+
+					return Message::fromArray( $message );
+				},
+				$request->get_param( 'messages' )
+			);
 			$tools    = array_map(
 				static fn( $tool ) => FunctionDeclaration::fromArray( $tool ),
 				$request->get_param( 'tools' )
@@ -168,46 +178,20 @@ class Fallback {
 			return $result;
 		}
 
-		return new WP_REST_Response( $this->to_answer( $result ) );
-	}
-
-	/**
-	 * Converts a message from the editor into the AI Client's message
-	 *
-	 * @param array $message The message, with its role and parts.
-	 * @return Message
-	 * @throws InvalidArgumentException When a part is not text or a tool call or result.
-	 */
-	public function to_message( array $message ): Message {
-		foreach ( $message['parts'] as $part ) {
-			if ( ! array_intersect( array_keys( $part ), self::PART_KEYS ) || isset( $part['file'] ) ) {
-				throw new InvalidArgumentException( esc_html__( 'Messages may only contain text, tool calls, and tool results.', 'ai-content-editing-assistant' ) );
-			}
-		}
-
-		return Message::fromArray( $message );
-	}
-
-	/**
-	 * Converts the AI Client's result into the answer for the editor
-	 *
-	 * @param GenerativeAiResult $result The result.
-	 * @return array The message, why it ended, the tokens it used, and the
-	 *               provider and model that wrote it.
-	 */
-	public function to_answer( GenerativeAiResult $result ): array {
 		$candidate = $result->getCandidates()[0];
 		$usage     = $result->getTokenUsage();
 
-		return array(
-			'message'      => $candidate->getMessage()->toArray(),
-			'finishReason' => $candidate->getFinishReason()->value,
-			'usage'        => array(
-				'inputTokens'  => $usage->getPromptTokens(),
-				'outputTokens' => $usage->getCompletionTokens(),
-			),
-			'provider'     => $result->getProviderMetadata()->getId(),
-			'model'        => $result->getModelMetadata()->getId(),
+		return new WP_REST_Response(
+			array(
+				'message'      => $candidate->getMessage()->toArray(),
+				'finishReason' => $candidate->getFinishReason()->value,
+				'usage'        => array(
+					'inputTokens'  => $usage->getPromptTokens(),
+					'outputTokens' => $usage->getCompletionTokens(),
+				),
+				'provider'     => $result->getProviderMetadata()->getId(),
+				'model'        => $result->getModelMetadata()->getId(),
+			)
 		);
 	}
 }

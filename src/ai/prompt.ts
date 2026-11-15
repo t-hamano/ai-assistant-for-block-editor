@@ -4,17 +4,6 @@
 import blockMarkupSkill from '../../skills/block-markup/SKILL.md?raw';
 
 /**
- * Removes the frontmatter from a skill. It records which versions the skill
- * was written for, which the model does not need.
- *
- * @param skill The skill file.
- * @return The skill without its frontmatter.
- */
-export function stripFrontmatter( skill: string ): string {
-	return skill.replace( /^---\n[\s\S]*?\n---\n+/, '' ).trim();
-}
-
-/**
  * Builds the instructions sent to the model with each message. The
  * document is not part of them: it goes with the user's messages, so the
  * instructions stay the same through the conversation and the prompt cache
@@ -72,7 +61,9 @@ export function buildSystemPrompt(
 	}
 	return [
 		lines.join( '\n' ),
-		`<skill name="block-markup">\n${ stripFrontmatter( blockMarkupSkill ) }\n</skill>`,
+		// The frontmatter records which versions the skill was written for, which
+		// the model does not need.
+		`<skill name="block-markup">\n${ blockMarkupSkill.replace( /^---\n[\s\S]*?\n---\n+/, '' ).trim() }\n</skill>`,
 		...( siteInfo ? [ `<site-info>\n${ siteInfo.trim() }\n</site-info>` ] : [] ),
 	].join( '\n\n' );
 }

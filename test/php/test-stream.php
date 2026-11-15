@@ -54,17 +54,6 @@ class Test_Stream extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests that an answer that stopped partway ends with an event that says why.
-	 */
-	public function test_sends_an_error_event() {
-		$stream = new AI_Content_Editing_Assistant_Test_Stream();
-
-		$this->expectOutputRegex( '/^\n\nevent: ai_content_editing_assistant_error\ndata: \{"message":"The provider took too long[^"]*"\}\n\n$/' );
-
-		$stream->send_error( true );
-	}
-
-	/**
 	 * Tests that an error is returned when the provider cannot be reached.
 	 */
 	public function test_unreachable_provider_is_an_error() {

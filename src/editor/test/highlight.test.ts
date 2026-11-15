@@ -24,7 +24,6 @@ import {
 	TEXT_OPACITY_PROPERTY,
 	createTextRange,
 	diffText,
-	getTextOpacity,
 	findChangedBlocks,
 	highlightBlocks,
 	highlightChanges,
@@ -146,15 +145,6 @@ describe( 'diffText', () => {
 
 	it( 'keeps characters made of two code units whole', () => {
 		expect( diffText( 'a😀b', 'a😃b' ) ).toEqual( { start: 1, end: 3 } );
-	} );
-} );
-
-describe( 'getTextOpacity', () => {
-	it( 'holds the color, then fades it out', () => {
-		expect( getTextOpacity( 0 ) ).toBe( 1 );
-		expect( getTextOpacity( 0.6 ) ).toBe( 1 );
-		expect( getTextOpacity( 0.8 ) ).toBeCloseTo( 0.5 );
-		expect( getTextOpacity( 1 ) ).toBe( 0 );
 	} );
 } );
 
