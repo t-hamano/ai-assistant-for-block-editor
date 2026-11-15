@@ -1,14 +1,28 @@
 /**
  * External dependencies
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+/**
+ * WordPress dependencies
+ */
+import apiFetch from '@wordpress/api-fetch';
 
 /**
  * Internal dependencies
  */
 import type { AiStreamEvent } from '..';
-import { ANTHROPIC_MODEL, buildAnthropicBody, readAnthropicStream } from '../anthropic';
+import {
+	ANTHROPIC_MODEL,
+	EDIT_TOOL,
+	buildAnthropicBody,
+	createAnthropicPlatform,
+	readAnthropicStream,
+	toAnthropicMessages,
+} from '../anthropic';
 import { streamBody } from './stream-body';
+
+vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
 
 function sse( event: string, data: object ) {
 	return `event: ${ event }\ndata: ${ JSON.stringify( data ) }\n\n`;
@@ -22,27 +36,53 @@ async function read( pieces: string[] ) {
 	return { events, done };
 }
 
+const EDIT = {
+	action: 'replace' as const,
+	markup: '<!-- wp:paragraph -->\n<p>New.</p>\n<!-- /wp:paragraph -->',
+};
+
 describe( 'buildAnthropicBody', () => {
-	it( 'sends the system prompt and the conversation as text', () => {
-		expect(
-			buildAnthropicBody( {
-				system: 'Be brief.',
-				messages: [
-					{ role: 'user', text: 'Hi' },
-					{ role: 'assistant', text: 'Hello' },
-					{ role: 'user', text: 'Shorter' },
-				],
-			} )
-		).toEqual( {
+	it( 'sends the system prompt, the edit tool, and the messages', () => {
+		const messages = toAnthropicMessages( [ { role: 'user', text: 'Hi' } ] );
+		expect( buildAnthropicBody( 'Be brief.', messages ) ).toEqual( {
 			model: ANTHROPIC_MODEL,
 			max_tokens: expect.any( Number ),
 			system: 'Be brief.',
-			messages: [
-				{ role: 'user', content: 'Hi' },
-				{ role: 'assistant', content: 'Hello' },
-				{ role: 'user', content: 'Shorter' },
-			],
+			tools: [ EDIT_TOOL ],
+			messages,
 		} );
+	} );
+} );
+
+describe( 'toAnthropicMessages', () => {
+	it( 'sends the text, and the edits as tool calls that were applied', () => {
+		expect(
+			toAnthropicMessages( [
+				{ role: 'user', text: 'Hi' },
+				{ role: 'assistant', text: 'Hello' },
+				{ role: 'user', text: 'Rewrite this' },
+				{ role: 'assistant', text: 'Rewrote it.', edits: [ EDIT ] },
+				{ role: 'user', text: 'Thanks' },
+			] )
+		).toEqual( [
+			{ role: 'user', content: [ { type: 'text', text: 'Hi' } ] },
+			{ role: 'assistant', content: [ { type: 'text', text: 'Hello' } ] },
+			{ role: 'user', content: [ { type: 'text', text: 'Rewrite this' } ] },
+			{
+				role: 'assistant',
+				content: [
+					{ type: 'text', text: 'Rewrote it.' },
+					{ type: 'tool_use', id: 'toolu_edit_3_0', name: 'edit_blocks', input: EDIT },
+				],
+			},
+			{
+				role: 'user',
+				content: [
+					{ type: 'tool_result', tool_use_id: 'toolu_edit_3_0', content: expect.any( String ) },
+					{ type: 'text', text: 'Thanks' },
+				],
+			},
+		] );
 	} );
 } );
 
@@ -81,6 +121,65 @@ describe( 'readAnthropicStream', () => {
 		] );
 	} );
 
+	it( 'collects the content to send back, with the thinking and the tool input', async () => {
+		const { events, done } = await read( [
+			sse( 'content_block_start', {
+				index: 0,
+				content_block: { type: 'thinking', thinking: '', signature: '' },
+			} ),
+			sse( 'content_block_delta', {
+				index: 0,
+				delta: { type: 'signature_delta', signature: 'sig' },
+			} ),
+			sse( 'content_block_stop', { index: 0 } ),
+			sse( 'content_block_start', {
+				index: 1,
+				content_block: { type: 'tool_use', id: 'toolu_1', name: 'edit_blocks', input: {} },
+			} ),
+			sse( 'content_block_delta', {
+				index: 1,
+				delta: { type: 'input_json_delta', partial_json: '{"action":"replace",' },
+			} ),
+			sse( 'content_block_delta', {
+				index: 1,
+				delta: { type: 'input_json_delta', partial_json: '"markup":"<p>x</p>"}' },
+			} ),
+			sse( 'content_block_stop', { index: 1 } ),
+			sse( 'content_block_start', {
+				index: 2,
+				content_block: { type: 'tool_use', id: 'toolu_2', name: 'edit_blocks', input: {} },
+			} ),
+			sse( 'content_block_delta', {
+				index: 2,
+				delta: { type: 'input_json_delta', partial_json: '{"action":' },
+			} ),
+			sse( 'content_block_stop', { index: 2 } ),
+			sse( 'message_delta', { delta: { stop_reason: 'tool_use' }, usage: {} } ),
+		] );
+
+		const answer = await done;
+
+		expect( events ).toEqual( [
+			{ type: 'activity', activity: 'thinking' },
+			{ type: 'activity', activity: 'editing' },
+			{ type: 'activity', activity: 'editing' },
+		] );
+		expect( answer ).toEqual( {
+			content: [
+				{ type: 'thinking', thinking: '', signature: 'sig' },
+				{
+					type: 'tool_use',
+					id: 'toolu_1',
+					name: 'edit_blocks',
+					input: { action: 'replace', markup: '<p>x</p>' },
+				},
+				{ type: 'tool_use', id: 'toolu_2', name: 'edit_blocks', input: {} },
+			],
+			stopReason: 'tool_use',
+			invalidInputs: new Map( [ [ 'toolu_2', '{"action":' ] ] ),
+		} );
+	} );
+
 	it( 'rejects with the message of an error event', async () => {
 		const { done } = await read( [
 			sse( 'message_start', { message: { usage: { input_tokens: 1, output_tokens: 0 } } } ),
@@ -106,5 +205,85 @@ describe( 'readAnthropicStream', () => {
 
 		await expect( done ).rejects.toThrow();
 		expect( events ).toEqual( [ { type: 'text', text: 'Part' } ] );
+	} );
+} );
+
+describe( 'createAnthropicPlatform', () => {
+	const toolCall = ( input: string ) => [
+		sse( 'content_block_start', {
+			index: 0,
+			content_block: { type: 'tool_use', id: 'toolu_1', name: 'edit_blocks', input: {} },
+		} ),
+		sse( 'content_block_delta', {
+			index: 0,
+			delta: { type: 'input_json_delta', partial_json: input },
+		} ),
+		sse( 'content_block_stop', { index: 0 } ),
+		sse( 'message_delta', { delta: { stop_reason: 'tool_use' }, usage: {} } ),
+	];
+	const text = [
+		sse( 'content_block_start', { index: 0, content_block: { type: 'text', text: '' } } ),
+		sse( 'content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'Done.' } } ),
+		sse( 'message_delta', { delta: { stop_reason: 'end_turn' }, usage: {} } ),
+	];
+
+	function respond( ...answers: string[][] ) {
+		const bodies: any[] = [];
+		vi.mocked( apiFetch ).mockReset();
+		answers.forEach( ( pieces ) => {
+			vi.mocked( apiFetch ).mockImplementationOnce( async ( options: any ) => {
+				bodies.push( structuredClone( options.data.body ) );
+				return new Response( streamBody( pieces ) );
+			} );
+		} );
+		return bodies;
+	}
+
+	it( 'applies the edit, and sends the result back for the model to go on', async () => {
+		const bodies = respond( toolCall( JSON.stringify( EDIT ) ), text );
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'applied' as const } : undefined
+		);
+
+		await createAnthropicPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite this' } ],
+			onEvent,
+			signal: new AbortController().signal,
+		} );
+
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'edit', edit: EDIT } );
+		expect( bodies[ 1 ].messages ).toEqual( [
+			{ role: 'user', content: [ { type: 'text', text: 'Rewrite this' } ] },
+			{
+				role: 'assistant',
+				content: [ { type: 'tool_use', id: 'toolu_1', name: 'edit_blocks', input: EDIT } ],
+			},
+			{
+				role: 'user',
+				content: [
+					{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'The edit was applied.' },
+				],
+			},
+		] );
+	} );
+
+	it( 'gives up after the model fails to fix its edit three times', async () => {
+		const bad = toolCall( '{"action":"replace"}' );
+		const bodies = respond( bad, bad, bad, bad, text );
+		const onEvent = vi.fn();
+
+		await expect(
+			createAnthropicPlatform( () => 1 ).chat( {
+				system: 'System',
+				messages: [ { role: 'user', text: 'Rewrite this' } ],
+				onEvent,
+				signal: new AbortController().signal,
+			} )
+		).rejects.toThrow( 'The edit could not be made.' );
+
+		expect( bodies ).toHaveLength( 4 );
+		expect( bodies[ 1 ].messages[ 2 ].content[ 0 ] ).toMatchObject( { is_error: true } );
+		expect( onEvent ).not.toHaveBeenCalledWith( expect.objectContaining( { type: 'edit' } ) );
 	} );
 } );

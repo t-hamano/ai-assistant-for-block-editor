@@ -16,7 +16,10 @@ import {
 	type ConversationAction,
 } from '../conversation';
 
-const EDIT = { action: 'replace' as const, markdown: 'New.\n' };
+const EDIT = {
+	action: 'replace' as const,
+	markup: '<!-- wp:paragraph -->\n<p>New.</p>\n<!-- /wp:paragraph -->',
+};
 
 function run( ...actions: ConversationAction[] ): Conversation {
 	return actions.reduce( conversationReducer, createConversation() );
@@ -36,11 +39,22 @@ describe( 'conversationReducer', () => {
 			{
 				role: 'assistant',
 				text: 'Done.',
-				edit: EDIT,
+				edits: [ EDIT ],
 				editStatus: 'applied',
 				status: 'done',
 			},
 		] );
+	} );
+
+	it( 'keeps every edit that changed the document', () => {
+		const SECOND = { action: 'insert_after' as const, markup: EDIT.markup };
+		const { messages } = run(
+			{ type: 'START', text: 'Rewrite this' },
+			{ type: 'EDIT', edit: EDIT, applied: true },
+			{ type: 'EDIT', edit: SECOND, applied: true },
+			{ type: 'EDIT', edit: EDIT, applied: false }
+		);
+		expect( messages[ 1 ] ).toMatchObject( { edits: [ EDIT, SECOND ], editStatus: 'applied' } );
 	} );
 
 	it( 'shows what the model does until its text arrives', () => {
@@ -157,7 +171,7 @@ describe( 'toAiMessages', () => {
 		);
 		expect( toAiMessages( messages ) ).toEqual( [
 			{ role: 'user', text: 'One' },
-			{ role: 'assistant', text: 'Edited.', edit: EDIT },
+			{ role: 'assistant', text: 'Edited.', edits: [ EDIT ] },
 			{ role: 'user', text: 'Three' },
 			{ role: 'user', text: 'Four' },
 			{ role: 'assistant', text: 'Could not edit.' },

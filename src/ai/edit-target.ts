@@ -14,19 +14,13 @@ export const SELECTION_END = '</selection>';
  */
 export type EditContext = {
 	/**
-	 * The whole document as Markdown.
+	 * The whole document as block markup.
 	 */
 	document: string;
 	/**
-	 * The selection as Markdown. Empty when nothing is selected.
+	 * The selection as block markup. Empty when nothing is selected.
 	 */
 	selection: string;
-	/**
-	 * Where the selection is in `document`, as character offsets. Both are
-	 * the place where new content goes when nothing is selected.
-	 */
-	selectionStart: number;
-	selectionEnd: number;
 };
 
 /**
@@ -49,36 +43,3 @@ export type EditTarget = {
 	 */
 	apply: ( edit: AiEdit ) => AiEditResult;
 };
-
-/**
- * Joins the Markdown before, inside and after the selection into the
- * document sent to the model, separated by blank lines.
- *
- * @param before    Markdown before the selection.
- * @param selection Markdown of the selection.
- * @param after     Markdown after the selection.
- * @return The document, and where the selection is in it.
- */
-export function joinAroundSelection(
-	before: string,
-	selection: string,
-	after: string
-): EditContext {
-	const trim = ( part: string ) => part.replace( /\n+$/, '' );
-	const head = trim( before );
-	const marked = trim( selection );
-	const tail = trim( after );
-	const parts = [ head, marked, tail ].filter( ( part ) => part !== '' );
-	const document = parts.length ? parts.join( '\n\n' ) + '\n' : '';
-	let selectionStart = head ? head.length + 2 : 0;
-	if ( ! marked && ! tail ) {
-		// Nothing follows, so new content goes at the end.
-		selectionStart = document.length;
-	}
-	return {
-		document,
-		selection,
-		selectionStart,
-		selectionEnd: selectionStart + marked.length,
-	};
-}

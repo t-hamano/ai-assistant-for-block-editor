@@ -7,10 +7,9 @@ import { describe, expect, it } from 'vitest';
  * Internal dependencies
  */
 import { buildMessageContext } from '../document-context';
-import { joinAroundSelection } from '../edit-target';
 
 describe( 'buildMessageContext', () => {
-	const context = joinAroundSelection( 'One.\n', 'Two.\n', '' );
+	const context = { document: 'One.\n\nTwo.\n', selection: 'Two.\n' };
 
 	it( 'sends the whole document when the model has not seen it', () => {
 		expect( buildMessageContext( context, null ) ).toBe(
@@ -31,7 +30,7 @@ describe( 'buildMessageContext', () => {
 	} );
 
 	it( 'sends the empty document when the user removed everything', () => {
-		const empty = joinAroundSelection( '', '', '' );
+		const empty = { document: '', selection: '' };
 		expect( buildMessageContext( empty, 'One.\n' ) ).toBe(
 			'The user changed the document after your last answer. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
 		);
