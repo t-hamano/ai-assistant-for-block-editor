@@ -51,6 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Lets Plugin Check post its results as a comment on the pull request.
+      pull-requests: write
     timeout-minutes: 15
 
     name: Plugin Check
