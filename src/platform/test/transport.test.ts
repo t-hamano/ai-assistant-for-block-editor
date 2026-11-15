@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * WordPress dependencies
@@ -11,7 +11,13 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import { IDLE_TIMEOUT, readEvents, streamFromRelay, type AnswerEvent } from '../transport';
+import {
+	IDLE_TIMEOUT,
+	readEvents,
+	requestAnswer,
+	resetStreamDetection,
+	type AnswerEvent,
+} from '../transport';
 import { streamBody } from './stream-body';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
@@ -31,12 +37,13 @@ function relayError( message: string ) {
 }
 
 function request( signal = new AbortController().signal ) {
-	return streamFromRelay( {
+	return requestAnswer( {
 		provider: 'anthropic',
 		postId: 1,
 		body: {},
 		signal,
-		readError: async ( response ) => `Error ${ response.status }`,
+		readError: async ( response: Response ) => `Error ${ response.status }`,
+		toEvents: ( answer ) => [ { event: 'whole', data: answer } ],
 	} );
 }
 
@@ -71,10 +78,21 @@ describe( 'readEvents', () => {
 	} );
 } );
 
-describe( 'streamFromRelay', () => {
+describe( 'requestAnswer', () => {
+	beforeEach( () => {
+		resetStreamDetection();
+		vi.mocked( apiFetch ).mockReset();
+	} );
+
 	afterEach( () => {
 		vi.useRealTimers();
+		vi.restoreAllMocks();
 	} );
+
+	const whole = () =>
+		new Response( '{"text":"Hi"}', { headers: { 'content-type': 'application/json' } } );
+	const sentStream = () =>
+		vi.mocked( apiFetch ).mock.calls.map( ( [ options ] ) => ( options.data as any ).stream );
 
 	it( 'streams the events of the answer', async () => {
 		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( streamBody( [ 'data: {}\n\n' ] ) ) );
@@ -87,7 +105,9 @@ describe( 'streamFromRelay', () => {
 	} );
 
 	it( 'rejects with the message of an error response', async () => {
-		vi.mocked( apiFetch ).mockRejectedValueOnce( new Response( '{}', { status: 401 } ) );
+		vi.mocked( apiFetch ).mockRejectedValueOnce(
+			new Response( '{}', { status: 401, headers: { 'content-type': 'application/json' } } )
+		);
 
 		await expect( readAll( request() ) ).rejects.toThrow( 'Error 401' );
 	} );
@@ -102,10 +122,14 @@ describe( 'streamFromRelay', () => {
 	} );
 
 	it( 'rejects when the connection drops', async () => {
+		let pulls = 0;
 		const body = new ReadableStream( {
-			start( controller ) {
-				controller.enqueue( new TextEncoder().encode( 'data: {}\n\n' ) );
-				controller.error( new TypeError( 'network error' ) );
+			pull( controller ) {
+				if ( pulls++ ) {
+					controller.error( new TypeError( 'network error' ) );
+				} else {
+					controller.enqueue( new TextEncoder().encode( 'data: {}\n\n' ) );
+				}
 			},
 		} );
 		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( body ) );
@@ -132,5 +156,69 @@ describe( 'streamFromRelay', () => {
 		controller.abort();
 
 		expect( await done ).toMatchObject( { name: 'AbortError' } );
+	} );
+
+	it( 'asks for the whole answer when a server in between fails the stream', async () => {
+		vi.mocked( apiFetch )
+			.mockRejectedValueOnce(
+				new Response( '<html>Gateway Timeout</html>', {
+					status: 504,
+					headers: { 'content-type': 'text/html' },
+				} )
+			)
+			.mockResolvedValueOnce( whole() )
+			.mockResolvedValueOnce( whole() );
+
+		expect( await readAll( request() ) ).toEqual( [ { event: 'whole', data: { text: 'Hi' } } ] );
+		// Later answers are asked for all at once.
+		await readAll( request() );
+		expect( sentStream() ).toEqual( [ true, false, false ] );
+	} );
+
+	it( 'asks for the whole answer when the stream ends before anything arrives', async () => {
+		vi.mocked( apiFetch )
+			.mockResolvedValueOnce( new Response( streamBody( [] ) ) )
+			.mockResolvedValueOnce( whole() );
+
+		expect( await readAll( request() ) ).toEqual( [ { event: 'whole', data: { text: 'Hi' } } ] );
+		expect( sentStream() ).toEqual( [ true, false ] );
+	} );
+
+	it( 'does not ask again when the provider answers with an error', async () => {
+		vi.mocked( apiFetch ).mockRejectedValueOnce(
+			new Response( '{}', { status: 400, headers: { 'content-type': 'application/json' } } )
+		);
+
+		await expect( readAll( request() ) ).rejects.toThrow( 'Error 400' );
+		expect( sentStream() ).toEqual( [ true ] );
+	} );
+
+	it( 'asks for whole answers after a streamed one arrives all at once', async () => {
+		const pieces = [ 'data: {}\n\n', 'data: {}\n\n', 'data: {}\n\n' ];
+		vi.mocked( apiFetch )
+			.mockResolvedValueOnce( new Response( streamBody( pieces ) ) )
+			.mockResolvedValueOnce( whole() );
+		// Sent at 0, and every piece arrives 3 seconds later.
+		vi.spyOn( Date, 'now' ).mockReturnValueOnce( 0 ).mockReturnValue( 3000 );
+
+		expect( await readAll( request() ) ).toHaveLength( 3 );
+		await readAll( request() );
+		expect( sentStream() ).toEqual( [ true, false ] );
+	} );
+
+	it( 'keeps streaming when the pieces arrive over time', async () => {
+		const pieces = [ 'data: {}\n\n', 'data: {}\n\n', 'data: {}\n\n' ];
+		vi.mocked( apiFetch )
+			.mockResolvedValueOnce( new Response( streamBody( pieces ) ) )
+			.mockResolvedValueOnce( new Response( streamBody( pieces ) ) );
+		vi.spyOn( Date, 'now' )
+			.mockReturnValueOnce( 0 )
+			.mockReturnValueOnce( 3000 )
+			.mockReturnValueOnce( 3500 )
+			.mockReturnValue( 4000 );
+
+		await readAll( request() );
+		await readAll( request() );
+		expect( sentStream() ).toEqual( [ true, true ] );
 	} );
 } );

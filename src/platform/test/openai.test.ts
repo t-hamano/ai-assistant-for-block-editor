@@ -20,6 +20,7 @@ import {
 	buildOpenAiBody,
 	createOpenAiPlatform,
 	readOpenAiStream,
+	toOpenAiEvents,
 	toOpenAiInput,
 } from '../openai';
 import { readEvents } from '../transport';
@@ -97,6 +98,53 @@ describe( 'toOpenAiInput', () => {
 			{ type: 'function_call_output', call_id: 'call_edit_3_0', output: expect.any( String ) },
 			{ role: 'user', content: 'Thanks' },
 		] );
+	} );
+} );
+
+async function* fromArray< T >( items: T[] ) {
+	yield* items;
+}
+
+describe( 'toOpenAiEvents', () => {
+	it( 'reads a whole answer as if it was streamed', async () => {
+		const output = [
+			{ type: 'message', content: [ { type: 'output_text', text: 'Done.' } ] },
+			{ type: 'function_call', call_id: 'call_1', name: 'edit_blocks', arguments: '{}' },
+		];
+		const events: AiStreamEvent[] = [];
+		const answer = await readOpenAiStream(
+			fromArray(
+				toOpenAiEvents( {
+					status: 'completed',
+					output,
+					usage: { input_tokens: 10, output_tokens: 5 },
+				} )
+			),
+			( event ) => {
+				events.push( event );
+			}
+		);
+
+		expect( answer.output ).toEqual( output );
+		expect( answer.calls ).toEqual( [ output[ 1 ] ] );
+		expect( events ).toEqual( [
+			{ type: 'text', text: 'Done.' },
+			{ type: 'activity', activity: 'editing' },
+			{
+				type: 'usage',
+				usage: { inputTokens: 10, cachedInputTokens: 0, outputTokens: 5 },
+			},
+		] );
+	} );
+
+	it( 'rejects an answer that was cut off', async () => {
+		const events = toOpenAiEvents( {
+			status: 'incomplete',
+			incomplete_details: { reason: 'max_output_tokens' },
+			output: [],
+		} );
+
+		await expect( readOpenAiStream( fromArray( events ), () => {} ) ).rejects.toThrow( 'cut off' );
 	} );
 } );
 

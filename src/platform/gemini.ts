@@ -9,7 +9,7 @@ import { __ } from '@wordpress/i18n';
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
+import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -358,12 +358,14 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 			let failures = 0;
 			for (;;) {
 				const answer = await readGeminiStream(
-					streamFromRelay( {
+					requestAnswer( {
 						provider: 'google',
 						postId: getPostId(),
 						body: buildGeminiBody( system, contents, model ),
 						signal,
 						readError: readGeminiErrorMessage,
+						// The whole answer has the shape of one piece of a streamed one.
+						toEvents: ( whole ) => [ { event: 'message', data: whole } ],
 					} ),
 					onEvent
 				);

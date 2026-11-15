@@ -8,7 +8,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
+import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -356,6 +356,58 @@ export async function readAnthropicStream(
 }
 
 /**
+ * Turns Anthropic's whole answer, when it is not streamed, into the events
+ * of a streamed one.
+ *
+ * @param answer The answer, a message.
+ * @return The events.
+ */
+export function toAnthropicEvents( answer: any ): AnswerEvent[] {
+	if ( ! Array.isArray( answer?.content ) ) {
+		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
+	}
+	const event = ( name: string, data: object ): AnswerEvent => ( { event: name, data } );
+	const events = [ event( 'message_start', { message: { usage: answer.usage ?? {} } } ) ];
+	answer.content.forEach( ( block: ContentBlock, index: number ) => {
+		if ( block.type === 'text' ) {
+			events.push(
+				event( 'content_block_start', { index, content_block: { ...block, text: '' } } ),
+				event( 'content_block_delta', {
+					index,
+					delta: { type: 'text_delta', text: block.text ?? '' },
+				} )
+			);
+		} else if ( block.type === 'thinking' ) {
+			events.push(
+				event( 'content_block_start', { index, content_block: { ...block, thinking: '' } } ),
+				event( 'content_block_delta', {
+					index,
+					delta: { type: 'thinking_delta', thinking: block.thinking ?? '' },
+				} )
+			);
+		} else if ( block.type === 'tool_use' ) {
+			events.push(
+				event( 'content_block_start', { index, content_block: { ...block, input: {} } } ),
+				event( 'content_block_delta', {
+					index,
+					delta: { type: 'input_json_delta', partial_json: JSON.stringify( block.input ?? {} ) },
+				} )
+			);
+		} else {
+			events.push( event( 'content_block_start', { index, content_block: block } ) );
+		}
+		events.push( event( 'content_block_stop', { index } ) );
+	} );
+	events.push(
+		event( 'message_delta', {
+			delta: { stop_reason: answer.stop_reason ?? null },
+			usage: { output_tokens: answer.usage?.output_tokens },
+		} )
+	);
+	return events;
+}
+
+/**
  * Applies the edits the model asked for, runs its reads, and builds the
  * results to send back.
  *
@@ -431,12 +483,13 @@ export function createAnthropicPlatform(
 			let failures = 0;
 			for (;;) {
 				const answer = await readAnthropicStream(
-					streamFromRelay( {
+					requestAnswer( {
 						provider: 'anthropic',
 						postId: getPostId(),
 						body: buildAnthropicBody( system, conversation, model ),
 						signal,
 						readError: readErrorMessage,
+						toEvents: toAnthropicEvents,
 					} ),
 					onEvent
 				);
