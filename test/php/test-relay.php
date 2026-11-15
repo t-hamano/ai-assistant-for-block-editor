@@ -122,27 +122,86 @@ class Test_Relay extends WP_UnitTestCase {
 
 	/**
 	 * Tests that the editor's own function tools are passed on.
+	 *
+	 * @dataProvider data_function_tools
+	 *
+	 * @param string $provider The provider ID.
+	 * @param array  $body     The request body.
 	 */
-	public function test_function_tools_are_passed_on() {
-		$tool     = array(
-			'name'         => 'edit_blocks',
-			'description'  => 'Edits the document.',
-			'input_schema' => array( 'type' => 'object' ),
-		);
+	public function test_function_tools_are_passed_on( $provider, $body ) {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+
 		$response = $this->chat(
 			array(
-				'body' => array(
-					'model'    => 'test-model',
-					'tools'    => array( $tool ),
-					'messages' => array(),
-				),
+				'provider' => $provider,
+				'body'     => $body,
 			)
 		);
 
 		$this->assertSame( 200, $response->get_status() );
 
-		$body = json_decode( $this->sent['args']['body'], true );
-		$this->assertSame( array( $tool ), $body['tools'] );
+		$sent = json_decode( $this->sent['args']['body'], true );
+		$this->assertSame( $body['tools'], $sent['tools'] );
+	}
+
+	/**
+	 * Bodies with the editor's own function tools.
+	 *
+	 * @return array
+	 */
+	public static function data_function_tools() {
+		return array(
+			'Anthropic' => array(
+				'anthropic',
+				array(
+					'model'    => 'test-model',
+					'tools'    => array(
+						array(
+							'name'                  => 'edit_blocks',
+							'description'           => 'Edits the document.',
+							'eager_input_streaming' => true,
+							'input_schema'          => array( 'type' => 'object' ),
+						),
+					),
+					'messages' => array(),
+				),
+			),
+			'OpenAI'    => array(
+				'openai',
+				array(
+					'model' => 'test-model',
+					'tools' => array(
+						array(
+							'type'        => 'function',
+							'name'        => 'edit_blocks',
+							'description' => 'Edits the document.',
+							'parameters'  => array( 'type' => 'object' ),
+							'strict'      => false,
+						),
+					),
+					'input' => array(),
+				),
+			),
+			'Google'    => array(
+				'google',
+				array(
+					'model'    => 'gemini-test',
+					'tools'    => array(
+						array(
+							'functionDeclarations' => array(
+								array(
+									'name'        => 'edit_blocks',
+									'description' => 'Edits the document.',
+									'parameters'  => array( 'type' => 'object' ),
+								),
+							),
+						),
+					),
+					'contents' => array(),
+				),
+			),
+		);
 	}
 
 	/**
