@@ -23,10 +23,37 @@ export type AiMessage =
 export type AiEdit =
 	| {
 			/**
-			 * `replace` replaces the selection it was given, and
-			 * `insert_after` inserts the markup after it.
+			 * Replaces the selection it was given.
 			 */
-			action: 'replace' | 'insert_after';
+			action: 'replace';
+			markup: string;
+	  }
+	| {
+			/**
+			 * Inserts the markup after the block whose reference ID is
+			 * `ref`, or without it, after the selection, or at the end of
+			 * the document when nothing is selected.
+			 */
+			action: 'insert_after';
+			markup: string;
+			ref?: string;
+	  }
+	| {
+			/**
+			 * Edits the block whose reference ID is `ref`, wherever the
+			 * selection is: `replace_block` replaces it with the markup,
+			 * `insert_before` inserts the markup before it, and
+			 * `delete_block` removes it, with an empty markup.
+			 */
+			action: 'replace_block' | 'insert_before' | 'delete_block';
+			ref: string;
+			markup: string;
+	  }
+	| {
+			/**
+			 * Adds the markup to the end of the document.
+			 */
+			action: 'append';
 			markup: string;
 	  }
 	| {
@@ -42,14 +69,17 @@ export type AiEdit =
 /**
  * What became of an edit:
  *
- * - `applied`: it changed the document.
+ * - `applied`: it changed the document. `refs` has the reference IDs of
+ *   the blocks it added, at the level they were added.
  * - `dropped`: the selection it was for no longer exists.
  * - `failed`: the model can fix it and try again, for example when its
  *   `find` text is not in the document. `reason` tells the model what went
  *   wrong.
  */
 export type AiEditResult =
-	{ status: 'applied' } | { status: 'dropped' } | { status: 'failed'; reason: string };
+	| { status: 'applied'; refs?: string[] }
+	| { status: 'dropped' }
+	| { status: 'failed'; reason: string };
 
 /**
  * What the model is doing while it is not writing text: `thinking` while it

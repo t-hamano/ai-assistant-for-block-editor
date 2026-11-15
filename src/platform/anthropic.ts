@@ -30,17 +30,38 @@ const MAX_FAILED_EDITS = 3;
  */
 export const EDIT_TOOL = {
 	name: 'edit_blocks',
-	description:
-		'Edits the document in the block editor. "replace" replaces the selected blocks with the markup, and "insert_after" inserts the markup after them, or at the end of the document when nothing is selected.',
+	description: [
+		'Edits the document in the block editor. Call it once for each change.',
+		'"replace" replaces the selected blocks with the markup. "insert_after" without "ref" inserts the markup after the selected blocks, or at the end of the document when nothing is selected.',
+		'With "ref", the reference ID of a block in the document, "replace_block" replaces that block, inner blocks included, "insert_before" and "insert_after" insert the markup before or after it, and "delete_block" removes it. "append" adds the markup to the end of the document.',
+	].join( ' ' ),
 	// Long markup arrives as it is written, instead of all at once at the end.
 	eager_input_streaming: true,
 	input_schema: {
 		type: 'object',
 		properties: {
-			action: { type: 'string', enum: [ 'replace', 'insert_after' ] },
-			markup: { type: 'string', description: 'The new content, as block markup.' },
+			action: {
+				type: 'string',
+				enum: [
+					'replace',
+					'insert_after',
+					'replace_block',
+					'insert_before',
+					'delete_block',
+					'append',
+				],
+			},
+			ref: {
+				type: 'string',
+				description:
+					'The reference ID of the block to edit, such as "b12", from the <!-- ref:b12 --> before it.',
+			},
+			markup: {
+				type: 'string',
+				description: 'The new content, as block markup. Empty for "delete_block".',
+			},
 		},
-		required: [ 'action', 'markup' ],
+		required: [ 'action' ],
 	},
 };
 
@@ -52,6 +73,20 @@ type ContentBlock = { type: string; [ key: string ]: unknown };
 type AnthropicMessage = { role: 'user' | 'assistant'; content: ContentBlock[] };
 
 const APPLIED = 'The edit was applied.';
+
+/**
+ * Tells the model its edit was applied, and the reference IDs of the blocks
+ * it added, so it can edit them again.
+ *
+ * @param refs The reference IDs of the added blocks.
+ * @return The result.
+ */
+function describeApplied( refs: string[] | undefined ): string {
+	if ( ! refs?.length ) {
+		return APPLIED;
+	}
+	return `${ APPLIED } The reference IDs of the new blocks are ${ refs.join( ', ' ) }.`;
+}
 
 /**
  * Converts the conversation into Anthropic's messages.
@@ -122,9 +157,24 @@ export function buildAnthropicBody( system: string, messages: AnthropicMessage[]
  * @return The edit, or `null` when the input does not match the tool.
  */
 function toEdit( input: unknown ): AiEdit | null {
-	const { action, markup } = ( input ?? {} ) as Record< string, unknown >;
-	if ( ( action === 'replace' || action === 'insert_after' ) && typeof markup === 'string' ) {
-		return { action, markup };
+	const { action, markup = '', ref } = ( input ?? {} ) as Record< string, unknown >;
+	if ( typeof markup !== 'string' || ( ref !== undefined && typeof ref !== 'string' ) ) {
+		return null;
+	}
+	switch ( action ) {
+		case 'replace':
+		case 'append':
+			return markup ? { action, markup } : null;
+		case 'insert_after':
+			if ( ! markup ) {
+				return null;
+			}
+			return ref ? { action, ref, markup } : { action, markup };
+		case 'replace_block':
+		case 'insert_before':
+			return ref && markup ? { action, ref, markup } : null;
+		case 'delete_block':
+			return ref ? { action, ref, markup: '' } : null;
 	}
 	return null;
 }
@@ -298,7 +348,7 @@ function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] 
 			} else if ( ! edit ) {
 				result = {
 					status: 'failed',
-					reason: `Call ${ EDIT_TOOL.name } with "action" set to "replace" or "insert_after", and "markup" set to block markup.`,
+					reason: `Call ${ EDIT_TOOL.name } with "action" set to one of ${ EDIT_TOOL.input_schema.properties.action.enum.join( ', ' ) }, "markup" set to block markup, and for "replace_block", "insert_before", and "delete_block", "ref" set to the reference ID of a block.`,
 				};
 			} else {
 				result = onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' };
@@ -312,7 +362,7 @@ function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] 
 				tool_use_id: id,
 				content:
 					result.status === 'applied'
-						? APPLIED
+						? describeApplied( result.refs )
 						: 'The selected blocks no longer exist, so the edit was not applied.',
 			};
 		} );

@@ -286,4 +286,47 @@ describe( 'createAnthropicPlatform', () => {
 		expect( bodies[ 1 ].messages[ 2 ].content[ 0 ] ).toMatchObject( { is_error: true } );
 		expect( onEvent ).not.toHaveBeenCalledWith( expect.objectContaining( { type: 'edit' } ) );
 	} );
+
+	it( 'reads the edits by reference ID, and tells the model the IDs of new blocks', async () => {
+		const edit = { action: 'replace_block', ref: 'b2', markup: EDIT.markup };
+		const bodies = respond(
+			toolCall( JSON.stringify( edit ) ),
+			toolCall( '{"action":"delete_block","ref":"b3"}' ),
+			text
+		);
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'applied' as const, refs: [ 'b7' ] } : undefined
+		);
+
+		await createAnthropicPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite this' } ],
+			onEvent,
+			signal: new AbortController().signal,
+		} );
+
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'edit', edit } );
+		expect( onEvent ).toHaveBeenCalledWith( {
+			type: 'edit',
+			edit: { action: 'delete_block', ref: 'b3', markup: '' },
+		} );
+		expect( bodies[ 1 ].messages[ 2 ].content[ 0 ].content ).toBe(
+			'The edit was applied. The reference IDs of the new blocks are b7.'
+		);
+	} );
+
+	it( 'fails an edit by reference ID without the ID', async () => {
+		const bodies = respond( toolCall( '{"action":"replace_block","markup":"x"}' ), text );
+		const onEvent = vi.fn();
+
+		await createAnthropicPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite this' } ],
+			onEvent,
+			signal: new AbortController().signal,
+		} );
+
+		expect( bodies[ 1 ].messages[ 2 ].content[ 0 ] ).toMatchObject( { is_error: true } );
+		expect( onEvent ).not.toHaveBeenCalledWith( expect.objectContaining( { type: 'edit' } ) );
+	} );
 } );

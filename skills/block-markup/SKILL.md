@@ -142,8 +142,12 @@ A `core/html` block that is already in the document stays exactly as it is, also
 ## Editing
 
 - Change only what the user asked for. Keep other text, blocks, attributes, classes, styles, and IDs exactly as they are.
+- When there is a selection, edit the selection first, with `replace` and `insert_after`. Edit other blocks by their reference IDs only when the request is about them.
 - `replace` replaces all the selected blocks. Write every selected block in your markup, also the ones that do not change. A block you leave out is deleted.
+- `replace_block` replaces one block with everything inside it. When you change a parent, write all its inner blocks too. To change one inner block, point `replace_block` at that inner block instead of its parent.
+- Change the smallest block that holds the change. Rewording one paragraph in a group replaces that paragraph, not the group.
+- To remove a block, use `delete_block`. Do not replace it with empty markup.
 - Keep the block type unless the user asks for another one. Rewording a paragraph keeps it a paragraph.
 - Keep the existing attributes of a block when you change its text, and keep the existing inner blocks when you change its parent.
 - Write the markup the current version of the block saves, also when the document has an older form of it.
-- Do not add HTML comments of your own. The only comments in your markup are block delimiters.
+- Do not add HTML comments of your own. The only comments in your markup are block delimiters. Reference IDs such as `<!-- ref:b12 -->` only point at blocks: leave them out of your markup.
