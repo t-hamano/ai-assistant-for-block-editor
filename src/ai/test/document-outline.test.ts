@@ -130,11 +130,13 @@ describe( 'readDocument', () => {
 		} );
 	} );
 
-	it( 'shows a block too long to read at once as an outline', () => {
-		const huge = group( 'b1', paragraph( 'b2', 'x'.repeat( LONG_DOCUMENT ) ) );
+	it( 'shows a block too long to read at once without its nested blocks', () => {
+		const quote = ( inner: string ) =>
+			`<!-- ref:b1 --><!-- wp:quote -->\n<blockquote class="wp-block-quote">${ inner }<cite>Someone</cite></blockquote>\n<!-- /wp:quote -->`;
+		const huge = quote( paragraph( 'b2', 'x'.repeat( LONG_DOCUMENT ) ) );
 		const result = readDocument( huge, { tool: 'read_blocks', refs: [ 'b1' ] } );
 		expect( result.status === 'done' && result.content ).toContain(
-			'\nb1 core/group\n  b2 core/paragraph: x'
+			`\n${ quote( '<!-- nested block b2 -->' ) }\n  b2 core/paragraph: x`
 		);
 	} );
 

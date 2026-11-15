@@ -284,6 +284,24 @@ export function formatOutline( document: string, selection: string ): string {
 }
 
 /**
+ * Returns the block's markup with each of its nested blocks replaced by a
+ * comment that names it, so its own attributes and content can be read.
+ *
+ * @param document The document.
+ * @param block    The block.
+ * @return The markup.
+ */
+function withoutChildren( document: string, block: OutlineBlock ): string {
+	let markup = '';
+	let end = block.start;
+	for ( const child of block.children ) {
+		markup += `${ document.slice( end, child.start ) }<!-- nested block ${ child.ref || child.name } -->`;
+		end = child.end;
+	}
+	return markup + document.slice( end, block.end );
+}
+
+/**
  * Returns the markup of the blocks with the reference IDs. A block too
  * long to read at once is shown as an outline, so its nested blocks can be
  * read one by one.
@@ -307,8 +325,9 @@ function readBlocks( document: string, refs: string[] ): AiReadResult {
 			// A block without nested blocks can only be read as a whole.
 			markup.length > LONG_DOCUMENT && block.children.length
 				? [
-						`Block ${ block.ref } is too long to read at once. These are its nested blocks; read them instead.`,
-						formatLines( flatten( block ) ),
+						`Block ${ block.ref } is too long to read at once. This is its own markup, with each nested block in a <!-- nested block ... --> comment, and the outline of its nested blocks after it. Read the nested blocks separately.`,
+						withoutChildren( document, block ),
+						formatLines( flatten( block ).slice( 1 ) ),
 					].join( '\n' )
 				: markup
 		);
