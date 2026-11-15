@@ -14,7 +14,7 @@ import {
 	toUserText,
 	type Conversation,
 } from './conversation';
-import { applyChange, buildMessageContext } from './document-context';
+import { buildMessageContext } from './document-context';
 import type { EditTarget } from './edit-target';
 import { buildSystemPrompt } from './prompt';
 import type { AiEditResult, AiPlatform } from '../platform';
@@ -125,10 +125,11 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 					}
 					const before = target ? target.getDocument() : '';
 					const result: AiEditResult = target ? target.apply( event.edit ) : { status: 'dropped' };
-					if ( target && result.status === 'applied' && seenDocument !== undefined ) {
-						// When the edit does not fit, the next message sends
-						// the whole document.
-						seenDocument = applyChange( seenDocument, before, target.getDocument() ) ?? undefined;
+					if ( target && result.status === 'applied' ) {
+						// When the user also changed the document, the model
+						// does not know it, so the next message sends the
+						// whole document.
+						seenDocument = seenDocument === before ? target.getDocument() : undefined;
 					}
 					// The model tries again after a failed edit, so the
 					// answer shows only the edit that changed the document,
