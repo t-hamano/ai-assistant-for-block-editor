@@ -10,7 +10,7 @@ import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@word
 /**
  * Internal dependencies
  */
-import type { AssistantChatMessage, ChatMessage } from '../ai/conversation';
+import type { AssistantChatMessage } from '../ai/conversation';
 import type { AiChat } from '../ai/use-ai-chat';
 import { AnswerMarkdown } from './answer-markdown';
 import './style.scss';
@@ -71,17 +71,6 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 				</Notice.Root>
 			) }
 		</Stack>
-	);
-}
-
-function Message( { message }: { message: ChatMessage } ) {
-	if ( message.role === 'assistant' ) {
-		return <AssistantMessage message={ message } />;
-	}
-	return (
-		<Text className="aabe-chat__message is-user" render={ <div /> }>
-			{ message.text }
-		</Text>
 	);
 }
 
@@ -155,9 +144,15 @@ export function Chat( { chat, isAvailable }: Props ) {
 						) }
 					</Text>
 				) }
-				{ conversation.messages.map( ( message ) => (
-					<Message key={ message.id } message={ message } />
-				) ) }
+				{ conversation.messages.map( ( message ) =>
+					message.role === 'assistant' ? (
+						<AssistantMessage key={ message.id } message={ message } />
+					) : (
+						<Text key={ message.id } className="aabe-chat__message is-user" render={ <div /> }>
+							{ message.text }
+						</Text>
+					)
+				) }
 			</Stack>
 			<Stack
 				render={
