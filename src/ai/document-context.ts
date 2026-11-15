@@ -16,22 +16,6 @@ function formatDocument( document: string ): string {
 }
 
 /**
- * Applies to the document as the model knows it a change made to the
- * document in the editor, such as the model's edit. When the editor's
- * document holds changes the model has not been told about, the change is
- * not applied, so the next message sends the whole document.
- *
- * @param seen   The document as the model knows it.
- * @param before The editor's document before the change.
- * @param after  The editor's document after the change.
- * @return The document as the model knows it, with the change, or `null`
- *         when the model does not know the document before the change.
- */
-export function applyChange( seen: string, before: string, after: string ): string | null {
-	return seen === before ? after : null;
-}
-
-/**
  * Describes the selection. It is empty when nothing is selected.
  *
  * @param context The selection and the document.
