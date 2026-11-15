@@ -62,14 +62,14 @@ export function formatUsage( usage: AiUsage ) {
 
 	return cached
 		? sprintf(
-				/* translators: 1: Input tokens. 2: Cached input tokens. 3: Output tokens. */
+				/* translators: 1: Input tokens. 2: Cached input tokens. 3: Output tokens. Example: "12,345 input tokens (10,000 cached), 678 output tokens". */
 				__( '%1$s %2$s, %3$s', 'ai-content-editing-assistant' ),
 				input,
 				cached,
 				output
 			)
 		: sprintf(
-				/* translators: 1: Input tokens. 2: Output tokens. */
+				/* translators: 1: Input tokens. 2: Output tokens. Example: "12,345 input tokens, 678 output tokens". */
 				__( '%1$s, %2$s', 'ai-content-editing-assistant' ),
 				input,
 				output
