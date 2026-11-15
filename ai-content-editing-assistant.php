@@ -10,7 +10,6 @@
  * License: GPL2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: ai-content-editing-assistant
- * Update URI: https://github.com/t-hamano/ai-content-editing-assistant
  *
  * @package AI_Content_Editing_Assistant
  * @author Aki Hamano
