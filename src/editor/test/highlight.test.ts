@@ -209,9 +209,9 @@ describe( 'highlightChanges', () => {
 		dispatch( blockEditorStore ).updateBlockAttributes( one, { content: 'One more' } );
 		render( one, 'One more' );
 		flushSync( () => highlightChanges( before ) );
-		vi.advanceTimersByTime( 16 );
+		flushSync( () => vi.advanceTimersByTime( 16 ) );
 
-		expect( container.querySelector( 'p' )?.className ).toBe( HIGHLIGHT_CLASS_NAME );
+		expect( container.querySelector( 'p' )?.className ).not.toContain( HIGHLIGHT_CLASS_NAME );
 		expect( highlights.get( TEXT_HIGHLIGHT_NAME )?.ranges[ 0 ].toString() ).toBe( ' more' );
 
 		flushSync( () => vi.advanceTimersByTime( HIGHLIGHT_DURATION ) );
@@ -226,9 +226,25 @@ describe( 'highlightChanges', () => {
 		dispatch( blockEditorStore ).replaceBlocks( [ one ], [ text ], undefined, null );
 		render( text.clientId, 'Ones' );
 		flushSync( () => highlightChanges( before ) );
-		vi.advanceTimersByTime( 16 );
+		flushSync( () => vi.advanceTimersByTime( 16 ) );
 
 		expect( highlights.get( TEXT_HIGHLIGHT_NAME )?.ranges[ 0 ].toString() ).toBe( 's' );
+	} );
+
+	it( 'highlights the whole block when there is no text to compare with', () => {
+		setUp();
+		const before = takeBlockSnapshot();
+		const text = createBlock( 'test/text', { content: 'New' } );
+		dispatch( blockEditorStore ).insertBlocks( [ text ], 0, undefined, false );
+		render( text.clientId, 'New' );
+		flushSync( () => highlightChanges( before ) );
+		flushSync( () => vi.advanceTimersByTime( 16 ) );
+
+		expect( container.querySelector( 'p' )?.className ).toBe( HIGHLIGHT_CLASS_NAME );
+		expect( highlights.has( TEXT_HIGHLIGHT_NAME ) ).toBe( false );
+
+		flushSync( () => vi.advanceTimersByTime( HIGHLIGHT_DURATION ) );
+		expect( container.querySelector( 'p' )?.className ).not.toContain( HIGHLIGHT_CLASS_NAME );
 	} );
 
 	it( 'announces the change', () => {

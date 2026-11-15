@@ -4,7 +4,7 @@
 import { speak } from '@wordpress/a11y';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { select } from '@wordpress/data';
-import { createElement, useEffect, useSyncExternalStore } from '@wordpress/element';
+import { createElement, useEffect, useState, useSyncExternalStore } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
 import { _n, sprintf } from '@wordpress/i18n';
 
@@ -236,18 +236,26 @@ function paintTextHighlight() {
 	paintedViews = new Set( rangesByView.keys() );
 }
 
-function highlightText( clientId: string ) {
+/**
+ * Colors the text that changed in the block.
+ *
+ * @param clientId The block's client ID.
+ * @return Whether some text was colored.
+ */
+function highlightText( clientId: string ): boolean {
 	const previous = previousTexts.get( clientId );
 	const element = getBlockElement( clientId );
 	if ( previous === undefined || ! element ) {
-		return;
+		return false;
 	}
 	const changed = diffText( previous, element.textContent ?? '' );
 	const range = changed && createTextRange( element, changed.start, changed.end );
-	if ( range ) {
-		textRanges.set( clientId, range );
-		paintTextHighlight();
+	if ( ! range ) {
+		return false;
 	}
+	textRanges.set( clientId, range );
+	paintTextHighlight();
+	return true;
 }
 
 function clearTextHighlight( clientId: string ) {
@@ -403,8 +411,8 @@ type BlockListBlockProps = {
 };
 
 /**
- * Adds the highlight class to the changed blocks, and colors their changed
- * text.
+ * Colors the changed text of the changed blocks. A block whose changed text
+ * cannot be found, such as a new block, gets the highlight class instead.
  *
  * @param BlockListBlock The block's component in the editor.
  * @return The component with the highlight.
@@ -415,7 +423,7 @@ export function withChangeHighlight< P extends BlockListBlockProps >(
 	return function ChangeHighlight( props: P ) {
 		const { clientId, className } = props;
 		const changedAt = useSyncExternalStore( subscribe, () => highlighted.get( clientId ) ?? 0 );
-		const isChanged = changedAt !== 0;
+		const [ hasNoText, setHasNoText ] = useState( false );
 
 		useEffect( () => {
 			if ( ! changedAt ) {
@@ -427,19 +435,21 @@ export function withChangeHighlight< P extends BlockListBlockProps >(
 					scrollTarget = null;
 					scrollIntoViewIfNeeded( clientId );
 				}
-				highlightText( clientId );
+				setHasNoText( ! highlightText( clientId ) );
 			} );
 			return () => {
 				window.cancelAnimationFrame( frame );
 				clearTextHighlight( clientId );
+				setHasNoText( false );
 			};
 		}, [ changedAt, clientId ] );
 
 		return createElement( BlockListBlock as ( props: P ) => null, {
 			...props,
-			className: isChanged
-				? [ className, HIGHLIGHT_CLASS_NAME ].filter( Boolean ).join( ' ' )
-				: className,
+			className:
+				changedAt && hasNoText
+					? [ className, HIGHLIGHT_CLASS_NAME ].filter( Boolean ).join( ' ' )
+					: className,
 		} );
 	};
 }
