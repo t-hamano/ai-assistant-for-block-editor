@@ -1,8 +1,25 @@
 /**
+ * Internal dependencies
+ */
+import blockMarkupSkill from '../../skills/block-markup/SKILL.md?raw';
+
+/**
+ * Removes the frontmatter from a skill. It records which versions the skill
+ * was written for, which the model does not need.
+ *
+ * @param skill The skill file.
+ * @return The skill without its frontmatter.
+ */
+export function stripFrontmatter( skill: string ): string {
+	return skill.replace( /^---\n[\s\S]*?\n---\n+/, '' ).trim();
+}
+
+/**
  * Builds the instructions sent to the model with each message. The
  * document is not part of them: it goes with the user's messages, so the
  * instructions stay the same through the conversation and the prompt cache
- * covers them, together with the messages before the new one.
+ * covers them, together with the messages before the new one. When the
+ * document can be edited, the rules for writing block markup follow.
  *
  * @param document The document, or `null` when the editor cannot provide
  *                 it.
@@ -28,7 +45,11 @@ export function buildSystemPrompt( document: string | null ): string {
 		'When the user asks you to write or change content, edit the document with the edit_blocks tool, in block markup. Use "replace" to replace the selected blocks, and "insert_after" to add blocks after them. Do not include the <selection> tags in your markup.',
 		'When there is a selection, edit it. When nothing is selected, "insert_after" adds blocks to the end of the document. To change existing content, ask the user to select the blocks first.',
 		'When the user only asks a question, answer it without editing.',
-		'After editing, briefly say what you changed. Do not repeat the content you wrote.'
+		'After editing, briefly say what you changed. Do not repeat the content you wrote.',
+		'Follow the rules in <skill name="block-markup"> whenever you write block markup.'
 	);
-	return lines.join( '\n' );
+	return [
+		lines.join( '\n' ),
+		`<skill name="block-markup">\n${ stripFrontmatter( blockMarkupSkill ) }\n</skill>`,
+	].join( '\n\n' );
 }
