@@ -35,6 +35,11 @@ class Enqueue {
 			return;
 		}
 
+		// The assistant needs an API key, so it is not shown at all without one.
+		if ( ! Api_Key::has_any() ) {
+			return;
+		}
+
 		// The widgets editor and the customizer have no editor sidebar.
 		if ( wp_script_is( 'wp-edit-widgets' ) || wp_script_is( 'wp-customize-widgets' ) ) {
 			return;
