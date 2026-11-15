@@ -5,9 +5,9 @@ import { store as blockEditorStore } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
-import { arrowUp } from '@wordpress/icons';
+import { arrowUp, blockDefault, typography } from '@wordpress/icons';
 import { isKeyboardEvent } from '@wordpress/keycodes';
-import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
+import { Icon, IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -138,23 +138,30 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 
 /**
  * Describes what is selected in the editor now, which is sent with the
- * next message: "Text selected" or "3 blocks selected", or nothing.
+ * next message: "Text selected" or "3 blocks selected" with an icon, or
+ * nothing.
  */
-function useSelectionLabel() {
+function useSelectionStatus() {
 	return useSelect( ( select ) => {
 		const editor = select( blockEditorStore );
 		if ( getTextSelection( editor ) ) {
-			return __( 'Text selected', 'ai-content-editing-assistant' );
+			return {
+				icon: typography,
+				label: __( 'Text selected', 'ai-content-editing-assistant' ),
+			};
 		}
 		const count = editor.getSelectedBlockClientIds().length;
 		if ( ! count ) {
-			return '';
+			return null;
 		}
-		return sprintf(
-			/* translators: %d: Number of selected blocks. */
-			_n( '%d block selected', '%d blocks selected', count, 'ai-content-editing-assistant' ),
-			count
-		);
+		return {
+			icon: blockDefault,
+			label: sprintf(
+				/* translators: %d: Number of selected blocks. */
+				_n( '%d block selected', '%d blocks selected', count, 'ai-content-editing-assistant' ),
+				count
+			),
+		};
 	}, [] );
 }
 
@@ -176,7 +183,7 @@ type Props = {
 export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
 	const messagesRef = useRef< HTMLDivElement >( null );
-	const selectionLabel = useSelectionLabel();
+	const selection = useSelectionStatus();
 
 	// Keep the latest message in view while the answer streams in.
 	useEffect( () => {
@@ -281,13 +288,20 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					disabled={ ! isAvailable }
 				/>
 				<Stack direction="row" align="center" justify="space-between" gap="sm">
-					<Text
-						variant="body-sm"
+					<Stack
 						className="ai-content-editing-assistant-chat__selection"
+						direction="row"
+						align="center"
+						gap="xs"
 						aria-live="polite"
 					>
-						{ isAvailable && selectionLabel }
-					</Text>
+						{ isAvailable && selection && (
+							<>
+								<Icon icon={ selection.icon } />
+								<Text variant="body-sm">{ selection.label }</Text>
+							</>
+						) }
+					</Stack>
 					{ isResponding ? (
 						<IconButton
 							icon={ stopIcon }
