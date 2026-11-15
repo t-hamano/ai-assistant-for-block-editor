@@ -21,11 +21,20 @@ export function stripFrontmatter( skill: string ): string {
  * covers them, together with the messages before the new one. When the
  * document can be edited, the rules for writing block markup follow.
  *
+ * The site information, when given, follows the rules. It describes the
+ * blocks, presets, and settings of the site, which stay the same through
+ * the conversation, so it is part of the cached instructions too.
+ *
  * @param document The document, or `null` when the editor cannot provide
  *                 it.
+ * @param siteInfo The site information, or `null` when it is not
+ *                 available.
  * @return The system prompt.
  */
-export function buildSystemPrompt( document: string | null ): string {
+export function buildSystemPrompt(
+	document: string | null,
+	siteInfo: string | null = null
+): string {
 	const lines = [
 		'You are the AI assistant of the WordPress block editor. Help the user write and edit their document.',
 		'Answer in the language the user writes in.',
@@ -53,8 +62,14 @@ export function buildSystemPrompt( document: string | null ): string {
 		'After editing, briefly say what you changed. Do not repeat the content you wrote.',
 		'Follow the rules in <skill name="block-markup"> whenever you write block markup.'
 	);
+	if ( siteInfo ) {
+		lines.push(
+			'<site-info> describes the blocks and the theme.json settings of this site. The skill explains how to read it.'
+		);
+	}
 	return [
 		lines.join( '\n' ),
 		`<skill name="block-markup">\n${ stripFrontmatter( blockMarkupSkill ) }\n</skill>`,
+		...( siteInfo ? [ `<site-info>\n${ siteInfo.trim() }\n</site-info>` ] : [] ),
 	].join( '\n\n' );
 }

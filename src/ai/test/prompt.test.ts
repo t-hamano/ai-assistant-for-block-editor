@@ -62,6 +62,23 @@ describe( 'buildSystemPrompt', () => {
 		);
 	} );
 
+	it( 'adds the site information after the rules', () => {
+		const prompt = buildSystemPrompt( '# Title\n', '## Blocks\n\n- `my-plugin/card`\n' );
+		expect( prompt ).toContain( '<site-info> describes the blocks and the theme.json settings' );
+		expect( prompt ).toMatch(
+			/<\/skill>\n\n<site-info>\n## Blocks\n\n- `my-plugin\/card`\n<\/site-info>$/
+		);
+	} );
+
+	it( 'leaves the site information out when there is none', () => {
+		const prompt = buildSystemPrompt( '# Title\n' );
+		expect( prompt ).not.toContain( '</site-info>' );
+	} );
+
+	it( 'leaves the site information out when the document is not available', () => {
+		expect( buildSystemPrompt( null, '## Blocks\n' ) ).not.toContain( '</site-info>' );
+	} );
+
 	it( 'asks for answers only when the document is not available', () => {
 		const prompt = buildSystemPrompt( null );
 		expect( prompt ).toContain( 'you cannot edit it' );
