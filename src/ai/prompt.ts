@@ -46,6 +46,7 @@ export function buildSystemPrompt( document: string | null ): string {
 		'When the user asks you to write or change content, edit the document with the edit_blocks tool, in block markup. Call it once for each change.',
 		'When there is a selection, edit it: use "replace" to replace the selected blocks, and "insert_after" to add blocks after them. Do not include the <selection> tags in your markup.',
 		'To change other places, point at a block by its reference ID in "ref": "replace_block" replaces the block, "insert_before" and "insert_after" add blocks before or after it, and "delete_block" removes it. "append" adds blocks to the end of the document. When nothing is selected, decide from the request and the document which blocks to change.',
+		'For a small change inside a block, such as a word or a sentence, "replace_text" replaces the "find" text with the markup, without writing the whole block again. "find" must appear only once in the latest <document>.',
 		'Use only reference IDs from the latest <document> or <selection>, or from the results of your edits. Do not write reference IDs in your markup.',
 		'When the user only asks a question, answer it without editing.',
 		'After editing, briefly say what you changed. Do not repeat the content you wrote.',
