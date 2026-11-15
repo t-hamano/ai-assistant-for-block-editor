@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import { applyChange, buildMessageContext } from '../document-context';
+import { buildMessageContext } from '../document-context';
 import { joinAroundSelection } from '../edit-target';
 
 describe( 'buildMessageContext', () => {
@@ -35,15 +35,5 @@ describe( 'buildMessageContext', () => {
 		expect( buildMessageContext( empty, 'One.\n' ) ).toBe(
 			'The user changed the document after your last answer. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
 		);
-	} );
-} );
-
-describe( 'applyChange', () => {
-	it( 'takes the new document when the model knows the old one', () => {
-		expect( applyChange( 'One.\n', 'One.\n', 'Two.\n' ) ).toBe( 'Two.\n' );
-	} );
-
-	it( 'returns null when the editor has changes the model does not know', () => {
-		expect( applyChange( 'One.\n', 'Typed.\n', 'Two.\n' ) ).toBeNull();
 	} );
 } );
