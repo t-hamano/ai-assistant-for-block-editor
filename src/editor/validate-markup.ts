@@ -332,18 +332,51 @@ export function validateMarkup(
 }
 
 /**
- * The text of the markup, without its tags, comments, and the whitespace
- * between them.
+ * Elements that show content without text.
+ */
+const MEDIA_ELEMENTS = [
+	'audio',
+	'canvas',
+	'embed',
+	'iframe',
+	'img',
+	'object',
+	'picture',
+	'source',
+	'svg',
+	'track',
+	'video',
+];
+
+/**
+ * Attributes that point at content: media and links.
+ */
+const CONTENT_ATTRIBUTES =
+	/\b(?:src|srcset|href|poster|data)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+
+/**
+ * What the markup shows: its text, without its tags, comments, and the
+ * whitespace between them, and its media and the URLs it points at, which
+ * have no text to compare.
  *
  * @param markup The markup.
- * @return The text.
+ * @return What it shows.
  */
-function toText( markup: string ): string {
-	return markup
-		.replace( /<!--[\s\S]*?-->/g, ' ' )
+function toContent( markup: string ): string {
+	const html = markup.replace( /<!--[\s\S]*?-->/g, ' ' );
+	const text = html
 		.replace( /<[^>]*>/g, ' ' )
 		.replace( /\s+/g, ' ' )
 		.trim();
+	const media = [ ...html.matchAll( /<([a-z][a-z0-9-]*)\b[^>]*>/gi ) ].flatMap(
+		( [ tag, name ] ) => [
+			...( MEDIA_ELEMENTS.includes( name.toLowerCase() ) ? [ name.toLowerCase() ] : [] ),
+			...[ ...tag.matchAll( CONTENT_ATTRIBUTES ) ].map(
+				( match ) => match[ 1 ] ?? match[ 2 ] ?? match[ 3 ]
+			),
+		]
+	);
+	return JSON.stringify( [ text, media ] );
 }
 
 /**
@@ -370,8 +403,8 @@ function rebuild( blocks: Block[], changes: string[] ): Block[] {
 
 /**
  * Fixes markup whose only problem is HTML that drifted from what the
- * blocks' attributes write. The fix is used only when it keeps the text and
- * the fixed markup passes every check.
+ * blocks' attributes write. The fix is used only when it keeps the text,
+ * media, and links, and the fixed markup passes every check.
  *
  * @param markup       The model's markup.
  * @param blocks       Its parsed blocks.
@@ -385,7 +418,7 @@ function autoFix(
 ): MarkupValidation | undefined {
 	const changes: string[] = [];
 	const fixedMarkup = serialize( rebuild( blocks, changes ) );
-	if ( toText( fixedMarkup ) !== toText( markup ) ) {
+	if ( toContent( fixedMarkup ) !== toContent( markup ) ) {
 		return undefined;
 	}
 	const fixed = parse( fixedMarkup );

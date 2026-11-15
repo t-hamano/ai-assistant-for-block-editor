@@ -130,6 +130,19 @@ describe( 'validateMarkup', () => {
 		);
 	} );
 
+	it( 'does not fix HTML when the fix would lose media or links', () => {
+		for ( const extra of [ '<img src="photo.jpg" alt="">', '<a href="/page"></a>' ] ) {
+			const result = validateMarkup(
+				`<!-- wp:test/group -->\n<div>${ extra }${ text( 'One' ) }</div>\n<!-- /wp:test/group -->`
+			);
+
+			expect( result.autoFix ).toBeUndefined();
+			expect( result.problems ).toEqual( [
+				expect.stringContaining( 'does not match its attributes' ),
+			] );
+		}
+	} );
+
 	it( 'does not fix drifted HTML when the markup has other problems', () => {
 		const result = validateMarkup(
 			`<!-- wp:test/text {"align":"left"} -->\n<p>One</p>\n<!-- /wp:test/text -->\n\n${ text(
