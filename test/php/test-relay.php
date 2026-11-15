@@ -91,6 +91,7 @@ class Test_Relay extends WP_UnitTestCase {
 		$this->assertSame( 'https://api.anthropic.com/v1/messages', $this->sent['url'] );
 		$this->assertSame( 'test-key', $this->sent['args']['headers']['x-api-key'] );
 		$this->assertSame( '2023-06-01', $this->sent['args']['headers']['anthropic-version'] );
+		$this->assertSame( 0, $this->sent['args']['redirection'] );
 
 		$body = json_decode( $this->sent['args']['body'], true );
 		$this->assertSame( 'test-model', $body['model'] );
