@@ -10,7 +10,7 @@
  */
 export function buildSystemPrompt( document: string | null ): string {
 	const lines = [
-		'You are the AI assistant of MarkBricks, a Markdown editor. Help the user write and edit their document.',
+		'You are the AI assistant of the WordPress block editor. Help the user write and edit their document.',
 		'Answer in the language the user writes in.',
 	];
 
