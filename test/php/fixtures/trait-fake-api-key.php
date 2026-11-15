@@ -34,7 +34,7 @@ trait AI_Content_Editing_Assistant_Fake_Api_Key {
 	public function tear_down() {
 		$registry = AiClient::defaultRegistry();
 
-		foreach ( array( AI_Content_Editing_Assistant_Fake_Provider::class, AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class ) as $provider ) {
+		foreach ( array( AI_Content_Editing_Assistant_Fake_Provider::class, AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class, AI_Content_Editing_Assistant_Fake_Google_Provider::class ) as $provider ) {
 			if ( $registry->hasProvider( $provider::ID ) ) {
 				$this->set_fake_api_key( '', $provider );
 			}

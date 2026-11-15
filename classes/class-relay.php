@@ -27,6 +27,9 @@ class Relay {
 	 *
 	 * `url` takes chat requests, and `models` lists the provider's models.
 	 * `key_prefix` goes before the key in its header, such as `Bearer `.
+	 * A provider with `stream_url` takes streamed requests there instead of
+	 * with `stream` in the body. `{model}` in either address is replaced with
+	 * the body's `model`, which is then taken out of the body.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
@@ -43,6 +46,13 @@ class Relay {
 			'headers'    => array(),
 			'key'        => 'authorization',
 			'key_prefix' => 'Bearer ',
+		),
+		'google'    => array(
+			'url'        => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+			'stream_url' => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse',
+			'models'     => 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+			'headers'    => array(),
+			'key'        => 'x-goog-api-key',
 		),
 	);
 
@@ -144,10 +154,32 @@ class Relay {
 			)
 		);
 
-		$body['stream'] = $stream;
+		$url = $stream && isset( $provider['stream_url'] ) ? $provider['stream_url'] : $provider['url'];
+
+		if ( isset( $provider['stream_url'] ) ) {
+			unset( $body['stream'] );
+		} else {
+			$body['stream'] = $stream;
+		}
+
+		if ( str_contains( $url, '{model}' ) ) {
+			$model = $body['model'] ?? null;
+
+			// The model is part of the address, so it must not change where the request goes.
+			if ( ! is_string( $model ) || ! preg_match( '/^[a-z0-9][a-z0-9._-]*$/i', $model ) ) {
+				return new WP_Error(
+					'ai_content_editing_assistant_invalid_model',
+					__( 'The model is not valid.', 'ai-content-editing-assistant' ),
+					array( 'status' => 400 )
+				);
+			}
+
+			unset( $body['model'] );
+			$url = str_replace( '{model}', $model, $url );
+		}
 
 		if ( $stream ) {
-			$error = ( new Stream() )->send( $provider['url'], $headers, wp_json_encode( $body ) );
+			$error = ( new Stream() )->send( $url, $headers, wp_json_encode( $body ) );
 
 			if ( $error ) {
 				return $error;
@@ -158,7 +190,7 @@ class Relay {
 		}
 
 		$response = wp_remote_post(
-			$provider['url'],
+			$url,
 			array(
 				'headers' => $headers,
 				'body'    => wp_json_encode( $body ),

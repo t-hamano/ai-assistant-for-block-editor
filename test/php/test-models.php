@@ -135,6 +135,51 @@ class Test_Models extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests that Google's models are listed by their ID, without the models that cannot chat.
+	 */
+	public function test_lists_the_google_models() {
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+		$this->answer = $this->response(
+			200,
+			array(
+				'models' => array(
+					array(
+						'name'                       => 'models/gemini-a',
+						'displayName'                => 'Gemini A',
+						'supportedGenerationMethods' => array( 'generateContent', 'countTokens' ),
+					),
+					array(
+						'name'                       => 'models/embedding-a',
+						'displayName'                => 'Embedding A',
+						'supportedGenerationMethods' => array( 'embedContent' ),
+					),
+					array( 'name' => 'models/gemini-b' ),
+					array( 'displayName' => 'No name' ),
+				),
+			)
+		);
+
+		$response = $this->list_models( 'google' );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame(
+			array(
+				array(
+					'id'   => 'gemini-a',
+					'name' => 'Gemini A',
+				),
+				array(
+					'id'   => 'gemini-b',
+					'name' => 'gemini-b',
+				),
+			),
+			$response->get_data()
+		);
+		$this->assertSame( 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', $this->sent[0]['url'] );
+		$this->assertSame( 'google-key', $this->sent[0]['args']['headers']['x-goog-api-key'] );
+	}
+
+	/**
 	 * Tests that the list is kept, so the provider is asked only once.
 	 */
 	public function test_keeps_the_list() {

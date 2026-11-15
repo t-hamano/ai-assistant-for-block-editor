@@ -139,7 +139,10 @@ class Models {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( 200 !== wp_remote_retrieve_response_code( $response ) || ! isset( $body['data'] ) || ! is_array( $body['data'] ) ) {
+		// Google lists its models under `models`, and the others under `data`.
+		$list = $body['data'] ?? $body['models'] ?? null;
+
+		if ( 200 !== wp_remote_retrieve_response_code( $response ) || ! is_array( $list ) ) {
 			return new WP_Error(
 				'ai_content_editing_assistant_models_unavailable',
 				__( 'The provider did not return its models.', 'ai-content-editing-assistant' ),
@@ -149,17 +152,50 @@ class Models {
 
 		$models = array();
 
-		foreach ( $body['data'] as $model ) {
-			if ( empty( $model['id'] ) || ! is_string( $model['id'] ) ) {
-				continue;
-			}
+		foreach ( $list as $model ) {
+			$model = self::normalize( $model );
 
-			$models[] = array(
-				'id'   => $model['id'],
-				'name' => isset( $model['display_name'] ) && is_string( $model['display_name'] ) ? $model['display_name'] : $model['id'],
-			);
+			if ( $model ) {
+				$models[] = $model;
+			}
 		}
 
 		return $models;
+	}
+
+	/**
+	 * Reads a model from a provider's list
+	 *
+	 * Google names its models `models/{id}`, with a `displayName`, and lists
+	 * models that cannot chat, such as embedding models, which are left out.
+	 *
+	 * @param mixed $model The model, as the provider lists it.
+	 * @return array|null The model with an `id` and a `name`, or null to leave it out.
+	 */
+	private static function normalize( $model ) {
+		if ( ! is_array( $model ) ) {
+			return null;
+		}
+
+		if ( isset( $model['id'] ) ) {
+			$id   = $model['id'];
+			$name = $model['display_name'] ?? null;
+		} else {
+			$id   = isset( $model['name'] ) && is_string( $model['name'] ) ? preg_replace( '#^models/#', '', $model['name'] ) : null;
+			$name = $model['displayName'] ?? null;
+
+			if ( isset( $model['supportedGenerationMethods'] ) && ! in_array( 'generateContent', (array) $model['supportedGenerationMethods'], true ) ) {
+				return null;
+			}
+		}
+
+		if ( empty( $id ) || ! is_string( $id ) ) {
+			return null;
+		}
+
+		return array(
+			'id'   => $id,
+			'name' => is_string( $name ) && '' !== $name ? $name : $id,
+		);
 	}
 }
