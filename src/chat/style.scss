@@ -18,10 +18,7 @@
 }
 
 .aabe-chat__messages {
-	display: flex;
 	flex: 1 1 auto;
-	flex-direction: column;
-	gap: var(--wpds-dimension-gap-lg);
 	min-height: 0;
 	padding: var(--wpds-dimension-padding-lg);
 	overflow: auto;

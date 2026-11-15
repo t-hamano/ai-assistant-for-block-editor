@@ -79,9 +79,9 @@ function Message( { message }: { message: ChatMessage } ) {
 		return <AssistantMessage message={ message } />;
 	}
 	return (
-		<div className="aabe-chat__message is-user">
-			<Text>{ message.text }</Text>
-		</div>
+		<Text className="aabe-chat__message is-user" render={ <div /> }>
+			{ message.text }
+		</Text>
 	);
 }
 
@@ -147,7 +147,7 @@ export function Chat( { chat, isAvailable }: Props ) {
 
 	return (
 		<Stack className="aabe-chat" direction="column">
-			<div className="aabe-chat__messages" ref={ messagesRef }>
+			<Stack className="aabe-chat__messages" direction="column" gap="lg" ref={ messagesRef }>
 				{ ! isAvailable && (
 					<Notice.Root intent="info">
 						<Notice.Description>
@@ -169,7 +169,7 @@ export function Chat( { chat, isAvailable }: Props ) {
 				{ conversation.messages.map( ( message ) => (
 					<Message key={ message.id } message={ message } />
 				) ) }
-			</div>
+			</Stack>
 			<Stack
 				render={
 					<form
