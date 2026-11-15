@@ -32,7 +32,7 @@ Skill 1 has two files:
    ```
 
 3. Find the latest WordPress release on <https://wordpress.org/download/releases/>. The `@wordpress/block-library` version it bundles is the `wp-X.Y` dist-tag above. If the tag does not exist yet, read `package.json` on the `X.Y` branch of <https://github.com/WordPress/wordpress-develop>.
-4. Target the Gutenberg release's packages, because the plugin is tested with the latest Gutenberg. Write down the old and new versions of WordPress, Gutenberg, and `@wordpress/block-library`. If nothing changed, stop and report that skill 1 is already up to date.
+4. Target the Gutenberg release's packages, because the plugin is tested with the latest Gutenberg. Write down the old and new versions of WordPress, Gutenberg, and `@wordpress/block-library`. If none of these versions changed and `Requires at least` did not go up since the last update, stop and report that skill 1 is already up to date. When only `Requires at least` went up, skip steps 2 and 3 and go on from step 4, looking for rules and examples that the skill left out because the old minimum did not support them.
 
 ### 2. Bump the `@wordpress/*` dependencies
 
