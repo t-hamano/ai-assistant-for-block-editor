@@ -14,12 +14,12 @@ use WordPress\AiClient\Providers\Models\Contracts\ModelInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 
 /**
- * A provider that takes an API key and has no models, so tests can give
- * the AI Client a key without a provider plugin.
+ * Stands in for the Anthropic provider plugin. It takes an API key and has
+ * no models, so tests can give the AI Client a key without the plugin.
  */
 class AABE_Fake_Provider extends AbstractProvider {
 
-	const ID = 'aabe-fake';
+	const ID = 'anthropic';
 
 	protected static function createModel( ModelMetadata $model_metadata, ProviderMetadata $provider_metadata ): ModelInterface {
 		throw new RuntimeException( 'The fake provider has no models.' );
