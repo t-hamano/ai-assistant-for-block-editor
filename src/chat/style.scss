@@ -132,6 +132,7 @@
 
 	// The box grows with its text up to about eight lines.
 	textarea {
+		field-sizing: content;
 		max-height: 12em;
 		resize: none;
 	}

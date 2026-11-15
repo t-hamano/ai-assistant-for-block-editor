@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useEffect, useLayoutEffect, useRef, useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
 import { isKeyboardEvent } from '@wordpress/keycodes';
@@ -98,7 +98,6 @@ export function Chat( { chat, isAvailable }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
 	const [ draft, setDraft ] = useState( '' );
 	const messagesRef = useRef< HTMLDivElement >( null );
-	const inputRef = useRef< HTMLTextAreaElement >( null );
 
 	// Keep the latest message in view while the answer streams in.
 	useEffect( () => {
@@ -107,16 +106,6 @@ export function Chat( { chat, isAvailable }: Props ) {
 			element.scrollTop = element.scrollHeight;
 		}
 	}, [ conversation ] );
-
-	// Grow the message box with its text, up to the height the stylesheet
-	// allows.
-	useLayoutEffect( () => {
-		const input = inputRef.current;
-		if ( input ) {
-			input.style.height = 'auto';
-			input.style.height = `${ input.scrollHeight }px`;
-		}
-	}, [ draft ] );
 
 	const canSend = isAvailable && !! draft.trim() && ! isResponding;
 
@@ -185,12 +174,10 @@ export function Chat( { chat, isAvailable }: Props ) {
 				gap="sm"
 			>
 				<TextareaControl
-					ref={ inputRef }
 					className="aabe-chat__input"
 					label={ __( 'Message', 'ai-assistant-for-block-editor' ) }
 					hideLabelFromVision
 					placeholder={ __( 'Ask the AI Assistant', 'ai-assistant-for-block-editor' ) }
-					rows={ 1 }
 					value={ draft }
 					onValueChange={ setDraft }
 					onKeyDown={ onKeyDown }
