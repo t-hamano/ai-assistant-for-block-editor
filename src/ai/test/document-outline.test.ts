@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import { LONG_DOCUMENT, formatOutline, parseOutline, readDocument } from '../document-outline';
+import {
+	LONG_DOCUMENT,
+	formatOutline,
+	isLongDocument,
+	parseOutline,
+	readDocument,
+} from '../document-outline';
 
 const paragraph = ( ref: string, text: string ) =>
 	`<!-- ref:${ ref } --><!-- wp:paragraph -->\n<p>${ text }</p>\n<!-- /wp:paragraph -->`;
@@ -33,11 +39,26 @@ describe( 'parseOutline', () => {
 				text,
 			} ) )
 		).toEqual( [
-			{ ref: 'b1', name: 'core/paragraph', depth: 0, text: 'One & two .' },
+			{ ref: 'b1', name: 'core/paragraph', depth: 0, text: 'One & two.' },
 			{ ref: 'b2', name: 'core/group', depth: 0, text: '' },
 			{ ref: 'b3', name: 'core/paragraph', depth: 1, text: 'Inside.' },
 			{ ref: 'b4', name: 'my-plugin/widget', depth: 0, text: '' },
 		] );
+	} );
+} );
+
+describe( 'isLongDocument', () => {
+	const blocks = Array.from( { length: 300 }, ( _, n ) =>
+		paragraph( `b${ n + 1 }`, 'Lorem ipsum dolor sit amet. '.repeat( 10 ) )
+	);
+
+	it( 'is true for a long document of blocks with reference IDs', () => {
+		expect( isLongDocument( doc( ...blocks ) ) ).toBe( true );
+		expect( isLongDocument( doc( ...blocks.slice( 0, 10 ) ) ) ).toBe( false );
+	} );
+
+	it( 'is false when content outside blocks would be missing from the outline', () => {
+		expect( isLongDocument( doc( '<p>Classic.</p>', ...blocks ) ) ).toBe( false );
 	} );
 } );
 
@@ -115,6 +136,23 @@ describe( 'readDocument', () => {
 		expect( result.status === 'done' && result.content ).toContain(
 			'\nb1 core/group\n  b2 core/paragraph: x'
 		);
+	} );
+
+	it( 'returns a long block without nested blocks as a whole', () => {
+		const huge = paragraph( 'b1', 'x'.repeat( LONG_DOCUMENT ) );
+		expect( readDocument( huge, { tool: 'read_blocks', refs: [ 'b1' ] } ) ).toEqual( {
+			status: 'done',
+			content: huge,
+		} );
+	} );
+
+	it( 'finds text across inline formatting', () => {
+		expect(
+			readDocument( paragraph( 'b1', 'Hello <strong>wor</strong>ld.' ), {
+				tool: 'find_blocks',
+				query: 'hello world.',
+			} )
+		).toEqual( { status: 'done', content: 'b1 core/paragraph: Hello world.' } );
 	} );
 
 	it( 'finds the blocks whose text has the query, ignoring case', () => {

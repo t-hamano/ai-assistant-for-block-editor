@@ -58,6 +58,14 @@ export type OutlineBlock = {
 	children: OutlineBlock[];
 };
 
+/**
+ * Matches the tags of elements that separate text, such as paragraphs,
+ * list items, table cells, and line breaks. Other tags, such as `<strong>`,
+ * are inside the text, so they are removed without a space.
+ */
+const SEPARATING_TAG =
+	/<\/?(?:p|div|h[1-6]|li|ul|ol|dl|dt|dd|blockquote|figure|figcaption|table|thead|tbody|tfoot|tr|td|th|pre|section|header|footer|aside|nav|article|details|summary|br|hr|img)\b[^>]*>/gi;
+
 const ENTITIES: Record< string, string > = {
 	amp: '&',
 	lt: '<',
@@ -77,7 +85,8 @@ const ENTITIES: Record< string, string > = {
 function toText( markup: string ): string {
 	return markup
 		.replace( /<!--[\s\S]*?-->/g, ' ' )
-		.replace( /<[^>]*>/g, ' ' )
+		.replace( SEPARATING_TAG, ' ' )
+		.replace( /<[^>]*>/g, '' )
 		.replace( /&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, ( entity, code: string ) => {
 			if ( code[ 0 ] === '#' ) {
 				const point =
@@ -222,6 +231,34 @@ function findNearby( blocks: OutlineBlock[], document: string, refs: Set< string
 }
 
 /**
+ * Tells whether the document is sent as an outline: when it is long, and
+ * all its content is in blocks with reference IDs. Content outside them,
+ * such as a classic block, would be missing from the outline, so such a
+ * document is sent as a whole.
+ *
+ * @param document The document, with reference IDs.
+ * @return Whether to send the outline.
+ */
+export function isLongDocument( document: string ): boolean {
+	if ( document.length <= LONG_DOCUMENT ) {
+		return false;
+	}
+	let rest = '';
+	let end = 0;
+	for ( const block of parseOutline( document ) ) {
+		if ( block.depth === 0 ) {
+			rest += document.slice( end, block.start );
+			end = block.end;
+			if ( ! block.ref ) {
+				return false;
+			}
+		}
+	}
+	rest += document.slice( end );
+	return ! rest.trim();
+}
+
+/**
  * Shows a long document as an outline: each block in a line with its
  * reference ID, name, and leading text, nested blocks indented under their
  * parent. The blocks around the selection follow as block markup.
@@ -267,7 +304,8 @@ function readBlocks( document: string, refs: string[] ): AiReadResult {
 		}
 		const markup = document.slice( block.start, block.end );
 		parts.push(
-			markup.length > LONG_DOCUMENT
+			// A block without nested blocks can only be read as a whole.
+			markup.length > LONG_DOCUMENT && block.children.length
 				? [
 						`Block ${ block.ref } is too long to read at once. These are its nested blocks; read them instead.`,
 						formatLines( flatten( block ) ),

@@ -2,7 +2,7 @@
  * Internal dependencies
  */
 import type { SeenDocument } from './conversation';
-import { LONG_DOCUMENT, formatOutline } from './document-outline';
+import { formatOutline, isLongDocument } from './document-outline';
 import { SELECTION_END, SELECTION_START, type EditContext } from './edit-target';
 
 /**
@@ -199,7 +199,7 @@ export function formatChanges( document: string, seen: SeenDocument ): string | 
  */
 function formatDocument( context: EditContext ): string {
 	const { document, selection } = context;
-	if ( document.length > LONG_DOCUMENT ) {
+	if ( isLongDocument( document ) ) {
 		return formatOutline( document, selection );
 	}
 	return [ '<document>', document.replace( /\n+$/, '' ), '</document>' ]
@@ -242,7 +242,7 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 	const { document } = context;
 	const changes = seen === null ? null : formatChanges( document, seen );
 	const whole = formatDocument( context );
-	const isOutline = document.length > LONG_DOCUMENT;
+	const isOutline = isLongDocument( document );
 	if ( seen === null ) {
 		parts.push( whole );
 	} else if ( changes !== null && changes.length < whole.length ) {
