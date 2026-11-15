@@ -32,14 +32,6 @@ function getActivityLabel( activity: NonNullable< AssistantChatMessage[ 'activit
 	}
 }
 
-function Note( { children }: { children: string } ) {
-	return (
-		<Text variant="body-sm" className="aabe-chat__note">
-			{ children }
-		</Text>
-	);
-}
-
 function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 	const activity = message.status === 'streaming' ? message.activity : undefined;
 
@@ -47,15 +39,17 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 		<Stack className="aabe-chat__message is-assistant" direction="column" gap="sm">
 			{ message.text && <AnswerMarkdown>{ message.text }</AnswerMarkdown> }
 			{ message.editStatus === 'applied' && (
-				<Note>{ __( 'Edited the content.', 'ai-assistant-for-block-editor' ) }</Note>
+				<Text variant="body-sm" className="aabe-chat__note">
+					{ __( 'Edited the content.', 'ai-assistant-for-block-editor' ) }
+				</Text>
 			) }
 			{ message.editStatus === 'dropped' && (
-				<Note>
+				<Text variant="body-sm" className="aabe-chat__note">
 					{ __(
 						'The edit was not applied because the selected blocks no longer exist.',
 						'ai-assistant-for-block-editor'
 					) }
-				</Note>
+				</Text>
 			) }
 			{ activity && (
 				<Stack className="aabe-chat__note" direction="row" align="center" gap="sm" role="status">
@@ -64,7 +58,9 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 				</Stack>
 			) }
 			{ message.status === 'stopped' && (
-				<Note>{ __( 'Stopped.', 'ai-assistant-for-block-editor' ) }</Note>
+				<Text variant="body-sm" className="aabe-chat__note">
+					{ __( 'Stopped.', 'ai-assistant-for-block-editor' ) }
+				</Text>
 			) }
 			{ message.status === 'error' && (
 				<Notice.Root intent="error">
@@ -163,12 +159,12 @@ export function Chat( { chat, isAvailable }: Props ) {
 					</Notice.Root>
 				) }
 				{ isAvailable && conversation.messages.length === 0 && (
-					<Note>
+					<Text variant="body-sm" className="aabe-chat__note">
 						{ __(
 							'Ask the AI Assistant to write or edit. The selected blocks are sent with your message.',
 							'ai-assistant-for-block-editor'
 						) }
-					</Note>
+					</Text>
 				) }
 				{ conversation.messages.map( ( message ) => (
 					<Message key={ message.id } message={ message } />
