@@ -18,31 +18,12 @@ class Enqueue {
 	}
 
 	/**
-	 * Whether the current user can use the AI assistant
-	 *
-	 * Only administrators can use it, because requests are sent with the site's API keys.
-	 *
-	 * @return bool
-	 */
-	public static function can_use() {
-		return current_user_can( 'manage_options' );
-	}
-
-	/**
-	 * Whether the assistant is shown to the current user
-	 *
-	 * @return bool
-	 */
-	private static function is_enabled() {
-		// The assistant needs an API key, so it is not shown at all without one.
-		return self::can_use() && Api_Key::has_any();
-	}
-
-	/**
 	 * Enqueue block editor scripts
 	 */
 	public function enqueue_editor_scripts() {
-		if ( ! self::is_enabled() ) {
+		// Only administrators can use the assistant, because requests are sent with
+		// the site's API keys. It needs an API key, so it is not shown without one.
+		if ( ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
 			return;
 		}
 
@@ -85,7 +66,7 @@ class Enqueue {
 	 * iframe. That hook also runs on the front end, where they are not needed.
 	 */
 	public function enqueue_canvas_styles() {
-		if ( ! is_admin() || ! self::is_enabled() ) {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
 			return;
 		}
 

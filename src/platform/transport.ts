@@ -42,17 +42,6 @@ export function connectionLost(): Error {
 }
 
 /**
- * The error for an answer that stopped arriving.
- *
- * @return The error.
- */
-function tookTooLong(): Error {
-	return new Error(
-		__( 'The answer took too long, so it was stopped.', 'ai-content-editing-assistant' )
-	);
-}
-
-/**
  * Reads the events of a provider's answer, with their data read from JSON.
  *
  * An event that is not JSON was cut off, so the answer ends there, with the
@@ -211,7 +200,11 @@ async function* stream( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
 		if ( signal.aborted ) {
 			return new DOMException( 'The answer was stopped.', 'AbortError' );
 		}
-		return timedOut ? tookTooLong() : null;
+		return timedOut
+			? new Error(
+					__( 'The answer took too long, so it was stopped.', 'ai-content-editing-assistant' )
+				)
+			: null;
 	};
 	let started = false;
 
@@ -301,7 +294,9 @@ async function* answerAtOnce( request: RelayRequest ): AsyncGenerator< AnswerEve
 			throw new DOMException( 'The answer was stopped.', 'AbortError' );
 		}
 		if ( timedOut ) {
-			throw tookTooLong();
+			throw new Error(
+				__( 'The answer took too long, so it was stopped.', 'ai-content-editing-assistant' )
+			);
 		}
 		if ( error instanceof Response ) {
 			throw new Error( await readError( error ) );
