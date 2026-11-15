@@ -2,7 +2,7 @@
 // canvas iframe, so these rules reach the blocks there.
 
 // The same overlay as the block editor draws on multi-selected blocks,
-// faded out over the same time as `HIGHLIGHT_DURATION`.
+// faded in briefly and out over the same time as `HIGHLIGHT_DURATION`.
 .wp-block.ai-content-editing-assistant-is-changed::after {
 	content: "";
 	position: absolute;
@@ -17,7 +17,11 @@
 
 @keyframes ai-content-editing-assistant-changed {
 
-	0%,
+	0% {
+		background-color: transparent;
+	}
+
+	10%,
 	60% {
 		background-color: rgba(var(--wp-admin-theme-color--rgb), 0.4);
 	}
