@@ -122,6 +122,19 @@ class Test_Models extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests that OpenAI's models are listed with the key as a bearer token.
+	 */
+	public function test_lists_the_openai_models() {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+
+		$response = $this->list_models( 'openai' );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'https://api.openai.com/v1/models', $this->sent[0]['url'] );
+		$this->assertSame( 'Bearer openai-key', $this->sent[0]['args']['headers']['authorization'] );
+	}
+
+	/**
 	 * Tests that the list is kept, so the provider is asked only once.
 	 */
 	public function test_keeps_the_list() {

@@ -26,6 +26,7 @@ class Relay {
 	 * Where each provider's requests go, and the headers that carry the key
 	 *
 	 * `url` takes chat requests, and `models` lists the provider's models.
+	 * `key_prefix` goes before the key in its header, such as `Bearer `.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
@@ -35,6 +36,13 @@ class Relay {
 				'anthropic-version' => '2023-06-01',
 			),
 			'key'     => 'x-api-key',
+		),
+		'openai'    => array(
+			'url'        => 'https://api.openai.com/v1/responses',
+			'models'     => 'https://api.openai.com/v1/models',
+			'headers'    => array(),
+			'key'        => 'authorization',
+			'key_prefix' => 'Bearer ',
 		),
 	);
 
@@ -132,7 +140,7 @@ class Relay {
 			$provider['headers'],
 			array(
 				'content-type'   => 'application/json',
-				$provider['key'] => $api_key,
+				$provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key,
 			)
 		);
 
