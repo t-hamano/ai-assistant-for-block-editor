@@ -24,6 +24,7 @@ beforeAll( () => {
 		attributes: {
 			content: { type: 'string', source: 'html', selector: 'p' },
 			align: { type: 'string', enum: [ 'left', 'right' ] },
+			dropCap: { type: 'boolean', default: false },
 		},
 		edit: () => null,
 		save: ( { attributes } ) =>
@@ -41,6 +42,7 @@ beforeAll( () => {
 				save: ( { attributes } ) => createElement( 'div', {}, attributes.content as string ),
 				migrate: ( { content, align } ) => ( {
 					content,
+					dropCap: false,
 					align: { start: 'left', end: 'right' }[ align as string ],
 				} ),
 			},
@@ -120,6 +122,14 @@ describe( 'validateMarkup', () => {
 		] );
 	} );
 
+	it( 'rejects values of the wrong type', () => {
+		const { problems } = validateMarkup( text( 'One', '{"dropCap":"true"} ' ) );
+
+		expect( problems[ 0 ] ).toContain(
+			'"true" is not a value of the "dropCap" attribute of the test/text block. Use a value of type boolean.'
+		);
+	} );
+
 	it( 'rejects HTML outside blocks', () => {
 		const { problems } = validateMarkup( `<p>Loose</p>\n\n${ text( 'One' ) }` );
 
@@ -140,6 +150,9 @@ describe( 'validateMarkup', () => {
 		expect(
 			validateMarkup( html( '<p>Kept</p>' ), new Set( [ '<p>Kept</p>' ] ) ).problems
 		).toEqual( [] );
+		expect( validateMarkup( html( '<svg></svg><h2>Title</h2><svg></svg>' ) ).problems ).toEqual( [
+			expect.stringContaining( 'Use core/html only for' ),
+		] );
 		expect( validateMarkup( html( '<h2>Title</h2><p>Text</p>' ) ).problems ).toEqual( [
 			expect.stringContaining( 'Use core/html only for' ),
 		] );

@@ -13,7 +13,53 @@ import {
 
 type RawBlock = ReturnType< typeof parseRaw >[ number ];
 
-type AttributeSchema = { enum?: unknown[]; source?: string };
+type AttributeSchema = { type?: string | string[]; enum?: unknown[]; source?: string };
+
+/**
+ * Whether the value has one of the types, as the parser checks them. A
+ * value of the wrong type is dropped.
+ *
+ * @param value The value.
+ * @param type  The attribute's type, or types.
+ * @return Whether it does.
+ */
+function hasType( value: unknown, type: AttributeSchema[ 'type' ] ): boolean {
+	if ( type === undefined ) {
+		return true;
+	}
+	return ( Array.isArray( type ) ? type : [ type ] ).some( ( item ) => {
+		switch ( item ) {
+			case 'null':
+				return value === null;
+			case 'boolean':
+			case 'string':
+			case 'number':
+				return typeof value === item;
+			case 'integer':
+				return Number.isInteger( value );
+			case 'array':
+				return Array.isArray( value );
+			case 'object':
+				return value !== null && typeof value === 'object' && ! Array.isArray( value );
+			default:
+				return true;
+		}
+	} );
+}
+
+/**
+ * Whether the attribute takes the value.
+ *
+ * @param schema The attribute.
+ * @param value  The value.
+ * @return Whether it does.
+ */
+function accepts( schema: AttributeSchema, value: unknown ): boolean {
+	return (
+		hasType( value, schema.type ) &&
+		( ! Array.isArray( schema.enum ) || schema.enum.includes( value ) )
+	);
+}
 
 /**
  * What became of the markup the model wrote.
@@ -35,10 +81,29 @@ export type MarkupValidation = {
  * Inline SVG or a script is the only content `core/html` may hold, since
  * blocks have no equivalent for it.
  */
-const ALLOWED_HTML = [
-	/^<svg(?:\s[^>]*)?>[\s\S]*<\/svg>$/i,
-	/^<script(?:\s[^>]*)?>[\s\S]*<\/script>$/i,
-];
+const ALLOWED_HTML = [ 'svg', 'script' ];
+
+/**
+ * Whether the HTML is one element that `core/html` may hold, with nothing
+ * beside it.
+ *
+ * @param html The HTML.
+ * @return Whether it is.
+ */
+function isAllowedHtml( html: string ): boolean {
+	const template = document.createElement( 'template' );
+	template.innerHTML = html;
+	const nodes = Array.from( template.content.childNodes ).filter(
+		( node ) =>
+			node.nodeType !== node.COMMENT_NODE &&
+			! ( node.nodeType === node.TEXT_NODE && ! node.textContent?.trim() )
+	);
+	return (
+		nodes.length === 1 &&
+		nodes[ 0 ].nodeType === nodes[ 0 ].ELEMENT_NODE &&
+		ALLOWED_HTML.includes( ( nodes[ 0 ] as Element ).localName )
+	);
+}
 
 /**
  * Formats a validation message, which the parser logs like the console
@@ -101,14 +166,13 @@ function checkAttributes( name: string, attrs: Record< string, unknown > ): stri
 		const schemas = versions.map( ( version ) => version[ key ] ).filter( Boolean );
 		if ( ! schemas.length ) {
 			problems.push( `"${ key }" is not an attribute of the ${ name } block.` );
-		} else if (
-			schemas.every( ( schema ) => Array.isArray( schema.enum ) && ! schema.enum.includes( value ) )
-		) {
-			const values = ( blockType.attributes?.[ key ]?.enum ?? schemas[ 0 ].enum ) as unknown[];
+		} else if ( ! schemas.some( ( schema ) => accepts( schema, value ) ) ) {
+			const schema = blockType.attributes?.[ key ] ?? schemas[ 0 ];
+			const expected = Array.isArray( schema.enum )
+				? `Use one of: ${ schema.enum.map( ( item ) => JSON.stringify( item ) ).join( ', ' ) }.`
+				: `Use a value of type ${ [ schema.type ].flat().join( ' or ' ) }.`;
 			problems.push(
-				`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. Use one of: ${ values
-					.map( ( item ) => JSON.stringify( item ) )
-					.join( ', ' ) }.`
+				`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. ${ expected }`
 			);
 		}
 	}
@@ -157,11 +221,7 @@ function checkRawBlocks(
 		const problems = checkAttributes( name, raw.attrs ?? {} );
 		if ( name === 'core/html' ) {
 			const html = raw.innerHTML.trim();
-			if (
-				html &&
-				! existingHtml.has( html ) &&
-				! ALLOWED_HTML.some( ( pattern ) => pattern.test( html ) )
-			) {
+			if ( html && ! existingHtml.has( html ) && ! isAllowedHtml( html ) ) {
 				problems.push(
 					'Use core/html only for an inline SVG or a script. Write text, headings, lists, images, and layout as core blocks, such as core/paragraph, core/heading, core/list, core/image, and core/group, so that the user can edit them.'
 				);
