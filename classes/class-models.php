@@ -124,7 +124,7 @@ class Models {
 		$response = wp_remote_get(
 			$provider['models'],
 			array(
-				'headers' => array_merge( $provider['headers'], array( $provider['key'] => $api_key ) ),
+				'headers' => array_merge( $provider['headers'], array( $provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key ) ),
 				'timeout' => self::TIMEOUT,
 			)
 		);

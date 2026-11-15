@@ -26,7 +26,7 @@ class AI_Content_Editing_Assistant_Fake_Provider extends AbstractProvider {
 	}
 
 	protected static function createProviderMetadata(): ProviderMetadata {
-		return new ProviderMetadata( self::ID, 'Fake', ProviderTypeEnum::cloud(), null, RequestAuthenticationMethod::apiKey() );
+		return new ProviderMetadata( static::ID, 'Fake', ProviderTypeEnum::cloud(), null, RequestAuthenticationMethod::apiKey() );
 	}
 
 	protected static function createProviderAvailability(): ProviderAvailabilityInterface {
