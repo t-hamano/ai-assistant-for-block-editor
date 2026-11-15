@@ -101,6 +101,22 @@ describe( 'createBlockTarget', () => {
 		expect( documentNow() ).toBe( paragraph( 'One' ) );
 	} );
 
+	it( 'does not apply markup that fails validation, and tells why', () => {
+		const [ first ] = setUp( 'One' );
+		dispatch( blockEditorStore ).selectBlock( first );
+
+		const result = createBlockTarget().apply( {
+			action: 'replace',
+			markup: '<!-- wp:test/missing -->\n<p>New</p>\n<!-- /wp:test/missing -->',
+		} );
+
+		expect( result ).toEqual( {
+			status: 'failed',
+			reason: expect.stringContaining( 'test/missing block is not registered' ),
+		} );
+		expect( documentNow() ).toBe( paragraph( 'One' ) );
+	} );
+
 	it( 'drops the edit when the selected blocks are gone', () => {
 		const [ first ] = setUp( 'One' );
 		dispatch( blockEditorStore ).selectBlock( first );
