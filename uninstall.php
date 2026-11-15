@@ -46,7 +46,8 @@ function ai_content_editing_assistant_uninstall_site() {
 		if ( array() === array_diff_key( $preferences, array( '_modified' => true ) ) ) {
 			delete_user_meta( (int) $user_id, $meta_key );
 		} else {
-			update_user_meta( (int) $user_id, $meta_key, $preferences );
+			// The meta functions remove slashes, so they are added back first.
+			update_user_meta( (int) $user_id, $meta_key, wp_slash( $preferences ) );
 		}
 	}
 }

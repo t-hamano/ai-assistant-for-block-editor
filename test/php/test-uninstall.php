@@ -35,10 +35,13 @@ class Test_Uninstall extends WP_UnitTestCase {
 		update_user_meta(
 			$user_id,
 			$meta_key,
-			array(
-				'core'                         => array( 'fixedToolbar' => true ),
-				'ai-content-editing-assistant' => array( 'model' => 'anthropic/claude' ),
-				'_modified'                    => '2026-11-15T00:00:00.000Z',
+			wp_slash(
+				array(
+					'core'                         => array( 'fixedToolbar' => true ),
+					'other-plugin'                 => array( 'pattern' => '\\d+' ),
+					'ai-content-editing-assistant' => array( 'model' => 'anthropic/claude' ),
+					'_modified'                    => '2026-11-15T00:00:00.000Z',
+				)
 			)
 		);
 
@@ -46,8 +49,9 @@ class Test_Uninstall extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'core'      => array( 'fixedToolbar' => true ),
-				'_modified' => '2026-11-15T00:00:00.000Z',
+				'core'         => array( 'fixedToolbar' => true ),
+				'other-plugin' => array( 'pattern' => '\\d+' ),
+				'_modified'    => '2026-11-15T00:00:00.000Z',
 			),
 			get_user_meta( $user_id, $meta_key, true )
 		);
