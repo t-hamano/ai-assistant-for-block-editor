@@ -15,11 +15,11 @@ import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
 import { createBlockTarget } from './editor/block-target';
 import icon from './icon';
-import { createAnthropicPlatform } from './platform/anthropic';
+import { createAutoPlatform } from './platform/select';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
-const ai = createAnthropicPlatform( () => selectStore( editorStore ).getCurrentPostId() as number );
+const ai = createAutoPlatform( () => selectStore( editorStore ).getCurrentPostId() as number );
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-content-editing-assistant' );

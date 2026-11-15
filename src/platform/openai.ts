@@ -12,7 +12,7 @@ import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropi
 import { readSse } from './sse';
 
 /**
- * The model that answers. It becomes selectable with the model list.
+ * The model that answers when no other model is chosen.
  */
 export const OPENAI_MODEL = 'gpt-6-astra';
 
@@ -84,11 +84,12 @@ export function toOpenAiInput( messages: AiMessage[] ): OpenAiItem[] {
  *
  * @param system The system prompt.
  * @param input  The input items.
+ * @param model  The model that answers.
  * @return The request body.
  */
-export function buildOpenAiBody( system: string, input: OpenAiItem[] ) {
+export function buildOpenAiBody( system: string, input: OpenAiItem[], model = OPENAI_MODEL ) {
 	return {
-		model: OPENAI_MODEL,
+		model,
 		max_output_tokens: MAX_OUTPUT_TOKENS,
 		instructions: system,
 		tools: [ OPENAI_EDIT_TOOL ],
@@ -242,9 +243,10 @@ function runTools( answer: OpenAiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
  * the site's API key on the server.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param model     The model that answers.
  * @return The connection.
  */
-export function createOpenAiPlatform( getPostId: () => number ): AiPlatform {
+export function createOpenAiPlatform( getPostId: () => number, model = OPENAI_MODEL ): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
@@ -261,7 +263,7 @@ export function createOpenAiPlatform( getPostId: () => number ): AiPlatform {
 							provider: 'openai',
 							post_id: getPostId(),
 							stream: true,
-							body: buildOpenAiBody( system, input ),
+							body: buildOpenAiBody( system, input, model ),
 						},
 						parse: false,
 						signal,
