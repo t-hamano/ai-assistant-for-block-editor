@@ -139,9 +139,13 @@ class Stream {
 			ob_end_clean();
 		}
 
+		// Apache's gzip compression (mod_deflate) collects output before
+		// sending it, so turn it off for this request. The function only
+		// exists when PHP runs as an Apache module.
 		if ( function_exists( 'apache_setenv' ) ) {
 			apache_setenv( 'no-gzip', '1' );
 		}
+		// PHP's own compression holds output back in the same way.
 		ini_set( 'zlib.output_compression', '0' ); // phpcs:ignore WordPress.PHP.IniSet.Risky
 
 		status_header( $this->status ? $this->status : 200 );
