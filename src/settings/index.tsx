@@ -130,21 +130,28 @@ export function ModelSettings( { onClose }: Props ) {
 	}
 
 	return (
-		<Stack className="ai-content-editing-assistant-settings" direction="column" gap="lg">
-			<Stack direction="row" align="center" gap="sm">
+		<Stack className="ai-content-editing-assistant-settings" direction="column">
+			<Stack
+				className="ai-content-editing-assistant-settings__header"
+				direction="row"
+				align="center"
+				gap="sm"
+			>
 				<IconButton
 					icon={ isRTL() ? chevronRight : chevronLeft }
 					label={ __( 'Back', 'ai-content-editing-assistant' ) }
 					variant="minimal"
 					tone="neutral"
-					size="compact"
+					size="small"
 					onClick={ onClose }
 				/>
 				<Text variant="heading-md" render={ <h2 /> }>
-					{ __( 'Model', 'ai-content-editing-assistant' ) }
+					{ __( 'AI model', 'ai-content-editing-assistant' ) }
 				</Text>
 			</Stack>
-			{ content }
+			<Stack className="ai-content-editing-assistant-settings__content" direction="column" gap="lg">
+				{ content }
+			</Stack>
 		</Stack>
 	);
 }
