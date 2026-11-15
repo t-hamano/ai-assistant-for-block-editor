@@ -25,10 +25,12 @@ define( 'AI_CONTENT_EDITING_ASSISTANT_URL', untrailingslashit( plugin_dir_url( _
 
 require_once __DIR__ . '/classes/class-api-key.php';
 require_once __DIR__ . '/classes/class-enqueue.php';
+require_once __DIR__ . '/classes/class-fallback.php';
 require_once __DIR__ . '/classes/class-models.php';
 require_once __DIR__ . '/classes/class-relay.php';
 require_once __DIR__ . '/classes/class-stream.php';
 
 new AI_Content_Editing_Assistant\Enqueue();
+new AI_Content_Editing_Assistant\Fallback();
 new AI_Content_Editing_Assistant\Models();
 new AI_Content_Editing_Assistant\Relay();

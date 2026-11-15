@@ -29,5 +29,6 @@ require $ai_content_editing_assistant_tests_dir . '/includes/bootstrap.php';
 
 require __DIR__ . '/fixtures/class-ai-content-editing-assistant-fake-provider.php';
 require __DIR__ . '/fixtures/class-ai-content-editing-assistant-fake-openai-provider.php';
+require __DIR__ . '/fixtures/class-ai-content-editing-assistant-fallback-provider.php';
 require __DIR__ . '/fixtures/trait-fake-api-key.php';
 require __DIR__ . '/fixtures/class-ai-content-editing-assistant-test-stream.php';
