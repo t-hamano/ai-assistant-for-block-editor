@@ -8,6 +8,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
+import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { readSse } from './sse';
 
 /**
@@ -165,7 +166,7 @@ export function buildAnthropicBody( system: string, messages: AnthropicMessage[]
 		max_tokens: MAX_TOKENS,
 		cache_control: CACHE_CONTROL,
 		system: [ { type: 'text', text: system, cache_control: CACHE_CONTROL } ],
-		tools: [ EDIT_TOOL ],
+		tools: [ EDIT_TOOL, ...READ_TOOLS ],
 		messages,
 	};
 }
@@ -287,7 +288,7 @@ export async function readAnthropicStream(
 					onEvent( { type: 'activity', activity: 'thinking' } );
 				} else if ( started.type === 'tool_use' ) {
 					inputs[ payload.index ] = '';
-					onEvent( { type: 'activity', activity: 'editing' } );
+					onEvent( { type: 'activity', activity: getToolActivity( started.name ) } );
 				}
 				break;
 			}
@@ -350,20 +351,33 @@ export async function readAnthropicStream(
 }
 
 /**
- * Applies the edits the model asked for, and builds the results to send
- * back.
+ * Applies the edits the model asked for, runs its reads, and builds the
+ * results to send back.
  *
  * @param answer  The answer.
  * @param onEvent Applies each edit.
- * @return The results, and how many edits failed.
+ * @param read    Reads the document.
+ * @return The results, and how many calls failed.
  */
-function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
+function runTools(
+	answer: AnthropicAnswer,
+	onEvent: AiChatRequest[ 'onEvent' ],
+	read: AiChatRequest[ 'read' ]
+) {
 	let failures = 0;
 	const results = answer.content
 		.filter( ( block ) => block.type === 'tool_use' )
 		.map( ( block ) => {
 			const id = block.id as string;
 			const invalid = answer.invalidInputs.get( id );
+			const found = invalid === undefined ? runRead( block.name, block.input, read ) : null;
+			if ( found ) {
+				if ( found.status === 'failed' ) {
+					failures++;
+					return { type: 'tool_result', tool_use_id: id, is_error: true, content: found.reason };
+				}
+				return { type: 'tool_result', tool_use_id: id, content: found.content };
+			}
 			const edit = block.name === EDIT_TOOL.name ? toEdit( block.input ) : null;
 			let result: AiEditResult;
 			if ( invalid !== undefined ) {
@@ -403,7 +417,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
-		async chat( { system, messages, onEvent, signal } ) {
+		async chat( { system, messages, onEvent, read, signal } ) {
 			const conversation = toAnthropicMessages( messages );
 			let failures = 0;
 			for (;;) {
@@ -433,7 +447,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 				if ( answer.stopReason !== 'tool_use' ) {
 					return;
 				}
-				const tools = runTools( answer, onEvent );
+				const tools = runTools( answer, onEvent, read );
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

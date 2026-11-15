@@ -15,6 +15,7 @@ import type { AiStreamEvent } from '..';
 import { EDIT_TOOL } from '../anthropic';
 import {
 	GEMINI_EDIT_TOOL,
+	GEMINI_READ_TOOLS,
 	GEMINI_MODEL,
 	buildGeminiBody,
 	createGeminiPlatform,
@@ -64,7 +65,7 @@ describe( 'buildGeminiBody', () => {
 			model: GEMINI_MODEL,
 			systemInstruction: { parts: [ { text: 'Be brief.' } ] },
 			contents,
-			tools: [ { functionDeclarations: [ GEMINI_EDIT_TOOL ] } ],
+			tools: [ { functionDeclarations: [ GEMINI_EDIT_TOOL, ...GEMINI_READ_TOOLS ] } ],
 			generationConfig: {
 				maxOutputTokens: expect.any( Number ),
 				thinkingConfig: { includeThoughts: true },

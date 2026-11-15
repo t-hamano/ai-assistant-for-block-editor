@@ -82,10 +82,28 @@ export type AiEditResult =
 	| { status: 'failed'; reason: string };
 
 /**
- * What the model is doing while it is not writing text: `thinking` while it
- * reasons, and `editing` while it writes an edit of the selection.
+ * A request of the model to read the document, which the editor answers
+ * without changing it:
+ *
+ * - `read_blocks`: the markup of the blocks whose reference IDs are `refs`.
+ * - `find_blocks`: the blocks whose text has `query`.
  */
-export type AiActivity = 'thinking' | 'editing';
+export type AiRead =
+	{ tool: 'read_blocks'; refs: string[] } | { tool: 'find_blocks'; query: string };
+
+/**
+ * What the editor found for a read: `done` with what goes back to the
+ * model, or `failed` with what the model can fix.
+ */
+export type AiReadResult =
+	{ status: 'done'; content: string } | { status: 'failed'; reason: string };
+
+/**
+ * What the model is doing while it is not writing text: `thinking` while it
+ * reasons, `editing` while it writes an edit of the selection, and
+ * `reading` while it reads the document.
+ */
+export type AiActivity = 'thinking' | 'editing' | 'reading';
 
 /**
  * The tokens a request to the model used, as the provider counted them.
@@ -159,6 +177,11 @@ export type AiChatRequest = {
 	 * the model.
 	 */
 	onEvent: ( event: AiStreamEvent ) => AiEditResult | void;
+	/**
+	 * Reads the document as it is now, for the model's read tools. Omitted
+	 * when the document is not available.
+	 */
+	read?: ( read: AiRead ) => AiReadResult;
 	/**
 	 * Aborted when the user stops the answer.
 	 */

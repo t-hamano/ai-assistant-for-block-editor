@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropic';
+import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { readSse } from './sse';
 
 /**
@@ -38,6 +39,17 @@ export const OPENAI_EDIT_TOOL = {
 	// Strict mode needs every property to be required, which the tool does not want.
 	strict: false,
 };
+
+/**
+ * The read tools, as functions of OpenAI's Responses API.
+ */
+export const OPENAI_READ_TOOLS = READ_TOOLS.map( ( tool ) => ( {
+	type: 'function',
+	name: tool.name,
+	description: tool.description,
+	parameters: tool.input_schema,
+	strict: false,
+} ) );
 
 /**
  * An item of the input or output of OpenAI's Responses API: a message, a
@@ -91,7 +103,7 @@ export function buildOpenAiBody( system: string, input: OpenAiItem[] ) {
 		model: OPENAI_MODEL,
 		max_output_tokens: MAX_OUTPUT_TOKENS,
 		instructions: system,
-		tools: [ OPENAI_EDIT_TOOL ],
+		tools: [ OPENAI_EDIT_TOOL, ...OPENAI_READ_TOOLS ],
 		input,
 		store: false,
 		include: [ 'reasoning.encrypted_content' ],
@@ -139,7 +151,7 @@ export async function readOpenAiStream(
 				if ( payload.item?.type === 'reasoning' ) {
 					onEvent( { type: 'activity', activity: 'thinking' } );
 				} else if ( payload.item?.type === 'function_call' ) {
-					onEvent( { type: 'activity', activity: 'editing' } );
+					onEvent( { type: 'activity', activity: getToolActivity( payload.item.name ) } );
 				}
 				break;
 			case 'response.output_text.delta':
@@ -194,14 +206,19 @@ export async function readOpenAiStream(
 }
 
 /**
- * Applies the edits the model asked for, and builds the outputs to send
- * back.
+ * Applies the edits the model asked for, runs its reads, and builds the
+ * outputs to send back.
  *
  * @param answer  The answer.
  * @param onEvent Applies each edit.
- * @return The outputs, and how many edits failed.
+ * @param read    Reads the document.
+ * @return The outputs, and how many calls failed.
  */
-function runTools( answer: OpenAiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
+function runTools(
+	answer: OpenAiAnswer,
+	onEvent: AiChatRequest[ 'onEvent' ],
+	read: AiChatRequest[ 'read' ]
+) {
 	let failures = 0;
 	const results = answer.calls.map( ( call ) => {
 		let input: unknown;
@@ -210,6 +227,17 @@ function runTools( answer: OpenAiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
 			input = JSON.parse( call.arguments as string );
 		} catch {
 			invalid = true;
+		}
+		const found = invalid ? null : runRead( call.name, input, read );
+		if ( found ) {
+			if ( found.status === 'failed' ) {
+				failures++;
+			}
+			return {
+				type: 'function_call_output',
+				call_id: call.call_id,
+				output: found.status === 'failed' ? found.reason : found.content,
+			};
 		}
 		const edit = ! invalid && call.name === EDIT_TOOL.name ? toEdit( input ) : null;
 		let result: AiEditResult;
@@ -248,7 +276,7 @@ export function createOpenAiPlatform( getPostId: () => number ): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
-		async chat( { system, messages, onEvent, signal } ) {
+		async chat( { system, messages, onEvent, read, signal } ) {
 			const input = toOpenAiInput( messages );
 			let failures = 0;
 			for (;;) {
@@ -278,7 +306,7 @@ export function createOpenAiPlatform( getPostId: () => number ): AiPlatform {
 				if ( ! answer.calls.length ) {
 					return;
 				}
-				const tools = runTools( answer, onEvent );
+				const tools = runTools( answer, onEvent, read );
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

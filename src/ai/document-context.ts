@@ -2,6 +2,7 @@
  * Internal dependencies
  */
 import type { SeenDocument } from './conversation';
+import { LONG_DOCUMENT, formatOutline } from './document-outline';
 import { SELECTION_END, SELECTION_START, type EditContext } from './edit-target';
 
 /**
@@ -190,12 +191,17 @@ export function formatChanges( document: string, seen: SeenDocument ): string | 
 }
 
 /**
- * Shows the document as the model reads it.
+ * Shows the document as the model reads it: the whole of it, or for a long
+ * document, its outline with the blocks around the selection.
  *
- * @param document The document.
- * @return The `<document>` block.
+ * @param context The selection and the document.
+ * @return The `<document>` block, or the `<outline>` block.
  */
-function formatDocument( document: string ): string {
+function formatDocument( context: EditContext ): string {
+	const { document, selection } = context;
+	if ( document.length > LONG_DOCUMENT ) {
+		return formatOutline( document, selection );
+	}
 	return [ '<document>', document.replace( /\n+$/, '' ), '</document>' ]
 		.filter( ( part ) => part !== '' )
 		.join( '\n' );
@@ -221,8 +227,10 @@ function formatSelection( context: EditContext ): string {
  * the blocks that differ from what the model knows, by the user's changes
  * after the last answer, and the blocks the model's edits added, so the
  * model learns their reference IDs. The whole document is sent again when
- * that is shorter, or when the changes cannot be told by reference ID. The
- * selection comes last.
+ * that is shorter, or when the changes cannot be told by reference ID. A
+ * long document is sent as an outline instead of the whole of it, and the
+ * model reads the blocks it needs with its read tools. The selection comes
+ * last.
  *
  * @param context The selection and the document now.
  * @param seen    What the model knows about the document, or `null` when
@@ -233,7 +241,8 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 	const parts: string[] = [];
 	const { document } = context;
 	const changes = seen === null ? null : formatChanges( document, seen );
-	const whole = formatDocument( document );
+	const whole = formatDocument( context );
+	const isOutline = document.length > LONG_DOCUMENT;
 	if ( seen === null ) {
 		parts.push( whole );
 	} else if ( changes !== null && changes.length < whole.length ) {
@@ -249,7 +258,9 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 		[ ...collectRefs( document ) ].some( ( ref ) => ! collectRefs( seen.shown ).has( ref ) )
 	) {
 		parts.push(
-			'The document changed after your last answer, or has blocks you added. This is the whole document now.',
+			isOutline
+				? 'The document changed after your last answer, or has blocks you added. This is the outline of the document now.'
+				: 'The document changed after your last answer, or has blocks you added. This is the whole document now.',
 			whole
 		);
 	}

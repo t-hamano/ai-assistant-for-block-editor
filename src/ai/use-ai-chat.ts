@@ -15,10 +15,11 @@ import {
 	type Conversation,
 } from './conversation';
 import { buildMessageContext } from './document-context';
+import { readDocument as answerRead } from './document-outline';
 import type { EditTarget } from './edit-target';
 import { buildSystemPrompt } from './prompt';
 import { highlightChanges, takeBlockSnapshot } from '../editor/highlight';
-import type { AiEditResult, AiPlatform } from '../platform';
+import type { AiEditResult, AiPlatform, AiRead } from '../platform';
 
 type UseAiChatArgs = {
 	ai: AiPlatform | undefined;
@@ -106,6 +107,8 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 				system: buildSystemPrompt( context?.document ?? null ),
 				messages,
 				signal: controller.signal,
+				// The model reads the document as it is now, with its edits.
+				...( target ? { read: ( read: AiRead ) => answerRead( target.getDocument(), read ) } : {} ),
 				onEvent( event ) {
 					if ( ! isCurrent() ) {
 						return;

@@ -27,6 +27,8 @@ function getActivityLabel( activity: NonNullable< AssistantChatMessage[ 'activit
 			return __( 'Thinking…', 'ai-content-editing-assistant' );
 		case 'editing':
 			return __( 'Editing the content…', 'ai-content-editing-assistant' );
+		case 'reading':
+			return __( 'Reading the content…', 'ai-content-editing-assistant' );
 		default:
 			return __( 'Waiting for the answer…', 'ai-content-editing-assistant' );
 	}
