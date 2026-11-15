@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useSelect } from '@wordpress/data';
+import { select as selectStore, useSelect } from '@wordpress/data';
 import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
 import { useCallback, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
@@ -14,12 +14,11 @@ import { IconButton } from '@wordpress/ui';
 import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
 import icon from './icon';
-import { createDummyPlatform } from './platform/dummy';
+import { createAnthropicPlatform } from './platform/anthropic';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
-// Answers with fixed text until the transport connects the chat to a model.
-const ai = createDummyPlatform();
+const ai = createAnthropicPlatform( () => selectStore( editorStore ).getCurrentPostId() as number );
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-assistant-for-block-editor' );
