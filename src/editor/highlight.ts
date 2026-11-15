@@ -15,7 +15,7 @@ import './style.scss';
  * How long a changed block stays highlighted, in milliseconds. The
  * stylesheet's animation fades out over the same time.
  */
-export const HIGHLIGHT_DURATION = 4000;
+export const HIGHLIGHT_DURATION = 2000;
 
 export const HIGHLIGHT_CLASS_NAME = 'ai-content-editing-assistant-is-changed';
 
