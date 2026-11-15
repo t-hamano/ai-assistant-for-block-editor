@@ -22,6 +22,11 @@ use WP_REST_Server;
  */
 class Relay {
 
+	// The AI Client returns the whole answer at once, so the relay talks to
+	// these providers directly to stream the answer to the editor as it is
+	// written. Other providers go through the AI Client in Fallback.
+	// phpcs:disable PluginCheck.CodeAnalysis.AIProvider.DirectIntegration
+
 	/**
 	 * Where each provider's requests go, and the headers that carry the key
 	 *
@@ -55,6 +60,7 @@ class Relay {
 			'key'        => 'x-goog-api-key',
 		),
 	);
+	// phpcs:enable PluginCheck.CodeAnalysis.AIProvider.DirectIntegration
 
 	/**
 	 * How long to wait for the provider, in seconds
@@ -135,7 +141,11 @@ class Relay {
 		}
 
 		// Sites can turn AI off, or stop prompts, as they do for the AI Client.
-		if ( ! wp_supports_ai() || apply_filters( 'wp_ai_client_prevent_prompt', false, wp_ai_client_prompt()->using_provider( $provider_id ) ) ) {
+		if (
+			! wp_supports_ai() ||
+			// The hook is the AI Client's own, so it is not prefixed.
+			apply_filters( 'wp_ai_client_prevent_prompt', false, wp_ai_client_prompt()->using_provider( $provider_id ) ) // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+		) {
 			return new WP_Error(
 				'ai_content_editing_assistant_prompt_prevented',
 				__( 'The site does not allow AI requests.', 'ai-content-editing-assistant' ),

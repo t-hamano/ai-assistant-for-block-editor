@@ -181,7 +181,7 @@ class Fallback {
 	public function to_message( array $message ): Message {
 		foreach ( $message['parts'] as $part ) {
 			if ( ! array_intersect( array_keys( $part ), self::PART_KEYS ) || isset( $part['file'] ) ) {
-				throw new InvalidArgumentException( __( 'Messages may only contain text, tool calls, and tool results.', 'ai-content-editing-assistant' ) );
+				throw new InvalidArgumentException( esc_html__( 'Messages may only contain text, tool calls, and tool results.', 'ai-content-editing-assistant' ) );
 			}
 		}
 
