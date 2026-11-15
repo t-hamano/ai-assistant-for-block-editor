@@ -26,7 +26,8 @@ type Provider = {
 	recommended: string[];
 	/**
 	 * Whether a model from the provider's list can chat, for when none of
-	 * the recommended models is in it.
+	 * the recommended models is in it. Older models are left out, because
+	 * they cannot write as many tokens as the adapters ask for.
 	 */
 	canChat: ( model: string ) => boolean;
 	create: ( getPostId: () => number, model: string ) => AiPlatform;
@@ -39,7 +40,7 @@ export const PROVIDERS: Provider[] = [
 	{
 		id: 'anthropic',
 		recommended: [ ANTHROPIC_MODEL, 'claude-opus-5', 'claude-sonnet-5-5' ],
-		canChat: ( model ) => model.startsWith( 'claude-' ),
+		canChat: ( model ) => /^claude-(?:opus|sonnet)-(?:[4-9]|\d{2,})/.test( model ),
 		create: createAnthropicPlatform,
 	},
 	{
@@ -47,14 +48,16 @@ export const PROVIDERS: Provider[] = [
 		recommended: [ OPENAI_MODEL, 'gpt-5' ],
 		// OpenAI also lists models for images, audio, and search.
 		canChat: ( model ) =>
-			/^gpt-/.test( model ) && ! /image|audio|realtime|tts|transcribe|search/.test( model ),
+			/^gpt-(?:[5-9]|\d{2,})/.test( model ) &&
+			! /image|audio|realtime|tts|transcribe|search/.test( model ),
 		create: createOpenAiPlatform,
 	},
 	{
 		id: 'google',
 		recommended: [ GEMINI_MODEL, 'gemini-2.5-pro' ],
 		canChat: ( model ) =>
-			/^gemini-/.test( model ) && ! /image|audio|tts|embedding|live/.test( model ),
+			/^gemini-(?:2\.5|[3-9]|\d{2,})/.test( model ) &&
+			! /image|audio|tts|embedding|live/.test( model ),
 		create: createGeminiPlatform,
 	},
 ];
@@ -89,9 +92,11 @@ export function chooseModel( provider: Provider, models: Model[] | null ): strin
 /**
  * Loads a provider's models.
  *
- * @param provider The provider ID.
- * @return The models; `null` when the list could not be loaded, or
+ * @param  provider The provider ID.
+ * @return The models; `null` when the provider could not list them, or
  *         `false` when the provider has no API key.
+ * @throws {Error} When the request did not reach the plugin, so it is not known
+ *                 whether the provider has a key.
  */
 async function loadModels( provider: string ): Promise< Model[] | null | false > {
 	try {
@@ -100,10 +105,15 @@ async function loadModels( provider: string ): Promise< Model[] | null | false >
 		} );
 	} catch ( error ) {
 		// The route answers this when the provider has no key in Connectors.
-		if ( ( error as { code?: unknown } )?.code === 'ai_content_editing_assistant_no_api_key' ) {
+		const code = ( error as { code?: unknown } )?.code;
+		if ( code === 'ai_content_editing_assistant_no_api_key' ) {
 			return false;
 		}
-		return null;
+		// The plugin's other errors mean the provider has a key but did not answer.
+		if ( typeof code === 'string' && code.startsWith( 'ai_content_editing_assistant_' ) ) {
+			return null;
+		}
+		throw error;
 	}
 }
 
@@ -134,6 +144,7 @@ export async function selectPlatform( getPostId: () => number ): Promise< AiPlat
 /**
  * Connects the AI assistant to the provider and model `selectPlatform()`
  * chooses. The choice is made when the first message is sent, and kept.
+ * When it could not be made, the next message tries again.
  *
  * @param getPostId Returns the ID of the post being edited.
  * @return The connection.
@@ -144,7 +155,10 @@ export function createAutoPlatform( getPostId: () => number ): AiPlatform {
 		// The sidebar only loads when the site can answer.
 		hasApiKey: async () => true,
 		async chat( request ) {
-			platform ??= selectPlatform( getPostId );
+			platform ??= selectPlatform( getPostId ).catch( ( error ) => {
+				platform = undefined;
+				throw error;
+			} );
 			return ( await platform ).chat( request );
 		},
 	};

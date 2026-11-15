@@ -68,8 +68,11 @@ describe( 'chooseModel', () => {
 	} );
 
 	it( 'chooses another model that can chat when the recommended ones were retired', () => {
-		expect( chooseModel( openai, list( 'text-embedding-3-large', 'gpt-image-2', 'gpt-7' ) ) ).toBe(
-			'gpt-7'
+		expect(
+			chooseModel( openai, list( 'gpt-4.1', 'text-embedding-3-large', 'gpt-image-2', 'gpt-7' ) )
+		).toBe( 'gpt-7' );
+		expect( chooseModel( anthropic, list( 'claude-3-opus', 'claude-sonnet-6' ) ) ).toBe(
+			'claude-sonnet-6'
 		);
 		expect( chooseModel( google, list( 'gemini-embedding-001', 'gemini-4-pro' ) ) ).toBe(
 			'gemini-4-pro'
@@ -97,6 +100,14 @@ describe( 'selectPlatform', () => {
 
 		expect( await selectPlatform( getPostId ) ).toEqual( { name: 'anthropic' } );
 		expect( createAnthropicPlatform ).toHaveBeenCalledWith( getPostId, anthropic.recommended[ 0 ] );
+	} );
+
+	it( 'does not choose when the request did not reach the plugin', async () => {
+		mockModels( { anthropic: { code: 'fetch_error' }, openai: list( 'gpt-7' ) } );
+
+		await expect( selectPlatform( getPostId ) ).rejects.toEqual( { code: 'fetch_error' } );
+		expect( createAnthropicPlatform ).not.toHaveBeenCalled();
+		expect( createOpenAiPlatform ).not.toHaveBeenCalled();
 	} );
 
 	it( 'falls back to the AI Client with the same order without a key', async () => {
@@ -128,5 +139,20 @@ describe( 'createAutoPlatform', () => {
 		expect( chat ).toHaveBeenCalledWith( request );
 		expect( createGeminiPlatform ).toHaveBeenCalledTimes( 1 );
 		expect( apiFetch ).toHaveBeenCalledTimes( 3 );
+	} );
+
+	it( 'chooses again when the choice could not be made', async () => {
+		const chat = vi.fn();
+		vi.mocked( createGeminiPlatform ).mockReturnValue( { hasApiKey: vi.fn(), chat } );
+		mockModels( { anthropic: { code: 'fetch_error' } } );
+
+		const ai = createAutoPlatform( getPostId );
+		const request = {} as Parameters< typeof chat >[ 0 ];
+		await expect( ai.chat( request ) ).rejects.toEqual( { code: 'fetch_error' } );
+
+		mockModels( { google: list( 'gemini-4-pro' ) } );
+		await ai.chat( request );
+
+		expect( chat ).toHaveBeenCalledWith( request );
 	} );
 } );
