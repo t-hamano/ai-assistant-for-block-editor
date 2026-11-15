@@ -12,35 +12,24 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 /**
  * Removes the data the plugin stored on the current site.
  *
- * - The cached model lists, kept as transients named
- *   `ai-content-editing-assistant_models_{hash}`.
- * - Each user's model choice, kept in the `ai-content-editing-assistant`
- *   scope of the `persisted_preferences` user meta. That meta also holds the
- *   preferences of WordPress itself and of other plugins, so only this scope
- *   is removed.
+ * Each user's model choice is kept in the `ai-content-editing-assistant`
+ * scope of the `persisted_preferences` user meta. That meta also holds the
+ * preferences of WordPress itself and of other plugins, so only this scope
+ * is removed.
+ *
+ * The cached model lists are transients that expire within 12 hours, and
+ * WordPress deletes expired transients on its own, so they are left alone.
  */
 function ai_content_editing_assistant_uninstall_site() {
 	global $wpdb;
 
-	$scope = 'ai-content-editing-assistant';
-
-	// Transients are named with a hash, so they are found by their prefix.
-	// When a persistent object cache is used, they are not in the database
-	// and expire on their own.
-	foreach ( array( '_transient_', '_transient_timeout_' ) as $prefix ) {
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-				$wpdb->esc_like( $prefix . $scope . '_models_' ) . '%'
-			)
-		);
-	}
-
+	$scope    = 'ai-content-editing-assistant';
 	$meta_key = $wpdb->get_blog_prefix() . 'persisted_preferences';
-	$user_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->prepare(
-			"SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s",
-			$meta_key
+	$user_ids = get_users(
+		array(
+			'blog_id'  => 0,
+			'meta_key' => $meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			'fields'   => 'ID',
 		)
 	);
 

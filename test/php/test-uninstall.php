@@ -24,21 +24,6 @@ class Test_Uninstall extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests that the cached model lists are removed, and other transients kept.
-	 */
-	public function test_removes_cached_models() {
-		set_transient( 'ai-content-editing-assistant_models_abc', array( 'model-a' ), HOUR_IN_SECONDS );
-		set_transient( 'other_plugin_models', array( 'model-b' ), HOUR_IN_SECONDS );
-
-		$this->uninstall();
-		wp_cache_flush();
-
-		$this->assertFalse( get_option( '_transient_ai-content-editing-assistant_models_abc' ) );
-		$this->assertFalse( get_option( '_transient_timeout_ai-content-editing-assistant_models_abc' ) );
-		$this->assertSame( array( 'model-b' ), get_transient( 'other_plugin_models' ) );
-	}
-
-	/**
 	 * Tests that only the plugin's scope of the preferences is removed.
 	 */
 	public function test_removes_only_the_plugin_preferences() {
