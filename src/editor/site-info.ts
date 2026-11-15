@@ -216,24 +216,19 @@ function listNames( names: string[] ): string {
 }
 
 /**
- * Describes a block. Core blocks are in the block reference and known to
- * the model, so only their supports and styles are listed. Blocks from
- * plugins also get their attributes and where they can go.
+ * Describes a block from a plugin: its supports, block styles, attributes,
+ * and where it can go.
  *
  * @param block The block.
  * @return The lines.
  */
 function describeBlock( block: SiteBlock ): string[] {
-	const isCore = block.name.startsWith( 'core/' );
-	const head = isCore ? `- \`${ block.name }\`` : `- \`${ block.name }\` (${ block.title })`;
+	const head = `- \`${ block.name }\` (${ block.title })`;
 	const details = [
 		describeSupports( block.supports ),
 		block.styles.length ? `styles: ${ block.styles.join( ', ' ) }` : '',
 	].filter( Boolean );
 	const lines = [ details.length ? `${ head }: ${ details.join( '; ' ) }` : head ];
-	if ( isCore ) {
-		return lines;
-	}
 	if ( block.description ) {
 		lines.push( `  ${ block.description }` );
 	}
@@ -254,6 +249,39 @@ function describeBlock( block: SiteBlock ): string[] {
 		for ( const [ name, schema ] of attributes ) {
 			lines.push( describeAttribute( name, schema ) );
 		}
+	}
+	return lines;
+}
+
+/**
+ * Describes the blocks of the site. Core blocks are known to the model and
+ * the same on every site, so they are listed by name, with the block
+ * styles that the site gives them. Blocks from plugins get their details.
+ *
+ * @param blocks The blocks.
+ * @return The lines.
+ */
+function describeBlocks( blocks: SiteBlock[] ): string[] {
+	const core = blocks.filter( ( block ) => block.name.startsWith( 'core/' ) );
+	const others = blocks.filter( ( block ) => ! block.name.startsWith( 'core/' ) );
+	const styled = core.filter( ( block ) => block.styles.length );
+	const lines: string[] = [];
+	if ( core.length ) {
+		lines.push( `Core blocks: ${ core.map( ( block ) => block.name.slice( 5 ) ).join( ', ' ) }.` );
+	}
+	if ( styled.length ) {
+		lines.push(
+			'',
+			'Block styles of core blocks, for `className` as `is-style-<name>`:',
+			...styled.map( ( block ) => `- \`${ block.name }\`: ${ block.styles.join( ', ' ) }` )
+		);
+	}
+	if ( others.length ) {
+		lines.push(
+			'',
+			'Blocks from plugins, with the supports and block styles each one has. A block can use only the supports listed for it: its color, typography, spacing, and other style attributes come from them.',
+			...others.flatMap( describeBlock )
+		);
 	}
 	return lines;
 }
@@ -294,9 +322,7 @@ export function formatSiteInfo( info: SiteInfo ): string {
 	return [
 		'## Blocks',
 		'',
-		'The blocks registered on the site, with the supports and block styles each one has. A block can use only the supports listed for it: its color, typography, spacing, and other style attributes come from them. Block styles go in `className` as `is-style-<name>`.',
-		'',
-		...info.blocks.flatMap( describeBlock ),
+		...describeBlocks( info.blocks ),
 		'',
 		'## Presets',
 		...describePresets(

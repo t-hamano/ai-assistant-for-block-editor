@@ -140,12 +140,11 @@ describe( 'formatSiteInfo', () => {
 		expect( text ).not.toContain( '`className`:' );
 	} );
 
-	it( 'lists core blocks by their supports only', () => {
+	it( 'lists core blocks by name, with their block styles', () => {
 		const text = getSiteInfo();
-		const paragraph = text
-			.split( '\n' )
-			.find( ( line ) => line.startsWith( '- `core/paragraph`' ) );
-		expect( paragraph ).toMatch( /typography: fontSize/ );
+		expect( text ).toMatch( /^Core blocks: .*\bparagraph\b.*\.$/m );
+		expect( text ).toContain( '- `core/button`: fill, outline' );
+		expect( text ).not.toContain( '`core/paragraph`' );
 		expect( text ).not.toContain( '`dropCap`' );
 	} );
 
@@ -158,7 +157,7 @@ describe( 'formatSiteInfo', () => {
 	} );
 
 	it( 'stays short enough to send with every conversation', () => {
-		expect( getSiteInfo().length ).toBeLessThan( 40000 );
+		expect( getSiteInfo().length ).toBeLessThan( 5000 );
 	} );
 
 	it( 'gives the same text for the same site, so the prompt cache holds', () => {
