@@ -8,6 +8,6 @@ import { registerPlugin } from '@wordpress/plugins';
  */
 import Sidebar from './sidebar';
 
-registerPlugin( 'ai-assistant-for-block-editor', {
+registerPlugin( 'ai-content-editing-assistant', {
 	render: Sidebar,
 } );

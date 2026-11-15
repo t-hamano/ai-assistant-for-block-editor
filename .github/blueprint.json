@@ -10,7 +10,7 @@
 			"step": "installPlugin",
 			"pluginData": {
 				"resource": "url",
-				"url": "{{ARTIFACT_URL:ai-assistant-for-block-editor}}"
+				"url": "{{ARTIFACT_URL:ai-content-editing-assistant}}"
 			}
 		}
 	]

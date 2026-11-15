@@ -1,11 +1,11 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  * @author Aki Hamano
  * @license GPL-2.0+
  */
 
-namespace AI_Assistant_For_Block_Editor;
+namespace AI_Content_Editing_Assistant;
 
 class Enqueue {
 
@@ -45,7 +45,7 @@ class Enqueue {
 			return;
 		}
 
-		$asset_path = AABE_PATH . '/build/index.asset.php';
+		$asset_path = ACEA_PATH . '/build/index.asset.php';
 
 		if ( ! file_exists( $asset_path ) ) {
 			return;
@@ -54,21 +54,21 @@ class Enqueue {
 		$asset_file = include $asset_path;
 
 		wp_enqueue_script(
-			AABE_NAMESPACE,
-			AABE_URL . '/build/index.js',
+			ACEA_NAMESPACE,
+			ACEA_URL . '/build/index.js',
 			$asset_file['dependencies'],
 			$asset_file['version'],
 			array( 'in_footer' => true )
 		);
 
-		wp_set_script_translations( AABE_NAMESPACE, AABE_NAMESPACE );
+		wp_set_script_translations( ACEA_NAMESPACE, ACEA_NAMESPACE );
 
 		wp_enqueue_style(
-			AABE_NAMESPACE,
-			AABE_URL . '/build/style-index.css',
+			ACEA_NAMESPACE,
+			ACEA_URL . '/build/style-index.css',
 			array(),
 			$asset_file['version']
 		);
-		wp_style_add_data( AABE_NAMESPACE, 'rtl', 'replace' );
+		wp_style_add_data( ACEA_NAMESPACE, 'rtl', 'replace' );
 	}
 }

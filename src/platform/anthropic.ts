@@ -178,7 +178,7 @@ export async function readAnthropicStream(
 	onEvent: AiChatRequest[ 'onEvent' ]
 ): Promise< AnthropicAnswer > {
 	if ( ! response.body ) {
-		throw new Error( __( 'The answer could not be read.', 'ai-assistant-for-block-editor' ) );
+		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
 	}
 
 	let usage: AiUsage | undefined;
@@ -254,7 +254,7 @@ export async function readAnthropicStream(
 			case 'error':
 				throw new Error(
 					payload.error?.message ??
-						__( 'The answer could not be loaded.', 'ai-assistant-for-block-editor' )
+						__( 'The answer could not be loaded.', 'ai-content-editing-assistant' )
 				);
 		}
 	}
@@ -265,11 +265,11 @@ export async function readAnthropicStream(
 
 	// Either can cut a tool call off, so its edit is not applied.
 	if ( stopReason === 'refusal' ) {
-		throw new Error( __( 'The model declined to answer.', 'ai-assistant-for-block-editor' ) );
+		throw new Error( __( 'The model declined to answer.', 'ai-content-editing-assistant' ) );
 	}
 	if ( stopReason === 'max_tokens' ) {
 		throw new Error(
-			__( 'The answer was cut off because it was too long.', 'ai-assistant-for-block-editor' )
+			__( 'The answer was cut off because it was too long.', 'ai-content-editing-assistant' )
 		);
 	}
 
@@ -337,7 +337,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 				let response: Response;
 				try {
 					response = await apiFetch< Response, false >( {
-						path: '/ai-assistant-for-block-editor/v1/chat',
+						path: '/ai-content-editing-assistant/v1/chat',
 						method: 'POST',
 						data: {
 							provider: 'anthropic',
@@ -363,7 +363,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 				const tools = runTools( answer, onEvent );
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
-					throw new Error( __( 'The edit could not be made.', 'ai-assistant-for-block-editor' ) );
+					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );
 				}
 				// The answer goes back unchanged, with its thinking, so the model
 				// goes on from where it stopped.
