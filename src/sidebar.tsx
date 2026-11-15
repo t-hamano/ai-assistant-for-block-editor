@@ -28,23 +28,6 @@ export default function Sidebar() {
 	// The connection to the model comes with the transport.
 	const chat = useAiChat( { ai: undefined, createTarget } );
 	const { stop, reset } = chat;
-	// `PluginSidebar` passes `header` on to `ComplementaryArea`, but its
-	// types leave it out.
-	const headerProps = {
-		header: (
-			<>
-				<h2 className="interface-complementary-area-header__title">{ title }</h2>
-				<Button
-					icon={ plus }
-					label={ __( 'New conversation', 'ai-assistant-for-block-editor' ) }
-					size="compact"
-					onClick={ reset }
-					disabled={ chat.conversation.messages.length === 0 }
-					accessibleWhenDisabled
-				/>
-			</>
-		),
-	};
 
 	// The conversation is about the blocks, so it ends when the user
 	// switches to the code editor.
@@ -65,7 +48,20 @@ export default function Sidebar() {
 				title={ title }
 				icon={ icon }
 				className="aabe-sidebar"
-				{ ...headerProps }
+				// @ts-expect-error `PluginSidebar` passes `header` on to `ComplementaryArea`, but its types leave it out.
+				header={
+					<>
+						<h2 className="interface-complementary-area-header__title">{ title }</h2>
+						<Button
+							icon={ plus }
+							label={ __( 'New conversation', 'ai-assistant-for-block-editor' ) }
+							size="compact"
+							onClick={ reset }
+							disabled={ chat.conversation.messages.length === 0 }
+							accessibleWhenDisabled
+						/>
+					</>
+				}
 			>
 				<Chat chat={ chat } isAvailable={ isVisualEditor } />
 			</PluginSidebar>
