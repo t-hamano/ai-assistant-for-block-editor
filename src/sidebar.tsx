@@ -1,12 +1,12 @@
 /**
  * WordPress dependencies
  */
-import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
 import { useCallback, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { plus } from '@wordpress/icons';
+import { IconButton } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -52,13 +52,14 @@ export default function Sidebar() {
 				header={
 					<>
 						<h2 className="interface-complementary-area-header__title">{ title }</h2>
-						<Button
+						<IconButton
 							icon={ plus }
 							label={ __( 'New conversation', 'ai-assistant-for-block-editor' ) }
+							variant="minimal"
+							tone="neutral"
 							size="compact"
 							onClick={ reset }
 							disabled={ chat.conversation.messages.length === 0 }
-							accessibleWhenDisabled
 						/>
 					</>
 				}

@@ -13,9 +13,7 @@
 }
 
 .aabe-chat {
-	display: flex;
 	flex: 1 1 auto;
-	flex-direction: column;
 	min-height: 0;
 }
 
@@ -23,14 +21,10 @@
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--wpds-dimension-gap-lg);
 	min-height: 0;
-	padding: 16px;
+	padding: var(--wpds-dimension-padding-lg);
 	overflow: auto;
-
-	.components-notice {
-		margin: 0;
-	}
 }
 
 .aabe-chat__message {
@@ -39,26 +33,15 @@
 	&.is-user {
 		align-self: flex-end;
 		max-width: 85%;
-		padding: 8px 12px;
-		border-radius: 2px;
-		background: #f0f0f0;
+		padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+		border-radius: var(--wpds-border-radius-md);
+		background: var(--wpds-color-background-surface-neutral-weak);
 		white-space: pre-wrap;
 	}
 }
 
 .aabe-chat__note {
-	margin: 0;
-	color: #757575;
-}
-
-.aabe-chat__activity {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-
-	.components-spinner {
-		margin: 0;
-	}
+	color: var(--wpds-color-foreground-content-neutral-weak);
 }
 
 .aabe-chat__markdown {
@@ -88,7 +71,7 @@
 	h6 {
 		margin: 1em 0 0.5em;
 		font-size: inherit;
-		font-weight: 600;
+		font-weight: var(--wpds-typography-font-weight-emphasis);
 	}
 
 	ul,
@@ -100,15 +83,27 @@
 		list-style: disc;
 	}
 
+	code {
+		font-family: var(--wpds-typography-font-family-mono);
+	}
+
 	pre {
-		padding: 8px;
+		padding: var(--wpds-dimension-padding-sm);
 		overflow-x: auto;
-		background: #f0f0f0;
+		border-radius: var(--wpds-border-radius-md);
+		background: var(--wpds-color-background-surface-neutral-weak);
 		overflow-wrap: normal;
 
 		code {
 			padding: 0;
+			background: none;
 		}
+	}
+
+	blockquote {
+		padding-left: 0.75em;
+		border-left: var(--wpds-border-width-md) solid var(--wpds-color-stroke-surface-neutral-weak);
+		color: var(--wpds-color-foreground-content-neutral-weak);
 	}
 
 	table {
@@ -122,18 +117,15 @@
 	th,
 	td {
 		padding: 0.25em 0.5em;
-		border: 1px solid #ddd;
+		border: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
 		text-align: left;
 	}
 }
 
 .aabe-chat__composer {
-	display: flex;
 	flex: 0 0 auto;
-	gap: 8px;
-	align-items: flex-end;
-	padding: 16px;
-	border-top: 1px solid #e0e0e0;
+	padding: var(--wpds-dimension-padding-lg);
+	border-top: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
 }
 
 .aabe-chat__input {

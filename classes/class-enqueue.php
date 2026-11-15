@@ -61,7 +61,7 @@ class Enqueue {
 		wp_enqueue_style(
 			AABE_NAMESPACE,
 			AABE_URL . '/build/style-index.css',
-			array( 'wp-components' ),
+			array(),
 			$asset_file['version']
 		);
 		wp_style_add_data( AABE_NAMESPACE, 'rtl', 'replace' );
