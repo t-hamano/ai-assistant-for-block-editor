@@ -167,6 +167,12 @@ describe( 'validateMarkup', () => {
 		expect( result.blocks[ 0 ].attributes.align ).toBe( 'left' );
 	} );
 
+	it( 'rejects values of a deprecated version in the current form', () => {
+		const { problems } = validateMarkup( text( 'New', '{"align":"start"} ' ) );
+
+		expect( problems[ 0 ] ).toContain( 'Use one of: "left", "right"' );
+	} );
+
 	it( 'migrates blocks written in a deprecated form', () => {
 		const result = validateMarkup(
 			'<!-- wp:test/text -->\n<div>Old</div>\n<!-- /wp:test/text -->'

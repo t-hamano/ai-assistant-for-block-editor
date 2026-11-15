@@ -3,11 +3,14 @@
  */
 import { parse as parseRaw } from '@wordpress/block-serialization-default-parser';
 import {
+	getBlockAttributes,
 	getBlockType,
 	getFreeformContentHandlerName,
 	getUnregisteredTypeHandlerName,
 	parse,
 	serialize,
+	serializeRawBlock,
+	validateBlock,
 	type Block,
 } from '@wordpress/blocks';
 
@@ -139,45 +142,87 @@ function toSavedMarkup( block: Block ): string {
 }
 
 /**
+ * Whether the block is in a deprecated form, which the parser migrates:
+ * its HTML is not what the current version saves.
+ *
+ * @param raw The block, from the default parser.
+ * @return Whether it is.
+ */
+function isDeprecatedForm( raw: RawBlock ): boolean {
+	const name = raw.blockName as string;
+	const blockType = getBlockType( name );
+	if ( ! blockType?.deprecated?.length ) {
+		return false;
+	}
+	const innerBlocks = parse(
+		raw.innerBlocks
+			// Both parsers give the same shape, typed apart.
+			.map( ( inner ) => serializeRawBlock( inner as Parameters< typeof serializeRawBlock >[ 0 ] ) )
+			.join( '' )
+	);
+	const [ isValid ] = validateBlock(
+		{
+			clientId: '',
+			name,
+			isValid: true,
+			attributes: getBlockAttributes( blockType, raw.innerHTML, raw.attrs ?? {} ),
+			innerBlocks,
+			originalContent: raw.innerHTML,
+		},
+		blockType
+	);
+	return ! isValid;
+}
+
+/**
  * Checks the attributes in a block's comment against its type, which the
  * parser drops without a word when it does not know them.
  *
- * @param name  The block name.
- * @param attrs The attributes in the comment.
+ * @param raw The block, from the default parser.
  * @return The problems.
  */
-function checkAttributes( name: string, attrs: Record< string, unknown > ): string[] {
+function checkAttributes( raw: RawBlock ): string[] {
+	const name = raw.blockName as string;
+	const attrs: Record< string, unknown > = raw.attrs ?? {};
 	const blockType = getBlockType( name ) as
 		| { attributes?: Record< string, AttributeSchema >; deprecated?: { attributes?: object }[] }
 		| undefined;
 	if ( ! blockType ) {
 		return [];
 	}
-	// The parser migrates the attributes of deprecated versions, so a key or
-	// value that any version accepts is fine.
-	const versions = [
-		blockType.attributes ?? {},
-		...( blockType.deprecated ?? [] ).map(
-			( version ) => ( version.attributes ?? {} ) as Record< string, AttributeSchema >
-		),
-	];
-	const problems: string[] = [];
-	for ( const [ key, value ] of Object.entries( attrs ) ) {
-		const schemas = versions.map( ( version ) => version[ key ] ).filter( Boolean );
-		if ( ! schemas.length ) {
-			problems.push( `"${ key }" is not an attribute of the ${ name } block.` );
-		} else if ( ! schemas.some( ( schema ) => accepts( schema, value ) ) ) {
-			const schema = blockType.attributes?.[ key ] ?? schemas[ 0 ];
-			const expected = Array.isArray( schema.enum )
-				? `Use one of: ${ schema.enum.map( ( item ) => JSON.stringify( item ) ).join( ', ' ) }.`
-				: `Use a value of type ${ [ schema.type ].flat().join( ' or ' ) }.`;
-			problems.push(
-				`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. ${ expected }`
-			);
+	const current = blockType.attributes ?? {};
+	const check = ( versions: Record< string, AttributeSchema >[] ) => {
+		const problems: string[] = [];
+		for ( const [ key, value ] of Object.entries( attrs ) ) {
+			const schemas = versions.map( ( version ) => version[ key ] ).filter( Boolean );
+			if ( ! schemas.length ) {
+				problems.push( `"${ key }" is not an attribute of the ${ name } block.` );
+			} else if ( ! schemas.some( ( schema ) => accepts( schema, value ) ) ) {
+				const schema = current[ key ] ?? schemas[ 0 ];
+				const expected = Array.isArray( schema.enum )
+					? `Use one of: ${ schema.enum.map( ( item ) => JSON.stringify( item ) ).join( ', ' ) }.`
+					: `Use a value of type ${ [ schema.type ].flat().join( ' or ' ) }.`;
+				problems.push(
+					`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. ${ expected }`
+				);
+			}
 		}
+		return problems;
+	};
+
+	let problems = check( [ current ] );
+	// A block in a deprecated form has its attributes migrated by the
+	// parser, so the attributes of any version are fine there.
+	if ( problems.length && isDeprecatedForm( raw ) ) {
+		problems = check( [
+			current,
+			...( blockType.deprecated ?? [] ).map(
+				( version ) => ( version.attributes ?? {} ) as Record< string, AttributeSchema >
+			),
+		] );
 	}
 	if ( problems.length ) {
-		const names = Object.entries( blockType.attributes ?? {} )
+		const names = Object.entries( current )
 			.filter( ( [ , schema ] ) => ! schema.source )
 			.map( ( [ key ] ) => key );
 		problems.push( `The ${ name } block has these attributes: ${ names.join( ', ' ) }.` );
@@ -218,7 +263,7 @@ function checkRawBlocks(
 		if ( ! getBlockType( name ) ) {
 			return [ `The ${ name } block is not registered on this site. Use a registered block.` ];
 		}
-		const problems = checkAttributes( name, raw.attrs ?? {} );
+		const problems = checkAttributes( raw );
 		if ( name === 'core/html' ) {
 			const html = raw.innerHTML.trim();
 			if ( html && ! existingHtml.has( html ) && ! isAllowedHtml( html ) ) {
