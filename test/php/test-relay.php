@@ -96,6 +96,190 @@ class Test_Relay extends WP_UnitTestCase {
 		$body = json_decode( $this->sent['args']['body'], true );
 		$this->assertSame( 'test-model', $body['model'] );
 		$this->assertFalse( $body['stream'] );
+		$this->assertSame( 64000, $body['max_tokens'] );
+	}
+
+	/**
+	 * Tests that the token limit is set on the server, whatever the body asks for.
+	 */
+	public function test_token_limit_is_set_on_the_server() {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+
+		$this->chat(
+			array(
+				'provider' => 'openai',
+				'body'     => array(
+					'model'             => 'test-model',
+					'max_output_tokens' => 1000000,
+					'input'             => array(),
+				),
+			)
+		);
+
+		$body = json_decode( $this->sent['args']['body'], true );
+		$this->assertSame( 64000, $body['max_output_tokens'] );
+	}
+
+	/**
+	 * Tests that the editor's own function tools are passed on.
+	 *
+	 * @dataProvider data_function_tools
+	 *
+	 * @param string $provider The provider ID.
+	 * @param array  $body     The request body.
+	 */
+	public function test_function_tools_are_passed_on( $provider, $body ) {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+
+		$response = $this->chat(
+			array(
+				'provider' => $provider,
+				'body'     => $body,
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$sent = json_decode( $this->sent['args']['body'], true );
+		$this->assertSame( $body['tools'], $sent['tools'] );
+	}
+
+	/**
+	 * Bodies with the editor's own function tools.
+	 *
+	 * @return array
+	 */
+	public static function data_function_tools() {
+		return array(
+			'Anthropic' => array(
+				'anthropic',
+				array(
+					'model'    => 'test-model',
+					'tools'    => array(
+						array(
+							'name'                  => 'edit_blocks',
+							'description'           => 'Edits the document.',
+							'eager_input_streaming' => true,
+							'input_schema'          => array( 'type' => 'object' ),
+						),
+					),
+					'messages' => array(),
+				),
+			),
+			'OpenAI'    => array(
+				'openai',
+				array(
+					'model' => 'test-model',
+					'tools' => array(
+						array(
+							'type'        => 'function',
+							'name'        => 'edit_blocks',
+							'description' => 'Edits the document.',
+							'parameters'  => array( 'type' => 'object' ),
+							'strict'      => false,
+						),
+					),
+					'input' => array(),
+				),
+			),
+			'Google'    => array(
+				'google',
+				array(
+					'model'    => 'gemini-test',
+					'tools'    => array(
+						array(
+							'functionDeclarations' => array(
+								array(
+									'name'        => 'edit_blocks',
+									'description' => 'Edits the document.',
+									'parameters'  => array( 'type' => 'object' ),
+								),
+							),
+						),
+					),
+					'contents' => array(),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Tests that a body that asks for more than the editor sends is rejected.
+	 *
+	 * @dataProvider data_invalid_bodies
+	 *
+	 * @param string $provider The provider ID.
+	 * @param array  $body     The request body.
+	 */
+	public function test_invalid_body_is_rejected( $provider, $body ) {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+
+		$response = $this->chat(
+			array(
+				'provider' => $provider,
+				'body'     => $body,
+			)
+		);
+
+		$this->assertSame( 'ai_content_editing_assistant_invalid_body', $response->as_error()->get_error_code() );
+		$this->assertNull( $this->sent );
+	}
+
+	/**
+	 * Bodies that ask for more than the editor sends.
+	 *
+	 * @return array
+	 */
+	public static function data_invalid_bodies() {
+		return array(
+			'unknown field'         => array(
+				'anthropic',
+				array(
+					'model'    => 'test-model',
+					'messages' => array(),
+					'metadata' => array(),
+				),
+			),
+			'Anthropic server tool' => array(
+				'anthropic',
+				array(
+					'model'    => 'test-model',
+					'tools'    => array(
+						array(
+							'type' => 'web_search_20250305',
+							'name' => 'web_search',
+						),
+					),
+					'messages' => array(),
+				),
+			),
+			'OpenAI built-in tool'  => array(
+				'openai',
+				array(
+					'model' => 'test-model',
+					'tools' => array( array( 'type' => 'web_search' ) ),
+					'input' => array(),
+				),
+			),
+			'Google search tool'    => array(
+				'google',
+				array(
+					'model'    => 'gemini-test',
+					'tools'    => array( array( 'googleSearch' => array() ) ),
+					'contents' => array(),
+				),
+			),
+			'Google candidates'     => array(
+				'google',
+				array(
+					'model'            => 'gemini-test',
+					'contents'         => array(),
+					'generationConfig' => array( 'candidateCount' => 8 ),
+				),
+			),
+		);
 	}
 
 	/**
@@ -104,7 +288,15 @@ class Test_Relay extends WP_UnitTestCase {
 	public function test_relays_the_request_to_openai() {
 		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
 
-		$response = $this->chat( array( 'provider' => 'openai' ) );
+		$response = $this->chat(
+			array(
+				'provider' => 'openai',
+				'body'     => array(
+					'model' => 'test-model',
+					'input' => array(),
+				),
+			)
+		);
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'https://api.openai.com/v1/responses', $this->sent['url'] );
@@ -145,7 +337,13 @@ class Test_Relay extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'x-api-key', $this->sent['args']['headers'] );
 
 		$body = json_decode( $this->sent['args']['body'], true );
-		$this->assertSame( array( 'contents' => array() ), $body );
+		$this->assertSame(
+			array(
+				'contents'         => array(),
+				'generationConfig' => array( 'maxOutputTokens' => 64000 ),
+			),
+			$body
+		);
 	}
 
 	/**
