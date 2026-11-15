@@ -22,6 +22,7 @@ import {
 	toEdit,
 } from '../anthropic';
 import { READ_TOOLS } from '../read-tools';
+import { readEvents } from '../transport';
 import { streamBody } from './stream-body';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
@@ -32,7 +33,7 @@ function sse( event: string, data: object ) {
 
 async function read( pieces: string[] ) {
 	const events: AiStreamEvent[] = [];
-	const done = readAnthropicStream( new Response( streamBody( pieces ) ), ( event ) => {
+	const done = readAnthropicStream( readEvents( streamBody( pieces ) ), ( event ) => {
 		events.push( event );
 	} );
 	return { events, done };
@@ -219,6 +220,15 @@ describe( 'readAnthropicStream', () => {
 		] );
 
 		await expect( done ).rejects.toThrow();
+	} );
+
+	it( 'rejects when the stream ends before the answer is finished', async () => {
+		const { events, done } = await read( [
+			sse( 'content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'Part' } } ),
+		] );
+
+		await expect( done ).rejects.toThrow( 'The connection was lost' );
+		expect( events ).toEqual( [ { type: 'text', text: 'Part' } ] );
 	} );
 
 	it( 'rejects when the answer is cut off', async () => {

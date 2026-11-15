@@ -15,10 +15,21 @@ export type SseEvent = {
 /**
  * Reads Server-Sent Events from a response body as they arrive.
  *
- * @param body The response body.
+ * @param body   The response body.
+ * @param signal Stops reading when aborted, so the events end there.
  */
-export async function* readSse( body: ReadableStream< Uint8Array > ): AsyncGenerator< SseEvent > {
+export async function* readSse(
+	body: ReadableStream< Uint8Array >,
+	signal?: AbortSignal
+): AsyncGenerator< SseEvent > {
 	const reader = body.getReader();
+	const cancel = () => {
+		reader.cancel().catch( () => {} );
+	};
+	if ( signal?.aborted ) {
+		cancel();
+	}
+	signal?.addEventListener( 'abort', cancel );
 	const decoder = new TextDecoder();
 	let buffer = '';
 	let event = '';
@@ -73,6 +84,7 @@ export async function* readSse( body: ReadableStream< Uint8Array > ): AsyncGener
 			}
 		}
 	} finally {
+		signal?.removeEventListener( 'abort', cancel );
 		reader.releaseLock();
 	}
 }

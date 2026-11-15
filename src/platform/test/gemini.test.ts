@@ -23,6 +23,7 @@ import {
 	readGeminiStream,
 	toGeminiContents,
 } from '../gemini';
+import { readEvents } from '../transport';
 import { streamBody } from './stream-body';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
@@ -37,7 +38,7 @@ function chunk( parts: unknown[], extra: Record< string, unknown > = {} ) {
 
 async function read( pieces: string[] ) {
 	const events: AiStreamEvent[] = [];
-	const done = readGeminiStream( new Response( streamBody( pieces ) ), ( event ) => {
+	const done = readGeminiStream( readEvents( streamBody( pieces ) ), ( event ) => {
 		events.push( event );
 	} );
 	return { events, done };
@@ -184,6 +185,13 @@ describe( 'readGeminiStream', () => {
 		const { done } = await read( [ chunk( [ { text: 'Part' } ], { finishReason: 'SAFETY' } ) ] );
 
 		await expect( done ).rejects.toThrow( 'The model declined to answer.' );
+	} );
+
+	it( 'rejects when the stream ends before the answer is finished', async () => {
+		const { events, done } = await read( [ chunk( [ { text: 'Part' } ] ) ] );
+
+		await expect( done ).rejects.toThrow( 'The connection was lost' );
+		expect( events ).toEqual( [ { type: 'text', text: 'Part' } ] );
 	} );
 
 	it( 'rejects when the answer is cut off', async () => {

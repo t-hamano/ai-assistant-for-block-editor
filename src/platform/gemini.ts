@@ -1,7 +1,6 @@
 /**
  * WordPress dependencies
  */
-import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -10,7 +9,7 @@ import { __ } from '@wordpress/i18n';
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { readSse } from './sse';
+import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -215,27 +214,21 @@ function addPart( parts: GeminiPart[], part: GeminiPart ) {
 /**
  * Streams Gemini's answer through `onEvent`, and collects its parts.
  *
- * @param response The streamed response.
- * @param onEvent  Called for each event of the answer.
+ * @param events  The events of the answer.
+ * @param onEvent Called for each event of the answer.
  * @return The answer.
  */
 export async function readGeminiStream(
-	response: Response,
+	events: AsyncIterable< AnswerEvent >,
 	onEvent: AiChatRequest[ 'onEvent' ]
 ): Promise< GeminiAnswer > {
-	if ( ! response.body ) {
-		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
-	}
-
 	const declined = __( 'The model declined to answer.', 'ai-content-editing-assistant' );
 	const parts: GeminiPart[] = [];
 	let usage: AiUsage | undefined;
 	let finishReason: string | undefined;
 	let thinking = false;
 
-	for await ( const { data } of readSse( response.body ) ) {
-		const payload = JSON.parse( data );
-
+	for await ( const { data: payload } of events ) {
 		if ( payload.error ) {
 			throw new Error(
 				payload.error.message ??
@@ -280,7 +273,12 @@ export async function readGeminiStream(
 		onEvent( { type: 'usage', usage } );
 	}
 
-	if ( finishReason && DECLINED_REASONS.includes( finishReason ) ) {
+	// The last piece of the answer says why it ended, so without it, the
+	// stream ended early.
+	if ( ! finishReason ) {
+		throw connectionLost();
+	}
+	if ( DECLINED_REASONS.includes( finishReason ) ) {
 		throw new Error( declined );
 	}
 	// It can cut a function call off, so its edit is not applied.
@@ -359,29 +357,16 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 			const contents = toGeminiContents( messages );
 			let failures = 0;
 			for (;;) {
-				let response: Response;
-				try {
-					response = await apiFetch< Response, false >( {
-						path: '/ai-content-editing-assistant/v1/chat',
-						method: 'POST',
-						data: {
-							provider: 'google',
-							post_id: getPostId(),
-							stream: true,
-							body: buildGeminiBody( system, contents, model ),
-						},
-						parse: false,
+				const answer = await readGeminiStream(
+					streamFromRelay( {
+						provider: 'google',
+						postId: getPostId(),
+						body: buildGeminiBody( system, contents, model ),
 						signal,
-					} );
-				} catch ( error ) {
-					// With `parse: false`, an error status rejects with the response itself.
-					if ( error instanceof Response ) {
-						throw new Error( await readGeminiErrorMessage( error ) );
-					}
-					throw error;
-				}
-
-				const answer = await readGeminiStream( response, onEvent );
+						readError: readGeminiErrorMessage,
+					} ),
+					onEvent
+				);
 				if ( ! answer.calls.length ) {
 					return;
 				}
