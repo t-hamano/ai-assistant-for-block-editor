@@ -198,9 +198,9 @@ export function formatChanges( document: string, seen: SeenDocument ): string | 
  * @return The `<document>` block, or the `<outline>` block.
  */
 function formatDocument( context: EditContext ): string {
-	const { document, selection } = context;
+	const { document, selection, textIn } = context;
 	if ( isLongDocument( document ) ) {
-		return formatOutline( document, selection );
+		return formatOutline( document, selection, textIn );
 	}
 	return [ '<document>', document.replace( /\n+$/, '' ), '</document>' ]
 		.filter( ( part ) => part !== '' )
@@ -208,7 +208,8 @@ function formatDocument( context: EditContext ): string {
 }
 
 /**
- * Describes the selection. It is empty when nothing is selected.
+ * Describes the selection. It is empty when nothing is selected. A text
+ * range inside one block says which block holds it.
  *
  * @param context The selection and the document.
  * @return The `<selection>` block.
@@ -218,7 +219,10 @@ function formatSelection( context: EditContext ): string {
 	if ( ! selection ) {
 		return `${ SELECTION_START }${ SELECTION_END }`;
 	}
-	return [ SELECTION_START, selection, SELECTION_END ].join( '\n' );
+	const start = context.textIn
+		? SELECTION_START.replace( '>', ` type="text" in="${ context.textIn }">` )
+		: SELECTION_START;
+	return [ start, selection, SELECTION_END ].join( '\n' );
 }
 
 /**

@@ -13,7 +13,7 @@ import { IconButton } from '@wordpress/ui';
  */
 import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
-import { createBlockTarget } from './editor/block-target';
+import { createSelectionTarget } from './editor/text-target';
 import icon from './icon';
 import { createAutoPlatform } from './platform/select';
 
@@ -27,7 +27,7 @@ export default function Sidebar() {
 		( select ) => select( editorStore ).getEditorMode() === 'visual',
 		[]
 	);
-	const chat = useAiChat( { ai, createTarget: createBlockTarget } );
+	const chat = useAiChat( { ai, createTarget: createSelectionTarget } );
 	const { stop, reset } = chat;
 
 	// The conversation is about the blocks, so it ends when the user

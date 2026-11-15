@@ -200,12 +200,18 @@ function flatten( block: OutlineBlock ): OutlineBlock[] {
 /**
  * Finds the blocks next to the selected ones, at the same level.
  *
- * @param blocks   The blocks of the document.
- * @param document The document.
- * @param refs     The reference IDs in the selection.
+ * @param blocks       The blocks of the document.
+ * @param document     The document.
+ * @param refs         The reference IDs in the selection.
+ * @param withSelected Whether the selected blocks come too, in their place.
  * @return The markup of the blocks before and after the selection.
  */
-function findNearby( blocks: OutlineBlock[], document: string, refs: Set< string > ): string[] {
+function findNearby(
+	blocks: OutlineBlock[],
+	document: string,
+	refs: Set< string >,
+	withSelected: boolean
+): string[] {
 	const selected = blocks.filter( ( block ) => refs.has( block.ref ) );
 	const first = selected[ 0 ];
 	if ( ! first ) {
@@ -219,6 +225,7 @@ function findNearby( blocks: OutlineBlock[], document: string, refs: Set< string
 	const to = siblings.indexOf( last );
 	const nearby = [
 		...siblings.slice( Math.max( 0, from - NEARBY_BLOCKS ), from ),
+		...( withSelected ? siblings.slice( from, to + 1 ) : [] ),
 		...siblings.slice( to + 1, to + 1 + NEARBY_BLOCKS ),
 	];
 	let length = 0;
@@ -261,22 +268,28 @@ export function isLongDocument( document: string ): boolean {
 /**
  * Shows a long document as an outline: each block in a line with its
  * reference ID, name, and leading text, nested blocks indented under their
- * parent. The blocks around the selection follow as block markup.
+ * parent. The blocks around the selection follow as block markup. When
+ * the selection is text inside a block, that block comes with them, since
+ * the selection has only the text.
  *
  * @param document  The document, with reference IDs.
  * @param selection The selection, with reference IDs.
+ * @param textIn    The reference ID of the block when the selection is
+ *                  text inside it.
  * @return The `<outline>` block, and the `<nearby>` block when there are
  *         blocks around the selection.
  */
-export function formatOutline( document: string, selection: string ): string {
+export function formatOutline( document: string, selection: string, textIn?: string ): string {
 	const blocks = parseOutline( document );
 	const refs = new Set(
-		[ ...selection.matchAll( /<!--\s*ref:([a-z0-9]+)\s*-->/gi ) ].map( ( match ) =>
-			match[ 1 ].toLowerCase()
-		)
+		textIn
+			? [ textIn.toLowerCase() ]
+			: [ ...selection.matchAll( /<!--\s*ref:([a-z0-9]+)\s*-->/gi ) ].map( ( match ) =>
+					match[ 1 ].toLowerCase()
+				)
 	);
 	const parts = [ [ '<outline>', formatLines( blocks ), '</outline>' ].join( '\n' ) ];
-	const nearby = findNearby( blocks, document, refs );
+	const nearby = findNearby( blocks, document, refs, !! textIn );
 	if ( nearby.length ) {
 		parts.push( [ '<nearby>', ...nearby, '</nearby>' ].join( '\n' ) );
 	}

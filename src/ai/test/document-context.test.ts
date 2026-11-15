@@ -180,6 +180,12 @@ describe( 'buildMessageContext', () => {
 		);
 	} );
 
+	it( 'says which block holds selected text', () => {
+		expect(
+			buildMessageContext( { ...context, selection: 'Tw', textIn: 'b2' }, seen( context.document ) )
+		).toBe( '<selection type="text" in="b2">\nTw\n</selection>' );
+	} );
+
 	it( 'sends only the changed blocks', () => {
 		const previous = doc(
 			paragraph( 'b1', long ),
