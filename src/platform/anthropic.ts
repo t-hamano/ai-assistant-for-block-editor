@@ -99,7 +99,18 @@ export function toAnthropicMessages( messages: AiMessage[] ): AnthropicMessage[]
 }
 
 /**
+ * Marks where Anthropic caches the prompt up to, for five minutes.
+ */
+const CACHE_CONTROL = { type: 'ephemeral' } as const;
+
+/**
  * Builds the body of a request to Anthropic's Messages API.
+ *
+ * The prompt is cached at two points. The marker on the system prompt
+ * caches the tool and the system prompt, which stay the same in every
+ * request, so they are read from the cache even when the conversation
+ * changes. The marker on the body caches the whole conversation, so the
+ * next message or tool call only pays in full for what it adds.
  *
  * @param system   The system prompt.
  * @param messages The messages.
@@ -109,7 +120,8 @@ export function buildAnthropicBody( system: string, messages: AnthropicMessage[]
 	return {
 		model: ANTHROPIC_MODEL,
 		max_tokens: MAX_TOKENS,
-		system,
+		cache_control: CACHE_CONTROL,
+		system: [ { type: 'text', text: system, cache_control: CACHE_CONTROL } ],
 		tools: [ EDIT_TOOL ],
 		messages,
 	};

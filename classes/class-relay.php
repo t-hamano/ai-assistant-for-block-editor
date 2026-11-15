@@ -24,10 +24,13 @@ class Relay {
 
 	/**
 	 * Where each provider's requests go, and the headers that carry the key
+	 *
+	 * `url` takes chat requests, and `models` lists the provider's models.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
 			'url'     => 'https://api.anthropic.com/v1/messages',
+			'models'  => 'https://api.anthropic.com/v1/models?limit=1000',
 			'headers' => array(
 				'anthropic-version' => '2023-06-01',
 			),
