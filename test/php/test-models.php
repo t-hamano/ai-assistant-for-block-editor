@@ -119,6 +119,7 @@ class Test_Models extends WP_UnitTestCase {
 		$this->assertSame( 'https://api.anthropic.com/v1/models?limit=1000', $this->sent[0]['url'] );
 		$this->assertSame( 'test-key', $this->sent[0]['args']['headers']['x-api-key'] );
 		$this->assertSame( '2023-06-01', $this->sent[0]['args']['headers']['anthropic-version'] );
+		$this->assertSame( 0, $this->sent[0]['args']['redirection'] );
 	}
 
 	/**

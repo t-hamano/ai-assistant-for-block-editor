@@ -17,8 +17,8 @@ use WP_REST_Server;
  * site's API key on the server.
  *
  * The request body is built by the editor and is not read here. Requests
- * only go to the fixed address of each provider, so the key cannot be sent
- * anywhere else.
+ * only go to the fixed address of each provider and do not follow redirects,
+ * so the key cannot be sent anywhere else.
  */
 class Relay {
 
@@ -202,9 +202,11 @@ class Relay {
 		$response = wp_remote_post(
 			$url,
 			array(
-				'headers' => $headers,
-				'body'    => wp_json_encode( $body ),
-				'timeout' => self::TIMEOUT,
+				'headers'     => $headers,
+				'body'        => wp_json_encode( $body ),
+				'timeout'     => self::TIMEOUT,
+				// A redirect would send the key to the new address as well.
+				'redirection' => 0,
 			)
 		);
 
