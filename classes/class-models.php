@@ -48,7 +48,7 @@ class Models {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'list_models' ),
-				'permission_callback' => static fn() => current_user_can( 'manage_options' ),
+				'permission_callback' => static fn() => current_user_can( AI_CONTENT_EDITING_ASSISTANT_CAPABILITY ),
 				'args'                => array(
 					'provider' => array(
 						'type'     => 'string',

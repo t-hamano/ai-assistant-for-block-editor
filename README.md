@@ -51,7 +51,7 @@ By default, the AI assistant picks a provider in the order Anthropic, OpenAI, Go
 
 ## Limitations
 
-* Only administrators can use the AI assistant. There is no setting to allow other roles.
+* Only administrators can use the AI assistant, and only super admins on a multisite network, where the API keys can be shared by every site. There is no setting to allow other roles.
 * Answers stream only for Anthropic, OpenAI, and Google. Other providers run through the AI Client in WordPress and show the answer all at once.
 * The AI edits post content only. Global Styles, templates, and template parts are out of scope.
 * When a text selection spans more than one block, the whole blocks are edited.

@@ -21,9 +21,10 @@ class Enqueue {
 	 * Enqueue block editor scripts
 	 */
 	public function enqueue_editor_scripts() {
-		// Only administrators can use the assistant, because requests are sent with
-		// the site's API keys. It needs an API key, so it is not shown without one.
-		if ( ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
+		// Only administrators, or super admins on a multisite network, can use the
+		// assistant, because requests are sent with the site's API keys. It needs
+		// an API key, so it is not shown without one.
+		if ( ! current_user_can( AI_CONTENT_EDITING_ASSISTANT_CAPABILITY ) || ! Api_Key::has_any() ) {
 			return;
 		}
 
@@ -66,7 +67,7 @@ class Enqueue {
 	 * iframe. That hook also runs on the front end, where they are not needed.
 	 */
 	public function enqueue_canvas_styles() {
-		if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
+		if ( ! is_admin() || ! current_user_can( AI_CONTENT_EDITING_ASSISTANT_CAPABILITY ) || ! Api_Key::has_any() ) {
 			return;
 		}
 
