@@ -13,7 +13,7 @@ import { IconButton } from '@wordpress/ui';
  */
 import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
-import { createBlockTarget } from './editor/block-target';
+import { createSelectionTarget } from './editor/text-target';
 import icon from './icon';
 import { createAutoPlatform } from './platform/select';
 import { ModelSettings } from './settings';
@@ -32,7 +32,7 @@ export default function Sidebar() {
 		( select ) => select( editorStore ).getEditorMode() === 'visual',
 		[]
 	);
-	const chat = useAiChat( { ai, createTarget: createBlockTarget } );
+	const chat = useAiChat( { ai, createTarget: createSelectionTarget } );
 	const { stop, reset } = chat;
 	const [ isSettingsOpen, setIsSettingsOpen ] = useState( false );
 	const [ draft, setDraft ] = useState( '' );

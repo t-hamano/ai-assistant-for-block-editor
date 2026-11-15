@@ -18,9 +18,15 @@ export type EditContext = {
 	 */
 	document: string;
 	/**
-	 * The selection as block markup. Empty when nothing is selected.
+	 * The selection as block markup, or for a text range inside one block,
+	 * as inline HTML. Empty when nothing is selected.
 	 */
 	selection: string;
+	/**
+	 * The reference ID of the block when the selection is a text range
+	 * inside it.
+	 */
+	textIn?: string;
 };
 
 /**
