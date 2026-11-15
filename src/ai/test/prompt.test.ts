@@ -17,9 +17,8 @@ describe( 'buildSystemPrompt', () => {
 
 	it( 'explains the context that comes with the messages', () => {
 		const prompt = buildSystemPrompt( '# Title\n' );
-		expect( prompt ).toContain( '<document_changes>' );
-		expect( prompt ).toContain( '"after-line"' );
-		expect( prompt ).toContain( 'without the line numbers' );
+		expect( prompt ).toContain( '<document>' );
+		expect( prompt ).toContain( '<selection>' );
 	} );
 
 	it( 'covers editing with and without a selection', () => {

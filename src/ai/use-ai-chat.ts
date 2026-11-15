@@ -39,9 +39,10 @@ export type AiChat = {
  * Runs a conversation with the AI assistant. The selection is captured when
  * a message is sent, and the model's edits are applied to it as they arrive.
  *
- * The first message carries the whole document, and later ones only the
- * lines the user changed since the last answer, so the conversation grows
- * at its end only and the prompt cache covers what came before.
+ * The first message carries the whole document, and later ones carry it
+ * again only when the user changed it since the last answer, so the
+ * conversation grows at its end only and the prompt cache covers what came
+ * before.
  *
  * @param args              Arguments.
  * @param args.ai           The host's connection to the model.
