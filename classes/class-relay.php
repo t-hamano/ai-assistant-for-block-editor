@@ -23,13 +23,15 @@ use WP_REST_Server;
 class Relay {
 
 	/**
-	 * Where each provider's requests go, and the header that carries the key
+	 * Where each provider's requests go, and the headers that carry the key
 	 *
-	 * `key_prefix` goes before the key in that header, such as `Bearer `.
+	 * `url` takes chat requests, and `models` lists the provider's models.
+	 * `key_prefix` goes before the key in its header, such as `Bearer `.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
 			'url'     => 'https://api.anthropic.com/v1/messages',
+			'models'  => 'https://api.anthropic.com/v1/models?limit=1000',
 			'headers' => array(
 				'anthropic-version' => '2023-06-01',
 			),
@@ -37,6 +39,7 @@ class Relay {
 		),
 		'openai'    => array(
 			'url'        => 'https://api.openai.com/v1/responses',
+			'models'     => 'https://api.openai.com/v1/models',
 			'headers'    => array(),
 			'key'        => 'authorization',
 			'key_prefix' => 'Bearer ',
