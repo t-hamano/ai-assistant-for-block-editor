@@ -7,31 +7,38 @@ use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication;
 
 /**
- * Gives the AI Client an API key for the fake provider, and takes it away
+ * Gives the AI Client an API key for a fake provider, and takes it away
  * after each test.
  */
 trait AI_Content_Editing_Assistant_Fake_Api_Key {
 
 	/**
-	 * Sets the API key of the fake provider.
+	 * Sets the API key of a fake provider.
 	 *
-	 * @param string $key The key. An empty string means no key.
+	 * @param string $key      The key. An empty string means no key.
+	 * @param string $provider The fake provider's class. The Anthropic one by default.
 	 */
-	protected function set_fake_api_key( string $key ) {
+	protected function set_fake_api_key( string $key, string $provider = AI_Content_Editing_Assistant_Fake_Provider::class ) {
 		$registry = AiClient::defaultRegistry();
 
-		if ( ! $registry->hasProvider( AI_Content_Editing_Assistant_Fake_Provider::ID ) ) {
-			$registry->registerProvider( AI_Content_Editing_Assistant_Fake_Provider::class );
+		if ( ! $registry->hasProvider( $provider::ID ) ) {
+			$registry->registerProvider( $provider );
 		}
 
-		$registry->setProviderRequestAuthentication( AI_Content_Editing_Assistant_Fake_Provider::ID, new ApiKeyRequestAuthentication( $key ) );
+		$registry->setProviderRequestAuthentication( $provider::ID, new ApiKeyRequestAuthentication( $key ) );
 	}
 
 	/**
-	 * Removes the key.
+	 * Removes the keys.
 	 */
 	public function tear_down() {
-		$this->set_fake_api_key( '' );
+		$registry = AiClient::defaultRegistry();
+
+		foreach ( array( AI_Content_Editing_Assistant_Fake_Provider::class, AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class ) as $provider ) {
+			if ( $registry->hasProvider( $provider::ID ) ) {
+				$this->set_fake_api_key( '', $provider );
+			}
+		}
 
 		parent::tear_down();
 	}

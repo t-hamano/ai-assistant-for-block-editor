@@ -98,6 +98,30 @@ class Test_Relay extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests that OpenAI requests go to OpenAI, with the key as a bearer token.
+	 */
+	public function test_relays_the_request_to_openai() {
+		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
+
+		$response = $this->chat( array( 'provider' => 'openai' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'https://api.openai.com/v1/responses', $this->sent['url'] );
+		$this->assertSame( 'Bearer openai-key', $this->sent['args']['headers']['authorization'] );
+		$this->assertArrayNotHasKey( 'x-api-key', $this->sent['args']['headers'] );
+	}
+
+	/**
+	 * Tests that each provider uses its own key.
+	 */
+	public function test_openai_needs_its_own_key() {
+		$response = $this->chat( array( 'provider' => 'openai' ) );
+
+		$this->assertSame( 'ai_content_editing_assistant_no_api_key', $response->as_error()->get_error_code() );
+		$this->assertNull( $this->sent );
+	}
+
+	/**
 	 * Tests that editors cannot use the route.
 	 */
 	public function test_editor_cannot_chat() {

@@ -121,7 +121,7 @@ export function buildAnthropicBody( system: string, messages: AnthropicMessage[]
  * @param input The input.
  * @return The edit, or `null` when the input does not match the tool.
  */
-function toEdit( input: unknown ): AiEdit | null {
+export function toEdit( input: unknown ): AiEdit | null {
 	const { action, markup } = ( input ?? {} ) as Record< string, unknown >;
 	if ( ( action === 'replace' || action === 'insert_after' ) && typeof markup === 'string' ) {
 		return { action, markup };
@@ -131,12 +131,12 @@ function toEdit( input: unknown ): AiEdit | null {
 
 /**
  * Finds a readable message in an error response from the relay or from
- * Anthropic.
+ * Anthropic, or from OpenAI, which answers errors in the same shape.
  *
  * @param response The error response.
  * @return The message.
  */
-async function readErrorMessage( response: Response ): Promise< string > {
+export async function readErrorMessage( response: Response ): Promise< string > {
 	try {
 		const body = await response.json();
 		// Anthropic: `{ type: 'error', error: { message } }`. WordPress: `{ code, message }`.

@@ -23,7 +23,9 @@ use WP_REST_Server;
 class Relay {
 
 	/**
-	 * Where each provider's requests go, and the headers that carry the key
+	 * Where each provider's requests go, and the header that carries the key
+	 *
+	 * `key_prefix` goes before the key in that header, such as `Bearer `.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
@@ -32,6 +34,12 @@ class Relay {
 				'anthropic-version' => '2023-06-01',
 			),
 			'key'     => 'x-api-key',
+		),
+		'openai'    => array(
+			'url'        => 'https://api.openai.com/v1/responses',
+			'headers'    => array(),
+			'key'        => 'authorization',
+			'key_prefix' => 'Bearer ',
 		),
 	);
 
@@ -129,7 +137,7 @@ class Relay {
 			$provider['headers'],
 			array(
 				'content-type'   => 'application/json',
-				$provider['key'] => $api_key,
+				$provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key,
 			)
 		);
 
