@@ -186,6 +186,18 @@ describe( 'readOpenAiStream', () => {
 		await expect( done ).rejects.toThrow( 'The model declined to answer.' );
 	} );
 
+	it( 'rejects when the stream ends before the response does', async () => {
+		const { done } = await read( [
+			sse( {
+				type: 'response.output_item.done',
+				output_index: 0,
+				item: { type: 'function_call', call_id: 'call_1', name: 'edit_blocks', arguments: '{}' },
+			} ),
+		] );
+
+		await expect( done ).rejects.toThrow( 'The answer was cut off.' );
+	} );
+
 	it( 'rejects when the answer is cut off', async () => {
 		const { events, done } = await read( [
 			sse( { type: 'response.output_text.delta', output_index: 0, delta: 'Part' } ),

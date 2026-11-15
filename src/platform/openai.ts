@@ -179,8 +179,13 @@ export async function readOpenAiStream(
 		}
 	}
 
+	// A stream that ends without its last event was cut off on the way, so
+	// neither its text nor its function calls are complete.
+	if ( ! finished ) {
+		throw new Error( __( 'The answer was cut off.', 'ai-content-editing-assistant' ) );
+	}
 	// Either can cut a function call off, so its edit is not applied.
-	if ( finished?.status === 'incomplete' ) {
+	if ( finished.status === 'incomplete' ) {
 		if ( finished.incomplete_details?.reason === 'content_filter' ) {
 			throw new Error( declined );
 		}
