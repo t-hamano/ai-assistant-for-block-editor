@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
-import { parse, serialize } from '@wordpress/blocks';
+import { serialize } from '@wordpress/blocks';
 import { dispatch, select } from '@wordpress/data';
 
 /**
@@ -10,6 +10,7 @@ import { dispatch, select } from '@wordpress/data';
  */
 import type { EditTarget } from '../ai/edit-target';
 import type { AiEditResult } from '../platform';
+import { collectHtml, validateMarkup } from './validate-markup';
 
 function failed( reason: string ): AiEditResult {
 	return { status: 'failed', reason };
@@ -58,7 +59,20 @@ export function createBlockTarget(): EditTarget {
 				anchor = clientIds[ clientIds.length - 1 ];
 			}
 
-			const blocks = parse( edit.markup );
+			// Markup that the editor would not read as written is never applied.
+			const { blocks, problems } = validateMarkup(
+				edit.markup,
+				collectHtml( editor().getBlocks() )
+			);
+			if ( problems.length ) {
+				return failed(
+					[
+						'The edit was not applied, because the markup has these problems:',
+						...problems.map( ( problem ) => `- ${ problem }` ),
+						'Fix the markup, and call edit_blocks again.',
+					].join( '\n' )
+				);
+			}
 			if ( ! blocks.length ) {
 				return failed(
 					'The markup has no blocks. Write the content as block markup, and try again.'
