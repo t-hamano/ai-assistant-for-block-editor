@@ -22,6 +22,7 @@
 	"files": [
 		"classes",
 		"src",
+		"skills",
 		"build",
 		"ai-content-editing-assistant.php"
 	],
