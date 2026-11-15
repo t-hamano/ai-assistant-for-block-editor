@@ -26,24 +26,6 @@ class Test_Enqueue extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests that administrators can use the AI assistant.
-	 */
-	public function test_administrator_can_use() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-
-		$this->assertTrue( Enqueue::can_use() );
-	}
-
-	/**
-	 * Tests that editors cannot use the AI assistant.
-	 */
-	public function test_editor_cannot_use() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$this->assertFalse( Enqueue::can_use() );
-	}
-
-	/**
 	 * Tests that the script and style are not enqueued for editors.
 	 */
 	public function test_script_is_not_enqueued_for_editor() {

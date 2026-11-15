@@ -19,12 +19,6 @@ import type { AiUsage } from '../platform';
 import { AnswerMarkdown } from './answer-markdown';
 import './style.scss';
 
-const stopIcon = (
-	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-		<path d="M7 7h10v10H7z" fill="currentColor" />
-	</svg>
-);
-
 function getActivityLabel( activity: NonNullable< AssistantChatMessage[ 'activity' ] > ) {
 	switch ( activity ) {
 		case 'thinking':
@@ -304,7 +298,11 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					</Stack>
 					{ isResponding ? (
 						<IconButton
-							icon={ stopIcon }
+							icon={
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+									<path d="M7 7h10v10H7z" fill="currentColor" />
+								</svg>
+							}
 							label={ __( 'Stop', 'ai-content-editing-assistant' ) }
 							tone="neutral"
 							size="compact"

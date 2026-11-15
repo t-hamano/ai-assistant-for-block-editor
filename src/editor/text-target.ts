@@ -31,13 +31,6 @@ type TextSelection = {
 	end: number;
 };
 
-function toHtml( value: unknown ): string | null {
-	if ( value instanceof RichTextData ) {
-		return value.toHTMLString();
-	}
-	return typeof value === 'string' ? value : null;
-}
-
 /**
  * Returns the text range the user selected now, when it is inside one rich
  * text attribute of one block and is not collapsed.
@@ -64,7 +57,8 @@ export function getTextSelection(
 		return null;
 	}
 	const attributes = getBlockAttributes( start.clientId );
-	if ( toHtml( attributes?.[ start.attributeKey ] ) === null ) {
+	const value = attributes?.[ start.attributeKey ];
+	if ( ! ( value instanceof RichTextData ) && typeof value !== 'string' ) {
 		return null;
 	}
 	return {
@@ -92,8 +86,13 @@ export function createTextTarget( selection: TextSelection ): EditTarget {
 	const { clientId, attributeKey } = selection;
 	let { start, end } = selection;
 
-	const readHtml = () =>
-		toHtml( select( blockEditorStore ).getBlockAttributes( clientId )?.[ attributeKey ] );
+	const readHtml = () => {
+		const value = select( blockEditorStore ).getBlockAttributes( clientId )?.[ attributeKey ];
+		if ( value instanceof RichTextData ) {
+			return value.toHTMLString();
+		}
+		return typeof value === 'string' ? value : null;
+	};
 	// The attribute as it was when the range was captured or last replaced.
 	// When something else changed it, the range may no longer point at the
 	// same text.

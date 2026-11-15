@@ -17,8 +17,8 @@ use WP_REST_Server;
  * site's API key on the server.
  *
  * The request body is built by the editor and is not read here. Requests
- * only go to the fixed address of each provider, so the key cannot be sent
- * anywhere else.
+ * only go to the fixed address of each provider and do not follow redirects,
+ * so the key cannot be sent anywhere else.
  */
 class Relay {
 
@@ -115,7 +115,7 @@ class Relay {
 	 * @return bool
 	 */
 	public function can_chat( WP_REST_Request $request ) {
-		return Enqueue::can_use() && current_user_can( 'edit_post', $request->get_param( 'post_id' ) );
+		return current_user_can( 'manage_options' ) && current_user_can( 'edit_post', $request->get_param( 'post_id' ) );
 	}
 
 	/**
@@ -202,9 +202,10 @@ class Relay {
 		$response = wp_remote_post(
 			$url,
 			array(
-				'headers' => $headers,
-				'body'    => wp_json_encode( $body ),
-				'timeout' => self::TIMEOUT,
+				'headers'     => $headers,
+				'body'        => wp_json_encode( $body ),
+				'timeout'     => self::TIMEOUT,
+				'redirection' => 0,
 			)
 		);
 

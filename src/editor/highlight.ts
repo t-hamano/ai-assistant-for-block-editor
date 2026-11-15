@@ -66,11 +66,6 @@ let paintedViews = new Set< Window >();
 // The fade of the changed text's color in each window, by frame request.
 const fades = new Map< Window, number >();
 
-function setHighlighted( next: ReadonlyMap< string, number > ) {
-	highlighted = next;
-	listeners.forEach( ( listener ) => listener() );
-}
-
 function subscribe( listener: () => void ) {
 	listeners.add( listener );
 	return () => {
@@ -172,18 +167,16 @@ export function diffText( before: string, after: string ): { start: number; end:
 		suffix++;
 	}
 	let end = after.length - suffix;
-	// Keep characters made of two code units whole.
-	if ( start > 0 && isHighSurrogate( after.charCodeAt( start - 1 ) ) ) {
+	// Keep characters made of two code units whole: a high surrogate starts one.
+	const startCode = after.charCodeAt( start - 1 );
+	if ( start > 0 && startCode >= 0xd800 && startCode <= 0xdbff ) {
 		start--;
 	}
-	if ( end < after.length && isHighSurrogate( after.charCodeAt( end - 1 ) ) ) {
+	const endCode = after.charCodeAt( end - 1 );
+	if ( end < after.length && endCode >= 0xd800 && endCode <= 0xdbff ) {
 		end++;
 	}
 	return start < end ? { start, end } : null;
-}
-
-function isHighSurrogate( code: number ): boolean {
-	return code >= 0xd800 && code <= 0xdbff;
 }
 
 /**
@@ -215,11 +208,6 @@ export function createTextRange( element: Element, start: number, end: number ):
 	return null;
 }
 
-function supportsTextHighlight( view: Window ): boolean {
-	const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
-	return !! css?.highlights && !! CustomHighlight;
-}
-
 /**
  * Colors the text that changed in each highlighted block, in each window
  * that shows some of it.
@@ -233,10 +221,10 @@ function paintTextHighlight() {
 		}
 	}
 	for ( const view of new Set( [ ...paintedViews, ...rangesByView.keys() ] ) ) {
-		if ( ! supportsTextHighlight( view ) ) {
+		const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
+		if ( ! css?.highlights || ! CustomHighlight ) {
 			continue;
 		}
-		const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
 		const ranges = rangesByView.get( view );
 		if ( ranges ) {
 			css.highlights.set( TEXT_HIGHLIGHT_NAME, new CustomHighlight( ...ranges ) );
@@ -259,7 +247,11 @@ function highlightText( clientId: string ): boolean {
 	// Browsers without the CSS Custom Highlight API show the block
 	// highlight instead.
 	const view = element?.ownerDocument.defaultView;
-	if ( previous === undefined || ! element || ! view || ! supportsTextHighlight( view ) ) {
+	if ( previous === undefined || ! element || ! view ) {
+		return false;
+	}
+	const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
+	if ( ! css?.highlights || ! CustomHighlight ) {
 		return false;
 	}
 	const changed = diffText( previous, element.textContent ?? '' );
@@ -271,17 +263,6 @@ function highlightText( clientId: string ): boolean {
 	paintTextHighlight();
 	fadeTextHighlight( view );
 	return true;
-}
-
-/**
- * The opacity of the changed text's color, the same as the block
- * highlight's animation: it holds, then fades out.
- *
- * @param progress How far the highlight is, from 0 to 1.
- * @return The opacity, from 1 to 0.
- */
-export function getTextOpacity( progress: number ): number {
-	return progress <= 0.6 ? 1 : Math.max( 0, 1 - ( progress - 0.6 ) / 0.4 );
 }
 
 /**
@@ -306,16 +287,12 @@ function fadeTextHighlight( view: Window ) {
 			style.removeProperty( TEXT_OPACITY_PROPERTY );
 			return;
 		}
-		style.setProperty( TEXT_OPACITY_PROPERTY, String( getTextOpacity( progress ) ) );
+		// The same as the block highlight's animation: it holds, then fades out.
+		const opacity = progress <= 0.6 ? 1 : Math.max( 0, 1 - ( progress - 0.6 ) / 0.4 );
+		style.setProperty( TEXT_OPACITY_PROPERTY, String( opacity ) );
 		fades.set( view, view.requestAnimationFrame( step ) );
 	};
 	fades.set( view, view.requestAnimationFrame( step ) );
-}
-
-function clearTextHighlight( clientId: string ) {
-	if ( textRanges.delete( clientId ) ) {
-		paintTextHighlight();
-	}
 }
 
 /**
@@ -352,12 +329,14 @@ export function highlightBlocks(
 				previousTexts.delete( clientId );
 				const rest = new Map( highlighted );
 				rest.delete( clientId );
-				setHighlighted( rest );
+				highlighted = rest;
+				listeners.forEach( ( listener ) => listener() );
 			}, HIGHLIGHT_DURATION )
 		);
 	}
 	scrollTarget = clientIds[ 0 ];
-	setHighlighted( next );
+	highlighted = next;
+	listeners.forEach( ( listener ) => listener() );
 }
 
 /**
@@ -493,7 +472,9 @@ export function withChangeHighlight< P extends BlockListBlockProps >(
 			} );
 			return () => {
 				window.cancelAnimationFrame( frame );
-				clearTextHighlight( clientId );
+				if ( textRanges.delete( clientId ) ) {
+					paintTextHighlight();
+				}
 				setHasNoText( false );
 			};
 		}, [ changedAt, clientId ] );

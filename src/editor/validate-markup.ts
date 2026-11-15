@@ -88,39 +88,6 @@ export type MarkupValidation = {
 };
 
 /**
- * Formats a validation message, which the parser logs like the console
- * does: a format string whose `%s`, `%o` placeholders take the arguments
- * that follow.
- *
- * @param args The logged arguments.
- * @return The message.
- */
-function formatIssue( args: unknown[] ): string {
-	const show = ( value: unknown ) =>
-		typeof value === 'object' ? JSON.stringify( value ) : String( value );
-	const rest = args.slice( 1 );
-	return String( args[ 0 ] ?? '' ).replace( /%[sodif]/g, ( placeholder ) =>
-		rest.length ? show( rest.shift() ) : placeholder
-	);
-}
-
-/**
- * The block's markup as its `save` writes it from the attributes the parser
- * read, with its inner blocks written the same way.
- *
- * @param block The parsed block.
- * @return The markup.
- */
-function toSavedMarkup( block: Block ): string {
-	const asValid = ( item: Block ): Block => ( {
-		...item,
-		isValid: true,
-		innerBlocks: item.innerBlocks.map( asValid ),
-	} );
-	return serialize( asValid( block ) );
-}
-
-/**
  * The keys of a deprecation that replace the block type's, as the parser
  * applies them.
  */
@@ -289,8 +256,24 @@ function checkParsedBlocks( blocks: Block[] ): string[] {
 		}
 		if ( block.isValid === false ) {
 			const issues = ( block.validationIssues ?? [] )
-				.map( ( issue: { args?: unknown[] } ) => formatIssue( issue.args ?? [] ) )
+				// The parser logs each message like the console does: a format
+				// string whose `%s`, `%o` placeholders take the arguments that follow.
+				.map( ( { args = [] }: { args?: unknown[] } ) => {
+					const rest = args.slice( 1 );
+					return String( args[ 0 ] ?? '' ).replace( /%[sodif]/g, ( placeholder ) => {
+						if ( ! rest.length ) {
+							return placeholder;
+						}
+						const value = rest.shift();
+						return typeof value === 'object' ? JSON.stringify( value ) : String( value );
+					} );
+				} )
 				.filter( ( issue: string ) => issue && ! issue.startsWith( 'Block validation failed' ) );
+			const asValid = ( item: Block ): Block => ( {
+				...item,
+				isValid: true,
+				innerBlocks: item.innerBlocks.map( asValid ),
+			} );
 			return [
 				[
 					`The HTML of this ${ block.name } block does not match its attributes${
@@ -298,7 +281,9 @@ function checkParsedBlocks( blocks: Block[] ): string[] {
 					}`,
 					block.originalContent ?? '',
 					'With the same attributes, the block is written as:',
-					toSavedMarkup( block ),
+					// As its `save` writes it from the attributes the parser read,
+					// with its inner blocks written the same way.
+					serialize( asValid( block ) ),
 				].join( '\n' ),
 			];
 		}

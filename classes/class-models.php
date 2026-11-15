@@ -48,7 +48,7 @@ class Models {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'list_models' ),
-				'permission_callback' => array( Enqueue::class, 'can_use' ),
+				'permission_callback' => static fn() => current_user_can( 'manage_options' ),
 				'args'                => array(
 					'provider' => array(
 						'type'     => 'string',
@@ -124,8 +124,9 @@ class Models {
 		$response = wp_remote_get(
 			$provider['models'],
 			array(
-				'headers' => array_merge( $provider['headers'], array( $provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key ) ),
-				'timeout' => self::TIMEOUT,
+				'headers'     => array_merge( $provider['headers'], array( $provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key ) ),
+				'timeout'     => self::TIMEOUT,
+				'redirection' => 0,
 			)
 		);
 
