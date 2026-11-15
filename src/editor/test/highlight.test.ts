@@ -10,19 +10,28 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { createBlock, registerBlockType } from '@wordpress/blocks';
+import { speak } from '@wordpress/a11y';
 import { dispatch } from '@wordpress/data';
-import { createElement } from '@wordpress/element';
+import { createElement, createRoot, flushSync } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
 import {
+	HIGHLIGHT_CLASS_NAME,
 	HIGHLIGHT_DURATION,
+	TEXT_HIGHLIGHT_NAME,
+	createTextRange,
+	diffText,
 	findChangedBlocks,
 	highlightBlocks,
+	highlightChanges,
 	isHighlighted,
 	takeBlockSnapshot,
+	withChangeHighlight,
 } from '../highlight';
+
+vi.mock( '@wordpress/a11y', () => ( { speak: vi.fn() } ) );
 
 beforeAll( () => {
 	registerBlockType( 'test/text', {
@@ -115,5 +124,125 @@ describe( 'highlightBlocks', () => {
 		expect( isHighlighted( 'a' ) ).toBe( true );
 		vi.advanceTimersByTime( HIGHLIGHT_DURATION / 2 );
 		expect( isHighlighted( 'a' ) ).toBe( false );
+	} );
+} );
+
+describe( 'diffText', () => {
+	it( 'finds the changed characters', () => {
+		expect( diffText( 'The cat sat.', 'The dog sat.' ) ).toEqual( { start: 4, end: 7 } );
+		expect( diffText( 'cat', 'car' ) ).toEqual( { start: 2, end: 3 } );
+	} );
+
+	it( 'finds added text', () => {
+		expect( diffText( 'Hello world', 'Hello big world' ) ).toEqual( { start: 6, end: 10 } );
+	} );
+
+	it( 'finds nothing when text was only removed, or nothing changed', () => {
+		expect( diffText( 'Hello big world', 'Hello world' ) ).toBeNull();
+		expect( diffText( 'Same', 'Same' ) ).toBeNull();
+	} );
+
+	it( 'keeps characters made of two code units whole', () => {
+		expect( diffText( 'a😀b', 'a😃b' ) ).toEqual( { start: 1, end: 3 } );
+	} );
+} );
+
+describe( 'createTextRange', () => {
+	it( 'covers the text between the offsets, across elements', () => {
+		const element = document.createElement( 'p' );
+		element.innerHTML = 'Hello <strong>big</strong> world';
+		expect( createTextRange( element, 6, 9 )?.toString() ).toBe( 'big' );
+		expect( createTextRange( element, 4, 11 )?.toString() ).toBe( 'o big w' );
+		expect( createTextRange( element, 4, 99 ) ).toBeNull();
+	} );
+} );
+
+describe( 'highlightChanges', () => {
+	type Props = { clientId: string; className?: string; text: string };
+	const Block = ( { clientId, className, text }: Props ) =>
+		createElement( 'p', { id: `block-${ clientId }`, className }, text );
+	const ChangeHighlight = withChangeHighlight( Block );
+
+	let container: HTMLDivElement;
+	let root: ReturnType< typeof createRoot >;
+	let highlights: Map< string, { ranges: Range[] } >;
+
+	function render( clientId: string, text: string ) {
+		flushSync( () => root.render( createElement( ChangeHighlight, { clientId, text } ) ) );
+	}
+
+	beforeEach( () => {
+		vi.useFakeTimers( {
+			toFake: [ 'setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame' ],
+		} );
+		highlights = new Map();
+		vi.stubGlobal( 'CSS', { highlights } );
+		vi.stubGlobal(
+			'Highlight',
+			class {
+				ranges: Range[];
+				constructor( ...ranges: Range[] ) {
+					this.ranges = ranges;
+				}
+			}
+		);
+		// The test page has no layout, so every block looks off-screen.
+		Element.prototype.scrollIntoView = vi.fn();
+		container = document.createElement( 'div' );
+		document.body.appendChild( container );
+		root = createRoot( container );
+	} );
+
+	afterEach( () => {
+		vi.runOnlyPendingTimers();
+		flushSync( () => root.unmount() );
+		container.remove();
+		vi.unstubAllGlobals();
+		vi.useRealTimers();
+		vi.mocked( speak ).mockClear();
+	} );
+
+	it( 'colors the changed text until the block highlight ends', () => {
+		const { one } = setUp();
+		render( one, 'One' );
+		const before = takeBlockSnapshot();
+		dispatch( blockEditorStore ).updateBlockAttributes( one, { content: 'One more' } );
+		render( one, 'One more' );
+		flushSync( () => highlightChanges( before ) );
+		vi.advanceTimersByTime( 16 );
+
+		expect( container.querySelector( 'p' )?.className ).toBe( HIGHLIGHT_CLASS_NAME );
+		expect( highlights.get( TEXT_HIGHLIGHT_NAME )?.ranges[ 0 ].toString() ).toBe( ' more' );
+
+		flushSync( () => vi.advanceTimersByTime( HIGHLIGHT_DURATION ) );
+		expect( highlights.has( TEXT_HIGHLIGHT_NAME ) ).toBe( false );
+	} );
+
+	it( 'compares a replaced block with the block it replaced', () => {
+		const { one } = setUp();
+		render( one, 'One' );
+		const before = takeBlockSnapshot();
+		const text = createBlock( 'test/text', { content: 'Ones' } );
+		dispatch( blockEditorStore ).replaceBlocks( [ one ], [ text ], undefined, null );
+		render( text.clientId, 'Ones' );
+		flushSync( () => highlightChanges( before ) );
+		vi.advanceTimersByTime( 16 );
+
+		expect( highlights.get( TEXT_HIGHLIGHT_NAME )?.ranges[ 0 ].toString() ).toBe( 's' );
+	} );
+
+	it( 'announces the change', () => {
+		const { one, inner } = setUp();
+		const before = takeBlockSnapshot();
+		dispatch( blockEditorStore ).updateBlockAttributes( one, { content: 'Changed' } );
+		dispatch( blockEditorStore ).updateBlockAttributes( inner, { content: 'Changed' } );
+		highlightChanges( before );
+		expect( speak ).toHaveBeenCalledWith( 'The AI changed 2 blocks.' );
+	} );
+
+	it( 'announces nothing when nothing changed', () => {
+		setUp();
+		highlightChanges( takeBlockSnapshot() );
+		expect( speak ).not.toHaveBeenCalled();
 	} );
 } );
