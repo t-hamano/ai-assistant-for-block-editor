@@ -1,0 +1,136 @@
+/**
+ * External dependencies
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+/**
+ * WordPress dependencies
+ */
+import apiFetch from '@wordpress/api-fetch';
+
+/**
+ * Internal dependencies
+ */
+import { IDLE_TIMEOUT, readEvents, streamFromRelay, type AnswerEvent } from '../transport';
+import { streamBody } from './stream-body';
+
+vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
+
+const LOST = 'The connection was lost before the answer was finished.';
+
+async function readAll( events: AsyncIterable< AnswerEvent > ) {
+	const read: AnswerEvent[] = [];
+	for await ( const event of events ) {
+		read.push( event );
+	}
+	return read;
+}
+
+function relayError( message: string ) {
+	return `\n\nevent: ai_content_editing_assistant_error\ndata: ${ JSON.stringify( { message } ) }\n\n`;
+}
+
+function request( signal = new AbortController().signal ) {
+	return streamFromRelay( {
+		provider: 'anthropic',
+		postId: 1,
+		body: {},
+		signal,
+		readError: async ( response ) => `Error ${ response.status }`,
+	} );
+}
+
+describe( 'readEvents', () => {
+	it( 'reads the data of each event from JSON', async () => {
+		expect(
+			await readAll(
+				readEvents( streamBody( [ 'event: a\ndata: {"n":1}\n\n', 'data: [2]\n\n' ] ) )
+			)
+		).toEqual( [
+			{ event: 'a', data: { n: 1 } },
+			{ event: 'message', data: [ 2 ] },
+		] );
+	} );
+
+	it( "rejects with the relay's message", async () => {
+		const events = readEvents( streamBody( [ 'data: {}\n\n', relayError( 'Too slow.' ) ] ) );
+
+		await expect( readAll( events ) ).rejects.toThrow( 'Too slow.' );
+	} );
+
+	it( "rejects with the relay's message after an event it cut off", async () => {
+		const events = readEvents( streamBody( [ 'data: {"text":"Hel', relayError( 'Too slow.' ) ] ) );
+
+		await expect( readAll( events ) ).rejects.toThrow( 'Too slow.' );
+	} );
+
+	it( 'rejects when the last event was cut off', async () => {
+		const events = readEvents( streamBody( [ 'data: {}\n\n', 'data: {"text":"Hel' ] ) );
+
+		await expect( readAll( events ) ).rejects.toThrow( LOST );
+	} );
+} );
+
+describe( 'streamFromRelay', () => {
+	afterEach( () => {
+		vi.useRealTimers();
+	} );
+
+	it( 'streams the events of the answer', async () => {
+		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( streamBody( [ 'data: {}\n\n' ] ) ) );
+
+		expect( await readAll( request() ) ).toEqual( [ { event: 'message', data: {} } ] );
+		expect( vi.mocked( apiFetch ).mock.calls[ 0 ][ 0 ] ).toMatchObject( {
+			path: '/ai-content-editing-assistant/v1/chat',
+			data: { provider: 'anthropic', post_id: 1, stream: true, body: {} },
+		} );
+	} );
+
+	it( 'rejects with the message of an error response', async () => {
+		vi.mocked( apiFetch ).mockRejectedValueOnce( new Response( '{}', { status: 401 } ) );
+
+		await expect( readAll( request() ) ).rejects.toThrow( 'Error 401' );
+	} );
+
+	it( 'rejects with the message of a request that failed', async () => {
+		vi.mocked( apiFetch ).mockRejectedValueOnce( {
+			code: 'fetch_error',
+			message: 'You are probably offline.',
+		} );
+
+		await expect( readAll( request() ) ).rejects.toThrow( 'You are probably offline.' );
+	} );
+
+	it( 'rejects when the connection drops', async () => {
+		const body = new ReadableStream( {
+			start( controller ) {
+				controller.enqueue( new TextEncoder().encode( 'data: {}\n\n' ) );
+				controller.error( new TypeError( 'network error' ) );
+			},
+		} );
+		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( body ) );
+
+		await expect( readAll( request() ) ).rejects.toThrow( LOST );
+	} );
+
+	it( 'stops the answer when nothing arrives for too long', async () => {
+		vi.useFakeTimers();
+		// A body that never sends anything.
+		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( new ReadableStream() ) );
+
+		const done = readAll( request() ).catch( ( error ) => error );
+		await vi.advanceTimersByTimeAsync( IDLE_TIMEOUT );
+
+		expect( ( await done ).message ).toMatch( 'The answer took too long' );
+	} );
+
+	it( 'rejects with an AbortError when the user stops the answer', async () => {
+		const controller = new AbortController();
+		vi.mocked( apiFetch ).mockResolvedValueOnce( new Response( new ReadableStream() ) );
+
+		const done = readAll( request( controller.signal ) ).catch( ( error ) => error );
+		controller.abort();
+
+		expect( await done ).toMatchObject( { name: 'AbortError' } );
+	} );
+} );

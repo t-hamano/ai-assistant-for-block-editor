@@ -1,7 +1,6 @@
 /**
  * WordPress dependencies
  */
-import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -9,7 +8,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { readSse } from './sse';
+import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -250,29 +249,24 @@ type AnthropicAnswer = {
 /**
  * Streams Anthropic's answer through `onEvent`, and collects its content.
  *
- * @param response The streamed response.
- * @param onEvent  Called for each event of the answer.
+ * @param events  The events of the answer.
+ * @param onEvent Called for each event of the answer.
  * @return The answer.
  */
 export async function readAnthropicStream(
-	response: Response,
+	events: AsyncIterable< AnswerEvent >,
 	onEvent: AiChatRequest[ 'onEvent' ]
 ): Promise< AnthropicAnswer > {
-	if ( ! response.body ) {
-		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
-	}
-
 	let usage: AiUsage | undefined;
 	let stopReason: string | null = null;
 	const content: ContentBlock[] = [];
 	const inputs: string[] = [];
 	const invalidInputs = new Map< string, string >();
 
-	for await ( const { event, data } of readSse( response.body ) ) {
+	for await ( const { event, data: payload } of events ) {
 		if ( event === 'ping' ) {
 			continue;
 		}
-		const payload = JSON.parse( data );
 		const block = content[ payload.index ];
 
 		switch ( event ) {
@@ -344,6 +338,10 @@ export async function readAnthropicStream(
 		onEvent( { type: 'usage', usage } );
 	}
 
+	// The stream ended before the model said why it stopped.
+	if ( stopReason === null ) {
+		throw connectionLost();
+	}
 	// Either can cut a tool call off, so its edit is not applied.
 	if ( stopReason === 'refusal' ) {
 		throw new Error( __( 'The model declined to answer.', 'ai-content-editing-assistant' ) );
@@ -432,29 +430,16 @@ export function createAnthropicPlatform(
 			const conversation = toAnthropicMessages( messages );
 			let failures = 0;
 			for (;;) {
-				let response: Response;
-				try {
-					response = await apiFetch< Response, false >( {
-						path: '/ai-content-editing-assistant/v1/chat',
-						method: 'POST',
-						data: {
-							provider: 'anthropic',
-							post_id: getPostId(),
-							stream: true,
-							body: buildAnthropicBody( system, conversation, model ),
-						},
-						parse: false,
+				const answer = await readAnthropicStream(
+					streamFromRelay( {
+						provider: 'anthropic',
+						postId: getPostId(),
+						body: buildAnthropicBody( system, conversation, model ),
 						signal,
-					} );
-				} catch ( error ) {
-					// With `parse: false`, an error status rejects with the response itself.
-					if ( error instanceof Response ) {
-						throw new Error( await readErrorMessage( error ) );
-					}
-					throw error;
-				}
-
-				const answer = await readAnthropicStream( response, onEvent );
+						readError: readErrorMessage,
+					} ),
+					onEvent
+				);
 				if ( answer.stopReason !== 'tool_use' ) {
 					return;
 				}

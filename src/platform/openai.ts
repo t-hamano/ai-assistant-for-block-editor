@@ -1,7 +1,6 @@
 /**
  * WordPress dependencies
  */
-import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -10,7 +9,7 @@ import { __ } from '@wordpress/i18n';
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropic';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { readSse } from './sse';
+import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -128,25 +127,19 @@ type OpenAiAnswer = {
 /**
  * Streams OpenAI's answer through `onEvent`, and collects its output.
  *
- * @param response The streamed response.
- * @param onEvent  Called for each event of the answer.
+ * @param events  The events of the answer.
+ * @param onEvent Called for each event of the answer.
  * @return The answer.
  */
 export async function readOpenAiStream(
-	response: Response,
+	events: AsyncIterable< AnswerEvent >,
 	onEvent: AiChatRequest[ 'onEvent' ]
 ): Promise< OpenAiAnswer > {
-	if ( ! response.body ) {
-		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
-	}
-
 	const declined = __( 'The model declined to answer.', 'ai-content-editing-assistant' );
 	const output: OpenAiItem[] = [];
 	let finished: { status?: string; incomplete_details?: { reason?: string } } | null = null;
 
-	for await ( const { data } of readSse( response.body ) ) {
-		const payload = JSON.parse( data );
-
+	for await ( const { data: payload } of events ) {
 		switch ( payload.type ) {
 			case 'response.output_item.added':
 				if ( payload.item?.type === 'reasoning' ) {
@@ -192,8 +185,12 @@ export async function readOpenAiStream(
 		}
 	}
 
+	// The stream ended before the answer was finished.
+	if ( ! finished ) {
+		throw connectionLost();
+	}
 	// Either can cut a function call off, so its edit is not applied.
-	if ( finished?.status === 'incomplete' ) {
+	if ( finished.status === 'incomplete' ) {
 		if ( finished.incomplete_details?.reason === 'content_filter' ) {
 			throw new Error( declined );
 		}
@@ -282,29 +279,16 @@ export function createOpenAiPlatform( getPostId: () => number, model = OPENAI_MO
 			const input = toOpenAiInput( messages );
 			let failures = 0;
 			for (;;) {
-				let response: Response;
-				try {
-					response = await apiFetch< Response, false >( {
-						path: '/ai-content-editing-assistant/v1/chat',
-						method: 'POST',
-						data: {
-							provider: 'openai',
-							post_id: getPostId(),
-							stream: true,
-							body: buildOpenAiBody( system, input, model ),
-						},
-						parse: false,
+				const answer = await readOpenAiStream(
+					streamFromRelay( {
+						provider: 'openai',
+						postId: getPostId(),
+						body: buildOpenAiBody( system, input, model ),
 						signal,
-					} );
-				} catch ( error ) {
-					// With `parse: false`, an error status rejects with the response itself.
-					if ( error instanceof Response ) {
-						throw new Error( await readErrorMessage( error ) );
-					}
-					throw error;
-				}
-
-				const answer = await readOpenAiStream( response, onEvent );
+						readError: readErrorMessage,
+					} ),
+					onEvent
+				);
 				if ( ! answer.calls.length ) {
 					return;
 				}

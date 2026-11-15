@@ -22,6 +22,7 @@ import {
 	readOpenAiStream,
 	toOpenAiInput,
 } from '../openai';
+import { readEvents } from '../transport';
 import { streamBody } from './stream-body';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
@@ -32,7 +33,7 @@ function sse( data: { type: string; [ key: string ]: unknown } ) {
 
 async function read( pieces: string[] ) {
 	const events: AiStreamEvent[] = [];
-	const done = readOpenAiStream( new Response( streamBody( pieces ) ), ( event ) => {
+	const done = readOpenAiStream( readEvents( streamBody( pieces ) ), ( event ) => {
 		events.push( event );
 	} );
 	return { events, done };
@@ -185,6 +186,15 @@ describe( 'readOpenAiStream', () => {
 		] );
 
 		await expect( done ).rejects.toThrow( 'The model declined to answer.' );
+	} );
+
+	it( 'rejects when the stream ends before the answer is finished', async () => {
+		const { events, done } = await read( [
+			sse( { type: 'response.output_text.delta', output_index: 0, delta: 'Part' } ),
+		] );
+
+		await expect( done ).rejects.toThrow( 'The connection was lost' );
+		expect( events ).toEqual( [ { type: 'text', text: 'Part' } ] );
 	} );
 
 	it( 'rejects when the answer is cut off', async () => {
