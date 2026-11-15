@@ -146,7 +146,7 @@ export function ModelSettings( { onClose }: Props ) {
 					onClick={ onClose }
 				/>
 				<Text variant="heading-md" render={ <h2 /> }>
-					{ __( 'AI model', 'ai-content-editing-assistant' ) }
+					{ __( 'Assistant settings', 'ai-content-editing-assistant' ) }
 				</Text>
 			</Stack>
 			<Stack className="ai-content-editing-assistant-settings__content" direction="column" gap="lg">

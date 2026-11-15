@@ -75,7 +75,7 @@ export default function Sidebar() {
 						/>
 						<IconButton
 							icon={ cog }
-							label={ __( 'AI model settings', 'ai-content-editing-assistant' ) }
+							label={ __( 'Assistant settings', 'ai-content-editing-assistant' ) }
 							variant="minimal"
 							tone="neutral"
 							size="compact"
