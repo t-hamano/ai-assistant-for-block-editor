@@ -53,7 +53,7 @@ Note the path of the saved file. If no API key is available, run `npm run evalua
    ```
 
 2. Run `npm install` so that `package-lock.json` matches. `.npmrc` sets `save-exact`.
-3. Run `npm run lint:types`, `npm run build`, and `npm run test:unit`. If the plugin's own code breaks, stop and report it: that fix belongs in its own pull request, merged first.
+3. Run `npm run lint:types` and `npm run build`. If the plugin's own code breaks, stop and report it: that fix belongs in its own pull request, merged first.
 
 ### 4. Regenerate the reference
 
@@ -62,6 +62,8 @@ npm run generate:block-reference
 ```
 
 The script rewrites only the generated parts, and copies `wordpress` and `gutenberg` from the frontmatter of `SKILL.md` into `core-blocks.md`. It warns when a block is no longer in the block library and its handwritten notes were dropped. Keep those warnings for the pull request.
+
+Then run `npm run test:unit`. A failure in `src/editor/test/skill-examples.test.ts` means an example in `SKILL.md` or a handwritten part no longer matches what the new blocks save: fix it in step 6. Any other failure is in the plugin's own code: stop and report it, as in step 3.
 
 ### 5. Find what changed
 
