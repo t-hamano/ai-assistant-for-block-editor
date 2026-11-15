@@ -1,25 +1,74 @@
 /**
  * WordPress dependencies
  */
-import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/editor';
+import { Button } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
+import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
+import { useCallback, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { plus } from '@wordpress/icons';
 
 /**
  * Internal dependencies
  */
+import { useAiChat } from './ai/use-ai-chat';
+import { Chat } from './chat';
 import icon from './icon';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-assistant-for-block-editor' );
+	const isVisualEditor = useSelect(
+		( select ) => select( editorStore ).getEditorMode() === 'visual',
+		[]
+	);
+	// The edit target for the selected blocks comes with the edit tool.
+	const createTarget = useCallback( () => null, [] );
+	// The connection to the model comes with the transport.
+	const chat = useAiChat( { ai: undefined, createTarget } );
+	const { stop, reset } = chat;
+	// `PluginSidebar` passes `header` on to `ComplementaryArea`, but its
+	// types leave it out.
+	const headerProps = {
+		header: (
+			<>
+				<h2 className="interface-complementary-area-header__title">{ title }</h2>
+				<Button
+					icon={ plus }
+					label={ __( 'New conversation', 'ai-assistant-for-block-editor' ) }
+					size="compact"
+					onClick={ reset }
+					disabled={ chat.conversation.messages.length === 0 }
+					accessibleWhenDisabled
+				/>
+			</>
+		),
+	};
+
+	// The conversation is about the blocks, so it ends when the user
+	// switches to the code editor.
+	useEffect( () => {
+		if ( ! isVisualEditor ) {
+			stop();
+			reset();
+		}
+	}, [ isVisualEditor, stop, reset ] );
 
 	return (
 		<>
 			<PluginSidebarMoreMenuItem target={ SIDEBAR_NAME } icon={ icon }>
 				{ title }
 			</PluginSidebarMoreMenuItem>
-			<PluginSidebar name={ SIDEBAR_NAME } title={ title } icon={ icon } />
+			<PluginSidebar
+				name={ SIDEBAR_NAME }
+				title={ title }
+				icon={ icon }
+				className="aabe-sidebar"
+				{ ...headerProps }
+			>
+				<Chat chat={ chat } isAvailable={ isVisualEditor } />
+			</PluginSidebar>
 		</>
 	);
 }

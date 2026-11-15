@@ -1,0 +1,140 @@
+// The chat fills the sidebar, and only the messages scroll.
+.aabe-sidebar {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.aabe-chat {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.aabe-chat__messages {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 16px;
+	min-height: 0;
+	padding: 16px;
+	overflow: auto;
+
+	.components-notice {
+		margin: 0;
+	}
+}
+
+.aabe-chat__message {
+	overflow-wrap: anywhere;
+
+	&.is-user {
+		align-self: flex-end;
+		max-width: 85%;
+		padding: 8px 12px;
+		border-radius: 2px;
+		background: #f0f0f0;
+		white-space: pre-wrap;
+	}
+}
+
+.aabe-chat__note {
+	margin: 0;
+	color: #757575;
+}
+
+.aabe-chat__activity {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+
+	.components-spinner {
+		margin: 0;
+	}
+}
+
+.aabe-chat__markdown {
+
+	> :first-child {
+		margin-top: 0;
+	}
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+
+	p,
+	ul,
+	ol,
+	pre,
+	blockquote,
+	table {
+		margin: 0 0 0.75em;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		margin: 1em 0 0.5em;
+		font-size: inherit;
+		font-weight: 600;
+	}
+
+	ul,
+	ol {
+		padding-left: 1.5em;
+	}
+
+	ul {
+		list-style: disc;
+	}
+
+	pre {
+		padding: 8px;
+		overflow-x: auto;
+		background: #f0f0f0;
+		overflow-wrap: normal;
+
+		code {
+			padding: 0;
+		}
+	}
+
+	table {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+		border-collapse: collapse;
+		overflow-wrap: normal;
+	}
+
+	th,
+	td {
+		padding: 0.25em 0.5em;
+		border: 1px solid #ddd;
+		text-align: left;
+	}
+}
+
+.aabe-chat__composer {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 8px;
+	align-items: flex-end;
+	padding: 16px;
+	border-top: 1px solid #e0e0e0;
+}
+
+.aabe-chat__input {
+	flex: 1 1 auto;
+
+	// The box grows with its text up to about eight lines.
+	textarea {
+		max-height: 12em;
+		resize: none;
+	}
+}

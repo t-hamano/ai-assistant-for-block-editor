@@ -99,6 +99,6 @@ module.exports = [
 	},
 	...defaultConfig.configs[ 'test-unit' ].map( ( config ) => ( {
 		...config,
-		files: [ 'src/**/test/**/*.ts' ],
+		files: [ 'src/**/test/**/*.{ts,tsx}' ],
 	} ) ),
 ];
