@@ -3,9 +3,10 @@
  */
 import { select as selectStore, useSelect } from '@wordpress/data';
 import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { plus } from '@wordpress/icons';
+import { cog, plus } from '@wordpress/icons';
+import { store as preferencesStore } from '@wordpress/preferences';
 import { IconButton } from '@wordpress/ui';
 
 /**
@@ -15,11 +16,19 @@ import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
 import { createSelectionTarget } from './editor/text-target';
 import icon from './icon';
-import { createAutoPlatform } from './platform/select';
+import { createAutoPlatform, type ModelChoice } from './platform/select';
+import { ModelSettings } from './settings';
 
 const SIDEBAR_NAME = 'ai-assistant';
 
-const ai = createAutoPlatform( () => selectStore( editorStore ).getCurrentPostId() as number );
+const ai = createAutoPlatform(
+	() => selectStore( editorStore ).getCurrentPostId() as number,
+	() =>
+		( selectStore( preferencesStore ).get(
+			'ai-content-editing-assistant',
+			'model'
+		) as ModelChoice | null ) ?? null
+);
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-content-editing-assistant' );
@@ -29,6 +38,8 @@ export default function Sidebar() {
 	);
 	const chat = useAiChat( { ai, createTarget: createSelectionTarget } );
 	const { stop, reset } = chat;
+	const [ isSettingsOpen, setIsSettingsOpen ] = useState( false );
+	const [ draft, setDraft ] = useState( '' );
 
 	// The conversation is about the blocks, so it ends when the user
 	// switches to the code editor.
@@ -62,10 +73,28 @@ export default function Sidebar() {
 							onClick={ reset }
 							disabled={ chat.conversation.messages.length === 0 }
 						/>
+						<IconButton
+							icon={ cog }
+							label={ __( 'Assistant settings', 'ai-content-editing-assistant' ) }
+							variant="minimal"
+							tone="neutral"
+							size="compact"
+							aria-pressed={ isSettingsOpen }
+							onClick={ () => setIsSettingsOpen( ! isSettingsOpen ) }
+						/>
 					</>
 				}
 			>
-				<Chat chat={ chat } isAvailable={ isVisualEditor } />
+				{ isSettingsOpen ? (
+					<ModelSettings onClose={ () => setIsSettingsOpen( false ) } />
+				) : (
+					<Chat
+						chat={ chat }
+						isAvailable={ isVisualEditor }
+						draft={ draft }
+						onDraftChange={ setDraft }
+					/>
+				) }
 			</PluginSidebar>
 		</>
 	);

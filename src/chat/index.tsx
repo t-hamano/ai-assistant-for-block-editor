@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
 import { isKeyboardEvent } from '@wordpress/keycodes';
@@ -93,11 +93,16 @@ type Props = {
 	 * is not available in the code editor.
 	 */
 	isAvailable: boolean;
+	/**
+	 * The message the user is writing. It is kept by the parent, so it
+	 * survives while the chat is not shown.
+	 */
+	draft: string;
+	onDraftChange: ( draft: string ) => void;
 };
 
-export function Chat( { chat, isAvailable }: Props ) {
+export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
-	const [ draft, setDraft ] = useState( '' );
 	const messagesRef = useRef< HTMLDivElement >( null );
 
 	// Keep the latest message in view while the answer streams in.
