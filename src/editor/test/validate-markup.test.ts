@@ -173,6 +173,20 @@ describe( 'validateMarkup', () => {
 		expect( problems[ 0 ] ).toContain( 'Use one of: "left", "right"' );
 	} );
 
+	it( 'rejects values of the current version in a deprecated form', () => {
+		const { problems } = validateMarkup(
+			'<!-- wp:test/text {"align":"left"} -->\n<div>Old</div>\n<!-- /wp:test/text -->'
+		);
+
+		expect( problems[ 0 ] ).toContain( 'Use one of: "start", "end"' );
+	} );
+
+	it( 'rejects attributes read from the HTML in the comment', () => {
+		const { problems } = validateMarkup( text( 'Old', '{"content":"New"} ' ) );
+
+		expect( problems[ 0 ] ).toContain( 'is read from its HTML' );
+	} );
+
 	it( 'migrates blocks written in a deprecated form', () => {
 		const result = validateMarkup(
 			'<!-- wp:test/text -->\n<div>Old</div>\n<!-- /wp:test/text -->'
