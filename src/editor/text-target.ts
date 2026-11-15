@@ -35,10 +35,14 @@ type TextSelection = {
  * Returns the text range the user selected now, when it is inside one rich
  * text attribute of one block and is not collapsed.
  *
+ * @param editor The block editor selectors. Pass the ones from `useSelect`
+ *               to rerender when the selection changes.
  * @return The range, or `null` when there is none.
  */
-export function getTextSelection(): TextSelection | null {
-	const { getBlockAttributes, getSelectionEnd, getSelectionStart } = select( blockEditorStore );
+export function getTextSelection(
+	editor: ReturnType< typeof select< typeof blockEditorStore > > = select( blockEditorStore )
+): TextSelection | null {
+	const { getBlockAttributes, getSelectionEnd, getSelectionStart } = editor;
 	const start = getSelectionStart();
 	const end = getSelectionEnd();
 	if (

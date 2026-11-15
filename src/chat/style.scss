@@ -38,7 +38,8 @@
 }
 
 .ai-content-editing-assistant-chat__note,
-.ai-content-editing-assistant-chat__usage {
+.ai-content-editing-assistant-chat__usage,
+.ai-content-editing-assistant-chat__selection {
 	color: var(--wpds-color-foreground-content-neutral-weak);
 }
 
@@ -133,8 +134,6 @@
 }
 
 .ai-content-editing-assistant-chat__input {
-	flex: 1 1 auto;
-
 	// The box grows with its text up to about eight lines.
 	textarea {
 		field-sizing: content;

@@ -1,17 +1,20 @@
 /**
  * WordPress dependencies
  */
+import { store as blockEditorStore } from '@wordpress/block-editor';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
-import { arrowUp } from '@wordpress/icons';
+import { arrowUp, blockDefault, typography } from '@wordpress/icons';
 import { isKeyboardEvent } from '@wordpress/keycodes';
-import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
+import { Icon, IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
 
 /**
  * Internal dependencies
  */
 import type { AssistantChatMessage } from '../ai/conversation';
 import type { AiChat } from '../ai/use-ai-chat';
+import { getTextSelection } from '../editor/text-target';
 import type { AiUsage } from '../platform';
 import { AnswerMarkdown } from './answer-markdown';
 import './style.scss';
@@ -127,6 +130,35 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 	);
 }
 
+/**
+ * Describes what is selected in the editor now, which is sent with the
+ * next message: "Text selected" or "3 blocks selected" with an icon, or
+ * nothing.
+ */
+function useSelectionStatus() {
+	return useSelect( ( select ) => {
+		const editor = select( blockEditorStore );
+		if ( getTextSelection( editor ) ) {
+			return {
+				icon: typography,
+				label: __( 'Text selected', 'ai-content-editing-assistant' ),
+			};
+		}
+		const count = editor.getSelectedBlockClientIds().length;
+		if ( ! count ) {
+			return null;
+		}
+		return {
+			icon: blockDefault,
+			label: sprintf(
+				/* translators: %d: Number of selected blocks. */
+				_n( '%d block selected', '%d blocks selected', count, 'ai-content-editing-assistant' ),
+				count
+			),
+		};
+	}, [] );
+}
+
 type Props = {
 	chat: AiChat;
 	/**
@@ -145,6 +177,7 @@ type Props = {
 export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
 	const messagesRef = useRef< HTMLDivElement >( null );
+	const selection = useSelectionStatus();
 
 	// Keep the latest message in view while the answer streams in.
 	useEffect( () => {
@@ -235,8 +268,7 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					/>
 				}
 				className="ai-content-editing-assistant-chat__composer"
-				direction="row"
-				align="flex-end"
+				direction="column"
 				gap="sm"
 			>
 				<TextareaControl
@@ -249,25 +281,43 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					onKeyDown={ onKeyDown }
 					disabled={ ! isAvailable }
 				/>
-				{ isResponding ? (
-					<IconButton
-						icon={
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-								<path d="M7 7h10v10H7z" fill="currentColor" />
-							</svg>
-						}
-						label={ __( 'Stop', 'ai-content-editing-assistant' ) }
-						tone="neutral"
-						onClick={ stop }
-					/>
-				) : (
-					<IconButton
-						type="submit"
-						icon={ arrowUp }
-						label={ __( 'Send', 'ai-content-editing-assistant' ) }
-						disabled={ ! canSend }
-					/>
-				) }
+				<Stack direction="row" align="center" justify="space-between" gap="sm">
+					<Stack
+						className="ai-content-editing-assistant-chat__selection"
+						direction="row"
+						align="center"
+						gap="xs"
+						aria-live="polite"
+					>
+						{ isAvailable && selection && (
+							<>
+								<Icon icon={ selection.icon } />
+								<Text variant="body-sm">{ selection.label }</Text>
+							</>
+						) }
+					</Stack>
+					{ isResponding ? (
+						<IconButton
+							icon={
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+									<path d="M7 7h10v10H7z" fill="currentColor" />
+								</svg>
+							}
+							label={ __( 'Stop', 'ai-content-editing-assistant' ) }
+							tone="neutral"
+							size="compact"
+							onClick={ stop }
+						/>
+					) : (
+						<IconButton
+							type="submit"
+							icon={ arrowUp }
+							label={ __( 'Send', 'ai-content-editing-assistant' ) }
+							size="compact"
+							disabled={ ! canSend }
+						/>
+					) }
+				</Stack>
 			</Stack>
 		</Stack>
 	);
