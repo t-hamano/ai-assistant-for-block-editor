@@ -26,6 +26,7 @@ define( 'AABE_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
 require_once __DIR__ . '/classes/class-api-key.php';
 require_once __DIR__ . '/classes/class-enqueue.php';
 require_once __DIR__ . '/classes/class-relay.php';
+require_once __DIR__ . '/classes/class-stream.php';
 
 new AI_Assistant_For_Block_Editor\Enqueue();
 new AI_Assistant_For_Block_Editor\Relay();
