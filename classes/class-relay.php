@@ -38,37 +38,48 @@ class Relay {
 	 * with `stream` in the body. `{model}` in either address is replaced with
 	 * the body's `model`, which is then taken out of the body.
 	 *
-	 * `body` lists the fields of the body that are passed on, and
+	 * `body` lists the fields of the body that are passed on. A field with a
+	 * list of its own only passes on those inner fields. `is_valid_tool`
+	 * tells whether a tool in the body is one of the editor's own, and
 	 * `max_tokens` is the path to the field that limits the answer's tokens.
 	 */
 	const PROVIDERS = array(
 		'anthropic' => array(
-			'url'        => 'https://api.anthropic.com/v1/messages',
-			'models'     => 'https://api.anthropic.com/v1/models?limit=1000',
-			'headers'    => array(
+			'url'           => 'https://api.anthropic.com/v1/messages',
+			'models'        => 'https://api.anthropic.com/v1/models?limit=1000',
+			'headers'       => array(
 				'anthropic-version' => '2023-06-01',
 			),
-			'key'        => 'x-api-key',
-			'body'       => array( 'model', 'max_tokens', 'cache_control', 'system', 'tools', 'messages' ),
-			'max_tokens' => array( 'max_tokens' ),
+			'key'           => 'x-api-key',
+			'body'          => array( 'model', 'max_tokens', 'cache_control', 'system', 'tools', 'messages' ),
+			'is_valid_tool' => array( self::class, 'is_anthropic_tool' ),
+			'max_tokens'    => array( 'max_tokens' ),
 		),
 		'openai'    => array(
-			'url'        => 'https://api.openai.com/v1/responses',
-			'models'     => 'https://api.openai.com/v1/models',
-			'headers'    => array(),
-			'key'        => 'authorization',
-			'key_prefix' => 'Bearer ',
-			'body'       => array( 'model', 'max_output_tokens', 'instructions', 'tools', 'input', 'store', 'include' ),
-			'max_tokens' => array( 'max_output_tokens' ),
+			'url'           => 'https://api.openai.com/v1/responses',
+			'models'        => 'https://api.openai.com/v1/models',
+			'headers'       => array(),
+			'key'           => 'authorization',
+			'key_prefix'    => 'Bearer ',
+			'body'          => array( 'model', 'max_output_tokens', 'instructions', 'tools', 'input', 'store', 'include' ),
+			'is_valid_tool' => array( self::class, 'is_openai_tool' ),
+			'max_tokens'    => array( 'max_output_tokens' ),
 		),
 		'google'    => array(
-			'url'        => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
-			'stream_url' => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse',
-			'models'     => 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
-			'headers'    => array(),
-			'key'        => 'x-goog-api-key',
-			'body'       => array( 'model', 'systemInstruction', 'contents', 'tools', 'generationConfig' ),
-			'max_tokens' => array( 'generationConfig', 'maxOutputTokens' ),
+			'url'           => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+			'stream_url'    => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse',
+			'models'        => 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+			'headers'       => array(),
+			'key'           => 'x-goog-api-key',
+			'body'          => array(
+				'model',
+				'systemInstruction',
+				'contents',
+				'tools',
+				'generationConfig' => array( 'maxOutputTokens', 'thinkingConfig' ),
+			),
+			'is_valid_tool' => array( self::class, 'is_google_tool' ),
+			'max_tokens'    => array( 'generationConfig', 'maxOutputTokens' ),
 		),
 	);
 	// phpcs:enable PluginCheck.CodeAnalysis.AIProvider.DirectIntegration
@@ -259,23 +270,10 @@ class Relay {
 		// The relay sets or takes out `stream` itself.
 		unset( $body['stream'] );
 
-		$valid = ! array_diff( array_keys( $body ), $provider['body'] );
+		$valid = self::has_only( $body, $provider['body'] );
 
 		foreach ( (array) ( $body['tools'] ?? array() ) as $tool ) {
-			if ( ! is_array( $tool ) ) {
-				$valid = false;
-			} elseif ( 'anthropic' === $provider_id ) {
-				// Tools with a type, such as web search, run on Anthropic's side.
-				$valid = $valid && ( ! isset( $tool['type'] ) || 'custom' === $tool['type'] );
-			} elseif ( 'openai' === $provider_id ) {
-				$valid = $valid && 'function' === ( $tool['type'] ?? null );
-			} else {
-				$valid = $valid && array( 'functionDeclarations' ) === array_keys( $tool );
-			}
-		}
-
-		if ( 'google' === $provider_id && isset( $body['generationConfig'] ) ) {
-			$valid = $valid && is_array( $body['generationConfig'] ) && ! array_diff( array_keys( $body['generationConfig'] ), array( 'maxOutputTokens', 'thinkingConfig' ) );
+			$valid = $valid && is_array( $tool ) && call_user_func( $provider['is_valid_tool'], $tool );
 		}
 
 		if ( ! $valid ) {
@@ -295,5 +293,62 @@ class Relay {
 		}
 
 		return $body;
+	}
+
+	/**
+	 * Whether the data only has the listed fields
+	 *
+	 * @param mixed $data   The data.
+	 * @param array $fields The fields, each a name, or a name with the list of its inner fields.
+	 * @return bool
+	 */
+	private static function has_only( $data, array $fields ) {
+		if ( ! is_array( $data ) ) {
+			return false;
+		}
+
+		foreach ( $data as $key => $value ) {
+			if ( isset( $fields[ $key ] ) && is_array( $fields[ $key ] ) ) {
+				if ( ! self::has_only( $value, $fields[ $key ] ) ) {
+					return false;
+				}
+			} elseif ( ! in_array( $key, $fields, true ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Whether an Anthropic tool is one the editor defines
+	 *
+	 * Tools with a type, such as web search, run on Anthropic's side.
+	 *
+	 * @param array $tool The tool.
+	 * @return bool
+	 */
+	public static function is_anthropic_tool( array $tool ) {
+		return ! isset( $tool['type'] ) || 'custom' === $tool['type'];
+	}
+
+	/**
+	 * Whether an OpenAI tool is one the editor defines
+	 *
+	 * @param array $tool The tool.
+	 * @return bool
+	 */
+	public static function is_openai_tool( array $tool ) {
+		return 'function' === ( $tool['type'] ?? null );
+	}
+
+	/**
+	 * Whether a Google tool only holds functions the editor defines
+	 *
+	 * @param array $tool The tool.
+	 * @return bool
+	 */
+	public static function is_google_tool( array $tool ) {
+		return array( 'functionDeclarations' ) === array_keys( $tool );
 	}
 }
