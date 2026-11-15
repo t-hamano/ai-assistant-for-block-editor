@@ -17,6 +17,7 @@ import {
 import { buildMessageContext } from './document-context';
 import type { EditTarget } from './edit-target';
 import { buildSystemPrompt } from './prompt';
+import { highlightChanges, takeBlockSnapshot } from '../editor/highlight';
 import type { AiEditResult, AiPlatform } from '../platform';
 
 type UseAiChatArgs = {
@@ -124,8 +125,10 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 						return;
 					}
 					const before = target ? target.getDocument() : '';
+					const blocksBefore = takeBlockSnapshot();
 					const result: AiEditResult = target ? target.apply( event.edit ) : { status: 'dropped' };
 					if ( target && result.status === 'applied' ) {
+						highlightChanges( blocksBefore );
 						// When the user also changed the document, the model
 						// does not know it, so the next message sends the
 						// whole document.
