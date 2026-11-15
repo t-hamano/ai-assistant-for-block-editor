@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
-import { isKeyboardEvent, withIgnoreIMEEvents } from '@wordpress/keycodes';
+import { isKeyboardEvent } from '@wordpress/keycodes';
 import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
 
 /**
@@ -105,9 +105,9 @@ export function Chat( { chat, isAvailable }: Props ) {
 		}
 	};
 
-	// Enter sends, and Shift+Enter adds a line. Keys that control an IME
-	// conversion are left to the IME.
-	const onKeyDown = withIgnoreIMEEvents( ( event: React.KeyboardEvent< HTMLTextAreaElement > ) => {
+	// Enter sends, and Shift+Enter adds a line. Enter that confirms an IME
+	// conversion does neither.
+	const onKeyDown = ( event: React.KeyboardEvent< HTMLTextAreaElement > ) => {
 		// Undo and redo act on the draft, not on the post.
 		if (
 			isKeyboardEvent.primary( event.nativeEvent, 'z' ) ||
@@ -117,11 +117,11 @@ export function Chat( { chat, isAvailable }: Props ) {
 			event.stopPropagation();
 			return;
 		}
-		if ( event.key === 'Enter' && ! event.shiftKey ) {
+		if ( event.key === 'Enter' && ! event.shiftKey && ! event.nativeEvent.isComposing ) {
 			event.preventDefault();
 			submit();
 		}
-	} );
+	};
 
 	return (
 		<Stack className="aabe-chat" direction="column">
