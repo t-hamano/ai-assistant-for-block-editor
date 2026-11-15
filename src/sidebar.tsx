@@ -14,8 +14,12 @@ import { IconButton } from '@wordpress/ui';
 import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
 import icon from './icon';
+import { createDummyPlatform } from './platform/dummy';
 
 const SIDEBAR_NAME = 'ai-assistant';
+
+// Answers with fixed text until the transport connects the chat to a model.
+const ai = createDummyPlatform();
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-assistant-for-block-editor' );
@@ -25,8 +29,7 @@ export default function Sidebar() {
 	);
 	// The edit target for the selected blocks comes with the edit tool.
 	const createTarget = useCallback( () => null, [] );
-	// The connection to the model comes with the transport.
-	const chat = useAiChat( { ai: undefined, createTarget } );
+	const chat = useAiChat( { ai, createTarget } );
 	const { stop, reset } = chat;
 
 	// The conversation is about the blocks, so it ends when the user
