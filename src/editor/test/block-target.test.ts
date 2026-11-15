@@ -123,6 +123,23 @@ describe( 'createBlockTarget', () => {
 		expect( documentNow() ).toBe( paragraph( 'One' ) );
 	} );
 
+	it( 'applies markup whose HTML was fixed automatically, and says what changed', () => {
+		const [ first ] = setUp( 'One' );
+		dispatch( blockEditorStore ).selectBlock( first );
+
+		const result = createBlockTarget().apply( {
+			action: 'replace',
+			markup: '<!-- wp:test/paragraph -->\n<p data-drift="1">New</p>\n<!-- /wp:test/paragraph -->',
+		} );
+
+		expect( result ).toEqual( {
+			status: 'applied',
+			refs: [ expect.any( String ) ],
+			autoFix: expect.stringContaining( `After:\n${ paragraph( 'New' ) }` ),
+		} );
+		expect( documentNow() ).toBe( paragraph( 'New' ) );
+	} );
+
 	it( 'drops the edit when the selected blocks are gone', () => {
 		const [ first ] = setUp( 'One' );
 		dispatch( blockEditorStore ).selectBlock( first );

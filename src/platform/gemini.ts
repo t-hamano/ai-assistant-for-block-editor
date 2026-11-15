@@ -309,7 +309,7 @@ function runTools( answer: GeminiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
 			failures++;
 			response = { error: result.reason };
 		} else if ( result.status === 'applied' ) {
-			response = { output: describeApplied( result.refs ) };
+			response = { output: describeApplied( result.refs, result.autoFix ) };
 		} else {
 			response = { output: 'The selected blocks no longer exist, so the edit was not applied.' };
 		}

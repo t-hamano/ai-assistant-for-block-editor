@@ -228,7 +228,7 @@ function runTools( answer: OpenAiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
 			failures++;
 			text = result.reason;
 		} else if ( result.status === 'applied' ) {
-			text = describeApplied( result.refs );
+			text = describeApplied( result.refs, result.autoFix );
 		} else {
 			text = 'The selected blocks no longer exist, so the edit was not applied.';
 		}

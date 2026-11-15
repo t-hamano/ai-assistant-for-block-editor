@@ -84,16 +84,18 @@ const APPLIED = 'The edit was applied.';
 
 /**
  * Tells the model its edit was applied, and the reference IDs of the blocks
- * it added, so it can edit them again.
+ * it added, so it can edit them again, and what was fixed in its markup, so
+ * it does not write it the same way again.
  *
- * @param refs The reference IDs of the added blocks.
+ * @param refs    The reference IDs of the added blocks.
+ * @param autoFix What the automatic fix changed.
  * @return The result.
  */
-export function describeApplied( refs: string[] | undefined ): string {
-	if ( ! refs?.length ) {
-		return APPLIED;
-	}
-	return `${ APPLIED } The reference IDs of the new blocks are ${ refs.join( ', ' ) }.`;
+export function describeApplied( refs: string[] | undefined, autoFix?: string ): string {
+	const applied = refs?.length
+		? `${ APPLIED } The reference IDs of the new blocks are ${ refs.join( ', ' ) }.`
+		: APPLIED;
+	return autoFix ? `${ applied }\n\n${ autoFix }` : applied;
 }
 
 /**
@@ -385,7 +387,7 @@ function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] 
 				tool_use_id: id,
 				content:
 					result.status === 'applied'
-						? describeApplied( result.refs )
+						? describeApplied( result.refs, result.autoFix )
 						: 'The selected blocks no longer exist, so the edit was not applied.',
 			};
 		} );
