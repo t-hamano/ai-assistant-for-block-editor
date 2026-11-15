@@ -36,8 +36,13 @@ beforeAll( () => {
 			{
 				attributes: {
 					content: { type: 'string', source: 'html', selector: 'div' },
+					align: { type: 'string', enum: [ 'start', 'end' ] },
 				},
 				save: ( { attributes } ) => createElement( 'div', {}, attributes.content as string ),
+				migrate: ( { content, align } ) => ( {
+					content,
+					align: { start: 'left', end: 'right' }[ align as string ],
+				} ),
 			},
 		],
 	} );
@@ -138,6 +143,15 @@ describe( 'validateMarkup', () => {
 		expect( validateMarkup( html( '<h2>Title</h2><p>Text</p>' ) ).problems ).toEqual( [
 			expect.stringContaining( 'Use core/html only for' ),
 		] );
+	} );
+
+	it( 'accepts attribute values of a deprecated version', () => {
+		const result = validateMarkup(
+			'<!-- wp:test/text {"align":"start"} -->\n<div>Old</div>\n<!-- /wp:test/text -->'
+		);
+
+		expect( result.problems ).toEqual( [] );
+		expect( result.blocks[ 0 ].attributes.align ).toBe( 'left' );
 	} );
 
 	it( 'migrates blocks written in a deprecated form', () => {

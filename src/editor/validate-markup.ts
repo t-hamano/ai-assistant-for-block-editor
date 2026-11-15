@@ -88,20 +88,25 @@ function checkAttributes( name: string, attrs: Record< string, unknown > ): stri
 	if ( ! blockType ) {
 		return [];
 	}
-	// Attributes of deprecated versions are migrated by the parser.
-	const known: Record< string, AttributeSchema > = Object.assign(
-		{},
-		...[ ...( blockType.deprecated ?? [] ) ].reverse().map( ( version ) => version.attributes ),
-		blockType.attributes
-	);
+	// The parser migrates the attributes of deprecated versions, so a key or
+	// value that any version accepts is fine.
+	const versions = [
+		blockType.attributes ?? {},
+		...( blockType.deprecated ?? [] ).map(
+			( version ) => ( version.attributes ?? {} ) as Record< string, AttributeSchema >
+		),
+	];
 	const problems: string[] = [];
 	for ( const [ key, value ] of Object.entries( attrs ) ) {
-		const schema = known[ key ];
-		if ( ! schema ) {
+		const schemas = versions.map( ( version ) => version[ key ] ).filter( Boolean );
+		if ( ! schemas.length ) {
 			problems.push( `"${ key }" is not an attribute of the ${ name } block.` );
-		} else if ( Array.isArray( schema.enum ) && ! schema.enum.includes( value ) ) {
+		} else if (
+			schemas.every( ( schema ) => Array.isArray( schema.enum ) && ! schema.enum.includes( value ) )
+		) {
+			const values = ( blockType.attributes?.[ key ]?.enum ?? schemas[ 0 ].enum ) as unknown[];
 			problems.push(
-				`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. Use one of: ${ schema.enum
+				`${ JSON.stringify( value ) } is not a value of the "${ key }" attribute of the ${ name } block. Use one of: ${ values
 					.map( ( item ) => JSON.stringify( item ) )
 					.join( ', ' ) }.`
 			);
