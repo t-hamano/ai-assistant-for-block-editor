@@ -1,6 +1,8 @@
 /**
  * WordPress dependencies
  */
+import { store as blockEditorStore } from '@wordpress/block-editor';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
@@ -12,6 +14,7 @@ import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@word
  */
 import type { AssistantChatMessage } from '../ai/conversation';
 import type { AiChat } from '../ai/use-ai-chat';
+import { getTextSelection } from '../editor/text-target';
 import type { AiUsage } from '../platform';
 import { AnswerMarkdown } from './answer-markdown';
 import './style.scss';
@@ -133,6 +136,28 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 	);
 }
 
+/**
+ * Describes what is selected in the editor now, which is sent with the
+ * next message: "Text selected" or "3 blocks selected", or nothing.
+ */
+function useSelectionLabel() {
+	return useSelect( ( select ) => {
+		const editor = select( blockEditorStore );
+		if ( getTextSelection( editor ) ) {
+			return __( 'Text selected', 'ai-content-editing-assistant' );
+		}
+		const count = editor.getSelectedBlockClientIds().length;
+		if ( ! count ) {
+			return '';
+		}
+		return sprintf(
+			/* translators: %d: Number of selected blocks. */
+			_n( '%d block selected', '%d blocks selected', count, 'ai-content-editing-assistant' ),
+			count
+		);
+	}, [] );
+}
+
 type Props = {
 	chat: AiChat;
 	/**
@@ -151,6 +176,7 @@ type Props = {
 export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
 	const messagesRef = useRef< HTMLDivElement >( null );
+	const selectionLabel = useSelectionLabel();
 
 	// Keep the latest message in view while the answer streams in.
 	useEffect( () => {
@@ -241,8 +267,7 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					/>
 				}
 				className="ai-content-editing-assistant-chat__composer"
-				direction="row"
-				align="flex-end"
+				direction="column"
 				gap="sm"
 			>
 				<TextareaControl
@@ -255,21 +280,32 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 					onKeyDown={ onKeyDown }
 					disabled={ ! isAvailable }
 				/>
-				{ isResponding ? (
-					<IconButton
-						icon={ stopIcon }
-						label={ __( 'Stop', 'ai-content-editing-assistant' ) }
-						tone="neutral"
-						onClick={ stop }
-					/>
-				) : (
-					<IconButton
-						type="submit"
-						icon={ arrowUp }
-						label={ __( 'Send', 'ai-content-editing-assistant' ) }
-						disabled={ ! canSend }
-					/>
-				) }
+				<Stack direction="row" align="center" justify="space-between" gap="sm">
+					<Text
+						variant="body-sm"
+						className="ai-content-editing-assistant-chat__selection"
+						aria-live="polite"
+					>
+						{ isAvailable && selectionLabel }
+					</Text>
+					{ isResponding ? (
+						<IconButton
+							icon={ stopIcon }
+							label={ __( 'Stop', 'ai-content-editing-assistant' ) }
+							tone="neutral"
+							size="compact"
+							onClick={ stop }
+						/>
+					) : (
+						<IconButton
+							type="submit"
+							icon={ arrowUp }
+							label={ __( 'Send', 'ai-content-editing-assistant' ) }
+							size="compact"
+							disabled={ ! canSend }
+						/>
+					) }
+				</Stack>
 			</Stack>
 		</Stack>
 	);
