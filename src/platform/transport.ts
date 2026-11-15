@@ -276,6 +276,16 @@ async function* stream( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
  */
 async function* answerAtOnce( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
 	const { provider, postId, body, signal, readError, toEvents } = request;
+	// The whole answer comes as one piece, so it may take as long as the
+	// wait for one piece of a streamed answer.
+	const watch = new AbortController();
+	let timedOut = false;
+	const timer = setTimeout( () => {
+		timedOut = true;
+		watch.abort();
+	}, IDLE_TIMEOUT );
+	const stop = () => watch.abort();
+	signal.addEventListener( 'abort', stop );
 	let answer: unknown;
 	try {
 		const response = await apiFetch< Response, false >( {
@@ -283,10 +293,16 @@ async function* answerAtOnce( request: RelayRequest ): AsyncGenerator< AnswerEve
 			method: 'POST',
 			data: { provider, post_id: postId, stream: false, body },
 			parse: false,
-			signal,
+			signal: watch.signal,
 		} );
 		answer = await response.json();
 	} catch ( error ) {
+		if ( signal.aborted ) {
+			throw new DOMException( 'The answer was stopped.', 'AbortError' );
+		}
+		if ( timedOut ) {
+			throw tookTooLong();
+		}
 		if ( error instanceof Response ) {
 			throw new Error( await readError( error ) );
 		}
@@ -294,6 +310,9 @@ async function* answerAtOnce( request: RelayRequest ): AsyncGenerator< AnswerEve
 			throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
 		}
 		throw toRequestError( error );
+	} finally {
+		clearTimeout( timer );
+		signal.removeEventListener( 'abort', stop );
 	}
 	yield* toEvents( answer );
 }

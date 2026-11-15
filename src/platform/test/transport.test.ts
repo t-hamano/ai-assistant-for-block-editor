@@ -221,4 +221,25 @@ describe( 'requestAnswer', () => {
 		await readAll( request() );
 		expect( sentStream() ).toEqual( [ true, true ] );
 	} );
+
+	it( 'stops a whole answer that takes too long', async () => {
+		vi.useFakeTimers();
+		vi.mocked( apiFetch )
+			.mockResolvedValueOnce( new Response( streamBody( [] ) ) )
+			// A request that never answers until it is aborted.
+			.mockImplementationOnce(
+				( options: any ) =>
+					new Promise( ( _, reject ) =>
+						options.signal.addEventListener( 'abort', () =>
+							reject( new DOMException( 'Aborted', 'AbortError' ) )
+						)
+					)
+			);
+
+		const done = readAll( request() ).catch( ( error ) => error );
+		await vi.advanceTimersByTimeAsync( IDLE_TIMEOUT );
+
+		expect( ( await done ).message ).toMatch( 'The answer took too long' );
+		expect( sentStream() ).toEqual( [ true, false ] );
+	} );
 } );
