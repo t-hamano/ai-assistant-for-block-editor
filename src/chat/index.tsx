@@ -187,7 +187,6 @@ export function Chat( { chat, isAvailable }: Props ) {
 						icon={ stopIcon }
 						label={ __( 'Stop', 'ai-assistant-for-block-editor' ) }
 						tone="neutral"
-						size="compact"
 						onClick={ stop }
 					/>
 				) : (
@@ -195,7 +194,6 @@ export function Chat( { chat, isAvailable }: Props ) {
 						type="submit"
 						icon={ arrowUp }
 						label={ __( 'Send', 'ai-assistant-for-block-editor' ) }
-						size="compact"
 						disabled={ ! canSend }
 					/>
 				) }
