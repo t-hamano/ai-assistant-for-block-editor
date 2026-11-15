@@ -95,6 +95,32 @@ export async function* readEvents(
 }
 
 /**
+ * How long the first piece of a streamed answer may take, in milliseconds,
+ * before an answer that then arrives all at once counts as held back.
+ */
+const HELD_WAIT = 2000;
+
+/**
+ * How quickly the pieces of a held back answer arrive after the first one,
+ * in milliseconds.
+ */
+const HELD_BURST = 100;
+
+/**
+ * Whether the site holds streamed answers back until they are finished, so
+ * answers are asked for all at once instead. It is kept until the editor
+ * reloads.
+ */
+let streamsHeld = false;
+
+/**
+ * Streams answers again, as when the editor loads.
+ */
+export function resetStreamDetection() {
+	streamsHeld = false;
+}
+
+/**
  * A request for the plugin's relay to send to a provider.
  */
 export type RelayRequest = {
@@ -112,19 +138,61 @@ export type RelayRequest = {
 	 * Reads the message of an error response.
 	 */
 	readError: ( response: Response ) => Promise< string >;
+	/**
+	 * Turns the provider's whole answer, when it is not streamed, into the
+	 * events of a streamed one.
+	 */
+	toEvents: ( answer: unknown ) => AnswerEvent[];
 };
+
+/**
+ * The error for a streamed answer that never started, so the request can
+ * be sent again for the whole answer at once.
+ */
+class StreamFailed extends Error {}
+
+/**
+ * Turns what apiFetch rejected with into an error to show.
+ *
+ * @param error What apiFetch rejected with.
+ * @return The error.
+ */
+function toRequestError( error: unknown ): Error {
+	if ( error instanceof Error || error instanceof DOMException ) {
+		return error;
+	}
+	// apiFetch rejects with `{ code, message }` when the request fails.
+	const message = ( error as { message?: unknown } )?.message;
+	return new Error(
+		typeof message === 'string' && message
+			? message
+			: __( 'The answer could not be loaded.', 'ai-content-editing-assistant' )
+	);
+}
+
+/**
+ * Whether a response came from WordPress or the provider, rather than from
+ * a server in between, such as a proxy that gave up.
+ *
+ * @param response The response.
+ * @param type     The content type the answer has.
+ */
+function hasType( response: Response, type: string ): boolean {
+	const contentType = response.headers.get( 'content-type' );
+	// Responses made in tests have no content type.
+	return ! contentType || contentType.includes( type );
+}
 
 /**
  * Sends a request through the plugin's relay, and reads the provider's
  * streamed answer as it arrives.
  *
- * When nothing arrives for `IDLE_TIMEOUT`, the answer is stopped. A lost
- * connection rejects with a message that says so. When `signal` is aborted,
- * rejects with an `AbortError`.
+ * Rejects with `StreamFailed` when the answer fails before anything of it
+ * arrived.
  *
  * @param request The request.
  */
-export async function* streamFromRelay( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
+async function* stream( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
 	const { provider, postId, body, signal, readError } = request;
 	const watch = new AbortController();
 	let timedOut = false;
@@ -145,6 +213,7 @@ export async function* streamFromRelay( request: RelayRequest ): AsyncGenerator<
 		}
 		return timedOut ? tookTooLong() : null;
 	};
+	let started = false;
 
 	try {
 		wait();
@@ -158,36 +227,38 @@ export async function* streamFromRelay( request: RelayRequest ): AsyncGenerator<
 				signal: watch.signal,
 			} );
 		} catch ( error ) {
-			// With `parse: false`, an error status rejects with the response itself.
+			// With `parse: false`, an error status rejects with the response
+			// itself. An error that is not JSON came from a server in between.
 			if ( error instanceof Response ) {
+				if ( ! hasType( error, 'json' ) ) {
+					throw new StreamFailed( await readError( error ) );
+				}
 				throw new Error( await readError( error ) );
 			}
-			// apiFetch rejects with `{ code, message }` when the request fails.
-			const message = ( error as { message?: unknown } )?.message;
-			throw (
-				stopped() ??
-				new Error(
-					typeof message === 'string' && message
-						? message
-						: __( 'The answer could not be loaded.', 'ai-content-editing-assistant' )
-				)
-			);
+			throw stopped() ?? toRequestError( error );
 		}
 
-		if ( ! response.body ) {
-			throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
+		if ( ! response.body || ! hasType( response, 'event-stream' ) ) {
+			throw new StreamFailed(
+				__( 'The answer could not be read.', 'ai-content-editing-assistant' )
+			);
 		}
 		try {
 			for await ( const event of readEvents( response.body, watch.signal ) ) {
 				wait();
+				started = true;
 				yield event;
 			}
 		} catch ( error ) {
 			// Reading fails with a `TypeError` when the connection drops.
-			throw stopped() ?? ( error instanceof TypeError ? connectionLost() : error );
+			const reason = stopped();
+			if ( reason || ! ( error instanceof TypeError ) ) {
+				throw reason ?? error;
+			}
+			throw started ? connectionLost() : new StreamFailed();
 		}
 		// Reading also ends without an error when it was stopped.
-		const reason = stopped();
+		const reason = stopped() ?? ( started ? null : new StreamFailed() );
 		if ( reason ) {
 			throw reason;
 		}
@@ -195,4 +266,98 @@ export async function* streamFromRelay( request: RelayRequest ): AsyncGenerator<
 		clearTimeout( timer );
 		signal.removeEventListener( 'abort', stop );
 	}
+}
+
+/**
+ * Sends a request through the plugin's relay for the provider's whole
+ * answer at once, and reads it as the events of a streamed one.
+ *
+ * @param request The request.
+ */
+async function* answerAtOnce( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
+	const { provider, postId, body, signal, readError, toEvents } = request;
+	// The whole answer comes as one piece, so it may take as long as the
+	// wait for one piece of a streamed answer.
+	const watch = new AbortController();
+	let timedOut = false;
+	const timer = setTimeout( () => {
+		timedOut = true;
+		watch.abort();
+	}, IDLE_TIMEOUT );
+	const stop = () => watch.abort();
+	signal.addEventListener( 'abort', stop );
+	let answer: unknown;
+	try {
+		const response = await apiFetch< Response, false >( {
+			path: '/ai-content-editing-assistant/v1/chat',
+			method: 'POST',
+			data: { provider, post_id: postId, stream: false, body },
+			parse: false,
+			signal: watch.signal,
+		} );
+		answer = await response.json();
+	} catch ( error ) {
+		if ( signal.aborted ) {
+			throw new DOMException( 'The answer was stopped.', 'AbortError' );
+		}
+		if ( timedOut ) {
+			throw tookTooLong();
+		}
+		if ( error instanceof Response ) {
+			throw new Error( await readError( error ) );
+		}
+		if ( error instanceof SyntaxError ) {
+			throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
+		}
+		throw toRequestError( error );
+	} finally {
+		clearTimeout( timer );
+		signal.removeEventListener( 'abort', stop );
+	}
+	yield* toEvents( answer );
+}
+
+/**
+ * Sends a request through the plugin's relay, and reads the provider's
+ * answer as it arrives.
+ *
+ * When the streamed answer fails before anything of it arrived, the request
+ * is sent again for the whole answer at once. When the site holds streamed
+ * answers back until they are finished, later answers are asked for all at
+ * once.
+ *
+ * When nothing arrives for `IDLE_TIMEOUT`, the answer is stopped. A lost
+ * connection rejects with a message that says so. When `signal` is aborted,
+ * rejects with an `AbortError`.
+ *
+ * @param request The request.
+ */
+export async function* requestAnswer( request: RelayRequest ): AsyncGenerator< AnswerEvent > {
+	if ( ! streamsHeld ) {
+		const sent = Date.now();
+		let first: number | undefined;
+		let last = 0;
+		let count = 0;
+		try {
+			for await ( const event of stream( request ) ) {
+				last = Date.now();
+				first ??= last;
+				count++;
+				yield event;
+			}
+		} catch ( error ) {
+			if ( ! ( error instanceof StreamFailed ) ) {
+				throw error;
+			}
+			streamsHeld = true;
+		}
+		if ( ! streamsHeld ) {
+			// An answer that arrives all at once after a wait was held back.
+			if ( count > 2 && first! - sent >= HELD_WAIT && last - first! <= HELD_BURST ) {
+				streamsHeld = true;
+			}
+			return;
+		}
+	}
+	yield* answerAtOnce( request );
 }

@@ -18,6 +18,7 @@ import {
 	buildAnthropicBody,
 	createAnthropicPlatform,
 	readAnthropicStream,
+	toAnthropicEvents,
 	toAnthropicMessages,
 	toEdit,
 } from '../anthropic';
@@ -106,6 +107,45 @@ describe( 'toAnthropicMessages', () => {
 					{ type: 'tool_result', tool_use_id: 'toolu_edit_3_0', content: expect.any( String ) },
 					{ type: 'text', text: 'Thanks' },
 				],
+			},
+		] );
+	} );
+} );
+
+async function* fromArray< T >( items: T[] ) {
+	yield* items;
+}
+
+describe( 'toAnthropicEvents', () => {
+	it( 'reads a whole answer as if it was streamed', async () => {
+		const content = [
+			{ type: 'thinking', thinking: 'Plan', signature: 'sig' },
+			{ type: 'text', text: 'Done.' },
+			{ type: 'tool_use', id: 'toolu_1', name: 'edit_blocks', input: EDIT },
+		];
+		const events: AiStreamEvent[] = [];
+		const answer = await readAnthropicStream(
+			fromArray(
+				toAnthropicEvents( {
+					content,
+					stop_reason: 'tool_use',
+					usage: { input_tokens: 10, output_tokens: 5 },
+				} )
+			),
+			( event ) => {
+				events.push( event );
+			}
+		);
+
+		expect( answer.content ).toEqual( content );
+		expect( answer.stopReason ).toBe( 'tool_use' );
+		expect( events ).toEqual( [
+			{ type: 'activity', activity: 'thinking' },
+			{ type: 'text', text: 'Done.' },
+			{ type: 'activity', activity: 'editing' },
+			{
+				type: 'usage',
+				usage: { inputTokens: 10, cachedInputTokens: 0, outputTokens: 5 },
 			},
 		] );
 	} );

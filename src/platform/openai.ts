@@ -9,7 +9,7 @@ import { __ } from '@wordpress/i18n';
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropic';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
-import { connectionLost, streamFromRelay, type AnswerEvent } from './transport';
+import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
 /**
  * The model that answers when no other model is chosen.
@@ -204,6 +204,43 @@ export async function readOpenAiStream(
 }
 
 /**
+ * Turns OpenAI's whole answer, when it is not streamed, into the events of
+ * a streamed one.
+ *
+ * @param answer The answer, a response.
+ * @return The events.
+ */
+export function toOpenAiEvents( answer: any ): AnswerEvent[] {
+	if ( ! Array.isArray( answer?.output ) ) {
+		throw new Error( __( 'The answer could not be read.', 'ai-content-editing-assistant' ) );
+	}
+	const data: object[] = [];
+	answer.output.forEach( ( item: OpenAiItem, index: number ) => {
+		data.push( { type: 'response.output_item.added', output_index: index, item } );
+		if ( item.type === 'message' && Array.isArray( item.content ) ) {
+			for ( const part of item.content as { type?: string; text?: string }[] ) {
+				if ( part.type === 'output_text' ) {
+					data.push( {
+						type: 'response.output_text.delta',
+						output_index: index,
+						delta: part.text,
+					} );
+				} else if ( part.type === 'refusal' ) {
+					data.push( { type: 'response.refusal.done', output_index: index } );
+				}
+			}
+		}
+		data.push( { type: 'response.output_item.done', output_index: index, item } );
+	} );
+	const finished: Record< string, string > = {
+		failed: 'response.failed',
+		incomplete: 'response.incomplete',
+	};
+	data.push( { type: finished[ answer.status ] ?? 'response.completed', response: answer } );
+	return data.map( ( payload ) => ( { event: 'message', data: payload } ) );
+}
+
+/**
  * Applies the edits the model asked for, runs its reads, and builds the
  * outputs to send back.
  *
@@ -280,12 +317,13 @@ export function createOpenAiPlatform( getPostId: () => number, model = OPENAI_MO
 			let failures = 0;
 			for (;;) {
 				const answer = await readOpenAiStream(
-					streamFromRelay( {
+					requestAnswer( {
 						provider: 'openai',
 						postId: getPostId(),
 						body: buildOpenAiBody( system, input, model ),
 						signal,
 						readError: readErrorMessage,
+						toEvents: toOpenAiEvents,
 					} ),
 					onEvent
 				);
