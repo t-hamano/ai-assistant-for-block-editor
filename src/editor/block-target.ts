@@ -3,14 +3,17 @@
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import type { Block } from '@wordpress/blocks';
+import { serialize } from '@wordpress/blocks';
 import { dispatch, select } from '@wordpress/data';
 
 /**
  * Internal dependencies
  */
 import type { EditTarget } from '../ai/edit-target';
+import { findUniqueText } from '../ai/find-text';
 import type { AiEdit, AiEditResult } from '../platform';
 import { getClientIdByRef, getRef, serializeWithRefs, stripRefs } from './block-refs';
+import { locateText } from './locate-text';
 import { collectHtml, validateMarkup } from './validate-markup';
 
 function failed( reason: string ): AiEditResult {
@@ -126,6 +129,80 @@ export function createBlockTarget(): EditTarget {
 		return applied( blocks );
 	}
 
+	/**
+	 * Replaces the one place in the document whose markup is `find`. Only
+	 * the smallest blocks that hold it are replaced, and of those, only the
+	 * ones that change.
+	 *
+	 * @param find   The markup to replace.
+	 * @param markup The new markup.
+	 * @return What became of the edit.
+	 */
+	function replaceText( find: string, markup: string ): AiEditResult {
+		const { canRemoveBlocks, getBlockRootClientId, getBlocks } = editor();
+		const document = serialize( getBlocks() );
+		const found = findUniqueText( document, stripRefs( find ) );
+		if ( 'reason' in found ) {
+			return failed( found.reason );
+		}
+		const located = locateText( getBlocks(), document, found.start, found.end );
+		if ( ! located ) {
+			return failed(
+				'The "find" text is not inside the blocks. Include whole blocks or text inside one block, and try again.'
+			);
+		}
+
+		const replaced = [
+			located.markup.slice( 0, located.start ),
+			stripRefs( markup ),
+			located.markup.slice( located.end ),
+		].join( '' );
+		const blocks = readBlocks( replaced );
+		if ( typeof blocks === 'string' ) {
+			return failed( blocks );
+		}
+
+		// Blocks at either end that stay the same keep their place, so that
+		// only what changed is highlighted.
+		const before = [ ...located.blocks ];
+		const same = ( a: Block | undefined, b: Block | undefined ) =>
+			!! a && !! b && serialize( [ a ] ) === serialize( [ b ] );
+		while ( before.length > 1 && blocks.length > 1 && same( before[ 0 ], blocks[ 0 ] ) ) {
+			before.shift();
+			blocks.shift();
+		}
+		while ( before.length > 1 && blocks.length > 1 && same( before.at( -1 ), blocks.at( -1 ) ) ) {
+			before.pop();
+			blocks.pop();
+		}
+		if ( before.length === 1 && blocks.length === 1 && same( before[ 0 ], blocks[ 0 ] ) ) {
+			return { status: 'applied', refs: [] };
+		}
+
+		const ids = before.map( ( block ) => block.clientId );
+		if ( ! canRemoveBlocks( ids ) ) {
+			return failed( 'The blocks with the "find" text are locked, so they cannot be changed.' );
+		}
+		const notAllowed = canInsert( blocks, getBlockRootClientId( ids[ 0 ] ) ?? undefined );
+		if ( notAllowed ) {
+			return failed( notAllowed );
+		}
+
+		// The new blocks are selected only when the old ones were, without
+		// taking the focus from the chat.
+		dispatch( blockEditorStore ).replaceBlocks( ids, blocks, undefined, null );
+		const newIds = blocks.map( ( block ) => block.clientId );
+		const index = clientIds.findIndex( ( id ) => ids.includes( id ) );
+		if ( index !== -1 ) {
+			clientIds = clientIds.filter( ( id ) => ! ids.includes( id ) );
+			clientIds.splice( index, 0, ...newIds );
+		}
+		if ( anchor && ids.includes( anchor ) ) {
+			anchor = newIds[ newIds.length - 1 ];
+		}
+		return applied( blocks );
+	}
+
 	return {
 		getContext: () => ( {
 			document: getDocument(),
@@ -138,9 +215,7 @@ export function createBlockTarget(): EditTarget {
 		getDocument,
 		apply( edit ) {
 			if ( edit.action === 'replace_text' ) {
-				return failed(
-					'The "replace_text" action is not available. Edit the blocks by their reference IDs instead.'
-				);
+				return replaceText( edit.find, edit.markup );
 			}
 			// `replace` and `append` do not point at a block, so a `ref` with them is ignored.
 			if ( edit.action !== 'replace' && edit.action !== 'append' && edit.ref !== undefined ) {

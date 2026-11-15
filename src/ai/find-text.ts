@@ -32,7 +32,7 @@ export function findUniqueText( text: string, find: string ): FoundText | { reas
 	if ( start === -1 ) {
 		return {
 			reason:
-				'The "find" text is not in the document. Copy it exactly from the document, including spaces and line breaks but without the line numbers, and try again.',
+				'The "find" text is not in the document. Copy it exactly from the document, including spaces and line breaks, and try again.',
 		};
 	}
 	let count = 1;
