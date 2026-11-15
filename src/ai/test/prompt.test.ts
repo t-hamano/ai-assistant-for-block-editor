@@ -35,6 +35,13 @@ describe( 'buildSystemPrompt', () => {
 		expect( prompt ).not.toContain( 'gutenberg:' );
 	} );
 
+	it( 'keeps the escapes for JSON strings written out', () => {
+		const backslash = String.fromCharCode( 92 );
+		expect( buildSystemPrompt( '# Title\n' ) ).toContain(
+			`${ backslash }u002d${ backslash }u002d`
+		);
+	} );
+
 	it( 'asks for answers only when the document is not available', () => {
 		const prompt = buildSystemPrompt( null );
 		expect( prompt ).toContain( 'you cannot edit it' );

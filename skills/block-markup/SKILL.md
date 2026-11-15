@@ -25,7 +25,7 @@ The document is WordPress block markup: the HTML that the block editor saves, wi
 
 - Separate top-level blocks with one blank line.
 - Every piece of content belongs to a block. HTML outside block delimiters becomes a Classic block (`core/freeform`), and the edit is rejected.
-- Use only blocks that are in the document or in the site information. A block that is not registered on the site is rejected.
+- Use core blocks, and blocks from other plugins only when they are in the document or in the site information. A block that is not registered on the site is rejected.
 
 ## Attributes
 
@@ -34,7 +34,7 @@ The document is WordPress block markup: the HTML that the block editor saves, wi
 - Leave out attributes that have their default value. A level 2 heading is `<!-- wp:heading -->`, not `{"level":2}`.
 - Use only attributes the block has, and only values it allows. Unknown attributes and values outside an `enum` are rejected.
 - Attributes that the block reads from its HTML, such as the text of a paragraph, the `src` and `alt` of an image, the `href` of a button, and `anchor` (the HTML `id`), live only in the HTML. Do not repeat them in the JSON.
-- Inside JSON strings, write `--` as `--`, `<` as `<`, `>` as `>`, `&` as `&`, and `"` as `"`, so the comment cannot end early.
+- Inside JSON strings, write `--` as `\u002d\u002d`, `<` as `\u003c`, `>` as `\u003e`, `&` as `\u0026`, and a `"` in the text as `\u0022`, so the comment cannot end early.
 
 ## Attributes and HTML must match
 
@@ -112,13 +112,15 @@ Some blocks are only valid inside a certain parent, and some parents only take c
 
 ## Dynamic blocks
 
-Blocks that the server renders, such as `core/latest-posts`, `core/archives`, `core/search`, `core/site-title`, and `core/post-title`, save no HTML. Write them as one self-closing delimiter, with attributes only:
+Blocks that the server renders and that save nothing, such as `core/latest-posts`, `core/archives`, `core/search`, `core/site-title`, and `core/post-title`, are one self-closing delimiter, with attributes only:
 
 ```html
 <!-- wp:latest-posts {"postsToShow":3} /-->
 ```
 
 Do not write HTML for them, and do not write their output by hand.
+
+Some server-rendered blocks still save their inner blocks, such as `core/query` with `core/post-template` inside. Write them with an opening and a closing delimiter, and keep their wrapper and inner blocks as they are in the document.
 
 ## Text inside blocks
 
