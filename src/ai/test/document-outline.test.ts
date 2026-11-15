@@ -88,6 +88,12 @@ describe( 'formatOutline', () => {
 		);
 	} );
 
+	it( 'adds the block that holds selected text, with the blocks around it', () => {
+		const blocks = [ 1, 2, 3, 4, 5 ].map( ( n ) => paragraph( `b${ n }`, `P${ n }` ) );
+		const outline = formatOutline( doc( ...blocks ), 'P', 'b3' );
+		expect( outline ).toContain( [ '<nearby>', ...blocks, '</nearby>' ].join( '\n' ) );
+	} );
+
 	it( 'takes the blocks around a nested selection from its parent', () => {
 		const outline = formatOutline(
 			doc(

@@ -198,9 +198,9 @@ export function formatChanges( document: string, seen: SeenDocument ): string | 
  * @return The `<document>` block, or the `<outline>` block.
  */
 function formatDocument( context: EditContext ): string {
-	const { document, selection } = context;
+	const { document, selection, textIn } = context;
 	if ( isLongDocument( document ) ) {
-		return formatOutline( document, selection );
+		return formatOutline( document, selection, textIn );
 	}
 	return [ '<document>', document.replace( /\n+$/, '' ), '</document>' ]
 		.filter( ( part ) => part !== '' )
