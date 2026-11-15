@@ -38,20 +38,27 @@ export function createBlockTarget(): EditTarget {
 	let anchor: string | undefined = clientIds[ clientIds.length - 1 ];
 
 	const getDocument = () => serializeWithRefs( editor().getBlocks() );
+	// What the automatic fix changed in the markup of the edit being applied.
+	let autoFix: string | undefined;
 
 	/**
 	 * Validates the markup, and returns its blocks or why they cannot be
 	 * applied.
 	 *
+	 * When the markup was fixed automatically, what changed is kept for the
+	 * result of the edit.
+	 *
 	 * @param markup The model's markup.
 	 * @return The blocks, or the reason.
 	 */
 	function readBlocks( markup: string ): Block[] | string {
+		autoFix = undefined;
 		// Markup that the editor would not read as written is never applied.
-		const { blocks, problems } = validateMarkup(
-			stripRefs( markup ),
-			collectHtml( editor().getBlocks() )
-		);
+		const {
+			blocks,
+			problems,
+			autoFix: fix,
+		} = validateMarkup( stripRefs( markup ), collectHtml( editor().getBlocks() ) );
 		if ( problems.length ) {
 			return [
 				'The edit was not applied, because the markup has these problems:',
@@ -62,6 +69,7 @@ export function createBlockTarget(): EditTarget {
 		if ( ! blocks.length ) {
 			return 'The markup has no blocks. Write the content as block markup, and try again.';
 		}
+		autoFix = fix;
 		return blocks;
 	}
 
@@ -73,7 +81,11 @@ export function createBlockTarget(): EditTarget {
 	}
 
 	function applied( blocks: Block[] ): AiEditResult {
-		return { status: 'applied', refs: blocks.map( ( block ) => getRef( block.clientId ) ) };
+		return {
+			status: 'applied',
+			refs: blocks.map( ( block ) => getRef( block.clientId ) ),
+			...( autoFix && { autoFix } ),
+		};
 	}
 
 	/**
@@ -176,7 +188,7 @@ export function createBlockTarget(): EditTarget {
 			blocks.pop();
 		}
 		if ( before.length === 1 && blocks.length === 1 && same( before[ 0 ], blocks[ 0 ] ) ) {
-			return { status: 'applied', refs: [] };
+			return { status: 'applied', refs: [], ...( autoFix && { autoFix } ) };
 		}
 
 		const ids = before.map( ( block ) => block.clientId );

@@ -70,14 +70,15 @@ export type AiEdit =
  * What became of an edit:
  *
  * - `applied`: it changed the document. `refs` has the reference IDs of
- *   the blocks it added, at the level they were added.
+ *   the blocks it added, at the level they were added. `autoFix` tells the
+ *   model what was fixed in its markup before it was applied.
  * - `dropped`: the selection it was for no longer exists.
  * - `failed`: the model can fix it and try again, for example when its
  *   `find` text is not in the document. `reason` tells the model what went
  *   wrong.
  */
 export type AiEditResult =
-	| { status: 'applied'; refs?: string[] }
+	| { status: 'applied'; refs?: string[]; autoFix?: string }
 	| { status: 'dropped' }
 	| { status: 'failed'; reason: string };
 

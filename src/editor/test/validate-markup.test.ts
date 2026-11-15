@@ -87,15 +87,76 @@ describe( 'validateMarkup', () => {
 		] );
 	} );
 
-	it( 'rejects HTML that does not match the attributes, with the markup it should be', () => {
-		const { problems } = validateMarkup(
-			'<!-- wp:test/text {"align":"left"} -->\n<p>One</p>\n<!-- /wp:test/text -->'
+	it( 'fixes HTML that drifted from the attributes, and says what changed', () => {
+		const result = validateMarkup(
+			`${ text( 'Kept' ) }\n\n<!-- wp:test/text {"align":"left"} -->\n<p>One</p>\n<!-- /wp:test/text -->`
 		);
 
-		expect( problems ).toHaveLength( 1 );
-		expect( problems[ 0 ] ).toContain( 'does not match its attributes' );
-		expect( problems[ 0 ] ).toContain(
-			'<!-- wp:test/text {"align":"left"} -->\n<p class="has-text-align-left">One</p>\n<!-- /wp:test/text -->'
+		expect( result.problems ).toEqual( [] );
+		expect( result.blocks.map( ( block ) => block.attributes.content ) ).toEqual( [
+			'Kept',
+			'One',
+		] );
+		expect( result.blocks.every( ( block ) => block.isValid ) ).toBe( true );
+		expect( result.autoFix ).toContain( 'fixed automatically' );
+		expect( result.autoFix ).toContain(
+			'Before:\n<p>One</p>\nAfter:\n<!-- wp:test/text {"align":"left"} -->\n<p class="has-text-align-left">One</p>\n<!-- /wp:test/text -->'
+		);
+		expect( result.autoFix ).not.toContain( 'Kept' );
+	} );
+
+	it( 'fixes drifted HTML in nested blocks', () => {
+		const result = validateMarkup(
+			'<!-- wp:test/group -->\n<div><!-- wp:test/text {"align":"right"} -->\n<p>One</p>\n<!-- /wp:test/text --></div>\n<!-- /wp:test/group -->'
+		);
+
+		expect( result.problems ).toEqual( [] );
+		expect( result.blocks[ 0 ].innerBlocks[ 0 ].attributes ).toMatchObject( {
+			content: 'One',
+			align: 'right',
+		} );
+	} );
+
+	it( 'does not fix HTML when the fix would lose text, and gives the markup it should be', () => {
+		const result = validateMarkup(
+			'<!-- wp:test/text {"align":"left"} -->\n<span>One</span>\n<!-- /wp:test/text -->'
+		);
+
+		expect( result.autoFix ).toBeUndefined();
+		expect( result.problems ).toHaveLength( 1 );
+		expect( result.problems[ 0 ] ).toContain( 'does not match its attributes' );
+		expect( result.problems[ 0 ] ).toContain(
+			'With the same attributes, the block is written as:'
+		);
+	} );
+
+	it( 'does not fix HTML when the fix would lose media or links', () => {
+		for ( const extra of [ '<img src="photo.jpg" alt="">', '<a href="/page"></a>' ] ) {
+			const result = validateMarkup(
+				`<!-- wp:test/group -->\n<div>${ extra }${ text( 'One' ) }</div>\n<!-- /wp:test/group -->`
+			);
+
+			expect( result.autoFix ).toBeUndefined();
+			expect( result.problems ).toEqual( [
+				expect.stringContaining( 'does not match its attributes' ),
+			] );
+		}
+	} );
+
+	it( 'does not fix drifted HTML when the markup has other problems', () => {
+		const result = validateMarkup(
+			`<!-- wp:test/text {"align":"left"} -->\n<p>One</p>\n<!-- /wp:test/text -->\n\n${ text(
+				'Two',
+				'{"size":"large"} '
+			) }`
+		);
+
+		expect( result.autoFix ).toBeUndefined();
+		expect( result.problems ).toEqual(
+			expect.arrayContaining( [
+				expect.stringContaining( '"size" is not an attribute' ),
+				expect.stringContaining( 'does not match its attributes' ),
+			] )
 		);
 	} );
 

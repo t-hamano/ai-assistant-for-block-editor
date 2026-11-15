@@ -3,6 +3,7 @@
  */
 import { parse as parseRaw } from '@wordpress/block-serialization-default-parser';
 import {
+	createBlock,
 	getBlockAttributes,
 	getBlockType,
 	getFreeformContentHandlerName,
@@ -79,6 +80,11 @@ export type MarkupValidation = {
 	 * blocks can be applied.
 	 */
 	problems: string[];
+	/**
+	 * What the automatic fix changed, to tell the model, when the markup
+	 * was fixed. `blocks` are then the fixed blocks.
+	 */
+	autoFix?: string;
 };
 
 /**
@@ -314,11 +320,123 @@ export function validateMarkup(
 	existingHtml: Set< string > = new Set()
 ): MarkupValidation {
 	const blocks = parse( markup );
+	const rawProblems = checkRawBlocks( parseRaw( markup ), existingHtml, true );
+	const problems = [ ...rawProblems, ...checkParsedBlocks( blocks ) ];
+	// Only HTML that drifted from what the attributes write is fixed: an
+	// unknown block or attribute, HTML outside blocks, or core/html is
+	// always for the model to fix.
+	if ( ! problems.length || rawProblems.length ) {
+		return { blocks, problems };
+	}
+	return autoFix( markup, blocks, existingHtml ) ?? { blocks, problems };
+}
+
+/**
+ * Elements that show content without text.
+ */
+const MEDIA_ELEMENTS = [
+	'audio',
+	'canvas',
+	'embed',
+	'iframe',
+	'img',
+	'object',
+	'picture',
+	'source',
+	'svg',
+	'track',
+	'video',
+];
+
+/**
+ * Attributes that point at content: media and links.
+ */
+const CONTENT_ATTRIBUTES =
+	/\b(?:src|srcset|href|poster|data)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+
+/**
+ * What the markup shows: its text, without its tags, comments, and the
+ * whitespace between them, and its media and the URLs it points at, which
+ * have no text to compare.
+ *
+ * @param markup The markup.
+ * @return What it shows.
+ */
+function toContent( markup: string ): string {
+	const html = markup.replace( /<!--[\s\S]*?-->/g, ' ' );
+	const text = html
+		.replace( /<[^>]*>/g, ' ' )
+		.replace( /\s+/g, ' ' )
+		.trim();
+	const media = [ ...html.matchAll( /<([a-z][a-z0-9-]*)\b[^>]*>/gi ) ].flatMap(
+		( [ tag, name ] ) => [
+			...( MEDIA_ELEMENTS.includes( name.toLowerCase() ) ? [ name.toLowerCase() ] : [] ),
+			...[ ...tag.matchAll( CONTENT_ATTRIBUTES ) ].map(
+				( match ) => match[ 1 ] ?? match[ 2 ] ?? match[ 3 ]
+			),
+		]
+	);
+	return JSON.stringify( [ text, media ] );
+}
+
+/**
+ * Rebuilds the blocks whose HTML does not match their attributes from the
+ * attributes the parser read, as their `save` writes them.
+ *
+ * @param blocks  The parsed blocks.
+ * @param changes Collects the rebuilt blocks, before and after.
+ * @return The blocks, rebuilt where needed.
+ */
+function rebuild( blocks: Block[], changes: string[] ): Block[] {
+	return blocks.map( ( block ) => {
+		const innerBlocks = rebuild( block.innerBlocks, changes );
+		if ( block.isValid !== false ) {
+			return innerBlocks === block.innerBlocks ? block : { ...block, innerBlocks };
+		}
+		const fixed = createBlock( block.name, block.attributes, innerBlocks );
+		changes.push(
+			[ 'Before:', block.originalContent ?? '', 'After:', serialize( fixed ) ].join( '\n' )
+		);
+		return fixed;
+	} );
+}
+
+/**
+ * Fixes markup whose only problem is HTML that drifted from what the
+ * blocks' attributes write. The fix is used only when it keeps the text,
+ * media, and links, and the fixed markup passes every check.
+ *
+ * @param markup       The model's markup.
+ * @param blocks       Its parsed blocks.
+ * @param existingHtml The content of the `core/html` blocks in the document.
+ * @return The fixed blocks, and what changed, or nothing.
+ */
+function autoFix(
+	markup: string,
+	blocks: Block[],
+	existingHtml: Set< string >
+): MarkupValidation | undefined {
+	const changes: string[] = [];
+	const fixedMarkup = serialize( rebuild( blocks, changes ) );
+	if ( toContent( fixedMarkup ) !== toContent( markup ) ) {
+		return undefined;
+	}
+	const fixed = parse( fixedMarkup );
 	const problems = [
-		...checkRawBlocks( parseRaw( markup ), existingHtml, true ),
-		...checkParsedBlocks( blocks ),
+		...checkRawBlocks( parseRaw( fixedMarkup ), existingHtml, true ),
+		...checkParsedBlocks( fixed ),
 	];
-	return { blocks, problems };
+	if ( problems.length ) {
+		return undefined;
+	}
+	return {
+		blocks: fixed,
+		problems: [],
+		autoFix: [
+			'The HTML of some blocks did not match their attributes, so it was fixed automatically. Write blocks as the fixed markup does in later edits.',
+			...changes,
+		].join( '\n' ),
+	};
 }
 
 /**
