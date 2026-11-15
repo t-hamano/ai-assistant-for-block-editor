@@ -38,10 +38,7 @@ Only users with administrator privileges can use this plugin, because requests a
 3. Install an AI provider plugin and set its API key on the Connectors screen.
 
 == Screenshots ==
-1. Edit What You Select, or the Whole Post
-2. Knows Your Site, Saves Tokens
-3. Streaming Answers
-4. Built on WordPress Connectors
+1. Select text, ask the AI, and see the changes highlighted in the editor
 
 == External services ==
 This plugin sends content to an AI provider to edit it. It connects only to the provider whose API key is set on the Connectors screen, and only when an administrator uses the AI assistant in the block editor.
