@@ -2,6 +2,8 @@
 
 [![Test](https://github.com/t-hamano/ai-content-editing-assistant/actions/workflows/test.yml/badge.svg)](https://github.com/t-hamano/ai-content-editing-assistant/actions/workflows/test.yml)
 
+![AI Content Editing Assistant](https://raw.githubusercontent.com/t-hamano/ai-content-editing-assistant/main/.wordpress-org/banner-1544x500.png)
+
 Select blocks or text in the block editor and edit them by chatting with AI. The plugin uses the API keys registered on the Connectors screen in WordPress core.
 
 > [!IMPORTANT]
