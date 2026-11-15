@@ -19,9 +19,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ACEA_NAMESPACE', 'ai-content-editing-assistant' );
-define( 'ACEA_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) );
-define( 'ACEA_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
+define( 'AI_CONTENT_EDITING_ASSISTANT_NAMESPACE', 'ai-content-editing-assistant' );
+define( 'AI_CONTENT_EDITING_ASSISTANT_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) );
+define( 'AI_CONTENT_EDITING_ASSISTANT_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
 
 require_once __DIR__ . '/classes/class-api-key.php';
 require_once __DIR__ . '/classes/class-enqueue.php';

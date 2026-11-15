@@ -45,7 +45,7 @@ class Enqueue {
 			return;
 		}
 
-		$asset_path = ACEA_PATH . '/build/index.asset.php';
+		$asset_path = AI_CONTENT_EDITING_ASSISTANT_PATH . '/build/index.asset.php';
 
 		if ( ! file_exists( $asset_path ) ) {
 			return;
@@ -54,21 +54,21 @@ class Enqueue {
 		$asset_file = include $asset_path;
 
 		wp_enqueue_script(
-			ACEA_NAMESPACE,
-			ACEA_URL . '/build/index.js',
+			AI_CONTENT_EDITING_ASSISTANT_NAMESPACE,
+			AI_CONTENT_EDITING_ASSISTANT_URL . '/build/index.js',
 			$asset_file['dependencies'],
 			$asset_file['version'],
 			array( 'in_footer' => true )
 		);
 
-		wp_set_script_translations( ACEA_NAMESPACE, ACEA_NAMESPACE );
+		wp_set_script_translations( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );
 
 		wp_enqueue_style(
-			ACEA_NAMESPACE,
-			ACEA_URL . '/build/style-index.css',
+			AI_CONTENT_EDITING_ASSISTANT_NAMESPACE,
+			AI_CONTENT_EDITING_ASSISTANT_URL . '/build/style-index.css',
 			array(),
 			$asset_file['version']
 		);
-		wp_style_add_data( ACEA_NAMESPACE, 'rtl', 'replace' );
+		wp_style_add_data( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, 'rtl', 'replace' );
 	}
 }

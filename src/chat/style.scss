@@ -1,30 +1,30 @@
 // The chat fills the sidebar below its header, and only the messages scroll.
-.interface-complementary-area:has(> .acea-sidebar) {
+.interface-complementary-area:has(> .ai-content-editing-assistant-sidebar) {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
 }
 
-.acea-sidebar {
+.ai-content-editing-assistant-sidebar {
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
 	min-height: 0;
 }
 
-.acea-chat {
+.ai-content-editing-assistant-chat {
 	flex: 1 1 auto;
 	min-height: 0;
 }
 
-.acea-chat__messages {
+.ai-content-editing-assistant-chat__messages {
 	flex: 1 1 auto;
 	min-height: 0;
 	padding: var(--wpds-dimension-padding-lg);
 	overflow: auto;
 }
 
-.acea-chat__message {
+.ai-content-editing-assistant-chat__message {
 	overflow-wrap: anywhere;
 
 	&.is-user {
@@ -37,13 +37,13 @@
 	}
 }
 
-.acea-chat__note {
+.ai-content-editing-assistant-chat__note {
 	color: var(--wpds-color-foreground-content-neutral-weak);
 }
 
 // Basic styles for the elements that the AI's Markdown answers turn into,
 // such as paragraphs, lists, code, and tables.
-.acea-chat__markdown {
+.ai-content-editing-assistant-chat__markdown {
 
 	> :first-child {
 		margin-top: 0;
@@ -125,13 +125,13 @@
 	}
 }
 
-.acea-chat__composer {
+.ai-content-editing-assistant-chat__composer {
 	flex: 0 0 auto;
 	padding: var(--wpds-dimension-padding-lg);
 	border-top: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
 }
 
-.acea-chat__input {
+.ai-content-editing-assistant-chat__input {
 	flex: 1 1 auto;
 
 	// The box grows with its text up to about eight lines.

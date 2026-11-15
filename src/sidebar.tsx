@@ -48,7 +48,7 @@ export default function Sidebar() {
 				name={ SIDEBAR_NAME }
 				title={ title }
 				icon={ icon }
-				className="acea-sidebar"
+				className="ai-content-editing-assistant-sidebar"
 				// @ts-expect-error `PluginSidebar` passes `header` on to `ComplementaryArea`, but its types leave it out.
 				header={
 					<>

@@ -36,15 +36,19 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 	const activity = message.status === 'streaming' ? message.activity : undefined;
 
 	return (
-		<Stack className="acea-chat__message is-assistant" direction="column" gap="sm">
+		<Stack
+			className="ai-content-editing-assistant-chat__message is-assistant"
+			direction="column"
+			gap="sm"
+		>
 			{ message.text && <AnswerMarkdown>{ message.text }</AnswerMarkdown> }
 			{ message.editStatus === 'applied' && (
-				<Text variant="body-sm" className="acea-chat__note">
+				<Text variant="body-sm" className="ai-content-editing-assistant-chat__note">
 					{ __( 'Edited the content.', 'ai-content-editing-assistant' ) }
 				</Text>
 			) }
 			{ message.editStatus === 'dropped' && (
-				<Text variant="body-sm" className="acea-chat__note">
+				<Text variant="body-sm" className="ai-content-editing-assistant-chat__note">
 					{ __(
 						'The edit was not applied because the selected blocks no longer exist.',
 						'ai-content-editing-assistant'
@@ -52,13 +56,19 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 				</Text>
 			) }
 			{ activity && (
-				<Stack className="acea-chat__note" direction="row" align="center" gap="sm" role="status">
+				<Stack
+					className="ai-content-editing-assistant-chat__note"
+					direction="row"
+					align="center"
+					gap="sm"
+					role="status"
+				>
 					<Spinner aria-hidden />
 					<Text variant="body-sm">{ getActivityLabel( activity ) }</Text>
 				</Stack>
 			) }
 			{ message.status === 'stopped' && (
-				<Text variant="body-sm" className="acea-chat__note">
+				<Text variant="body-sm" className="ai-content-editing-assistant-chat__note">
 					{ __( 'Stopped.', 'ai-content-editing-assistant' ) }
 				</Text>
 			) }
@@ -128,8 +138,13 @@ export function Chat( { chat, isAvailable }: Props ) {
 	};
 
 	return (
-		<Stack className="acea-chat" direction="column">
-			<Stack className="acea-chat__messages" direction="column" gap="lg" ref={ messagesRef }>
+		<Stack className="ai-content-editing-assistant-chat" direction="column">
+			<Stack
+				className="ai-content-editing-assistant-chat__messages"
+				direction="column"
+				gap="lg"
+				ref={ messagesRef }
+			>
 				{ ! isAvailable && (
 					<Notice.Root intent="info">
 						<Notice.Description>
@@ -141,7 +156,7 @@ export function Chat( { chat, isAvailable }: Props ) {
 					</Notice.Root>
 				) }
 				{ isAvailable && conversation.messages.length === 0 && (
-					<Text variant="body-sm" className="acea-chat__note">
+					<Text variant="body-sm" className="ai-content-editing-assistant-chat__note">
 						{ __(
 							'Ask the AI Assistant to write or edit. The selected blocks are sent with your message.',
 							'ai-content-editing-assistant'
@@ -152,7 +167,11 @@ export function Chat( { chat, isAvailable }: Props ) {
 					message.role === 'assistant' ? (
 						<AssistantMessage key={ message.id } message={ message } />
 					) : (
-						<Text key={ message.id } className="acea-chat__message is-user" render={ <div /> }>
+						<Text
+							key={ message.id }
+							className="ai-content-editing-assistant-chat__message is-user"
+							render={ <div /> }
+						>
 							{ message.text }
 						</Text>
 					)
@@ -167,13 +186,13 @@ export function Chat( { chat, isAvailable }: Props ) {
 						} }
 					/>
 				}
-				className="acea-chat__composer"
+				className="ai-content-editing-assistant-chat__composer"
 				direction="row"
 				align="flex-end"
 				gap="sm"
 			>
 				<TextareaControl
-					className="acea-chat__input"
+					className="ai-content-editing-assistant-chat__input"
 					label={ __( 'Message', 'ai-content-editing-assistant' ) }
 					hideLabelFromVision
 					placeholder={ __( 'Ask the AI Assistant', 'ai-content-editing-assistant' ) }

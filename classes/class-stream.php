@@ -82,7 +82,7 @@ class Stream {
 		}
 
 		return new WP_Error(
-			'acea_provider_unreachable',
+			'ai_content_editing_assistant_provider_unreachable',
 			$error ? $error : __( 'The provider did not answer.', 'ai-content-editing-assistant' ),
 			array( 'status' => 502 )
 		);

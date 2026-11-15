@@ -52,7 +52,7 @@ class Relay {
 	 */
 	public function register_routes() {
 		register_rest_route(
-			ACEA_NAMESPACE . '/v1',
+			AI_CONTENT_EDITING_ASSISTANT_NAMESPACE . '/v1',
 			'/chat',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -107,7 +107,7 @@ class Relay {
 
 		if ( '' === $api_key ) {
 			return new WP_Error(
-				'acea_no_api_key',
+				'ai_content_editing_assistant_no_api_key',
 				__( 'No API key is set for this provider.', 'ai-content-editing-assistant' ),
 				array( 'status' => 400 )
 			);
@@ -116,7 +116,7 @@ class Relay {
 		// Sites can turn AI off, or stop prompts, as they do for the AI Client.
 		if ( ! wp_supports_ai() || apply_filters( 'wp_ai_client_prevent_prompt', false, wp_ai_client_prompt()->using_provider( $provider_id ) ) ) {
 			return new WP_Error(
-				'acea_prompt_prevented',
+				'ai_content_editing_assistant_prompt_prevented',
 				__( 'The site does not allow AI requests.', 'ai-content-editing-assistant' ),
 				array( 'status' => 503 )
 			);
@@ -157,7 +157,7 @@ class Relay {
 
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error(
-				'acea_provider_unreachable',
+				'ai_content_editing_assistant_provider_unreachable',
 				$response->get_error_message(),
 				array( 'status' => 502 )
 			);

@@ -10,7 +10,7 @@ use WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication;
  * Gives the AI Client an API key for the fake provider, and takes it away
  * after each test.
  */
-trait ACEA_Fake_Api_Key {
+trait AI_Content_Editing_Assistant_Fake_Api_Key {
 
 	/**
 	 * Sets the API key of the fake provider.
@@ -20,11 +20,11 @@ trait ACEA_Fake_Api_Key {
 	protected function set_fake_api_key( string $key ) {
 		$registry = AiClient::defaultRegistry();
 
-		if ( ! $registry->hasProvider( ACEA_Fake_Provider::ID ) ) {
-			$registry->registerProvider( ACEA_Fake_Provider::class );
+		if ( ! $registry->hasProvider( AI_Content_Editing_Assistant_Fake_Provider::ID ) ) {
+			$registry->registerProvider( AI_Content_Editing_Assistant_Fake_Provider::class );
 		}
 
-		$registry->setProviderRequestAuthentication( ACEA_Fake_Provider::ID, new ApiKeyRequestAuthentication( $key ) );
+		$registry->setProviderRequestAuthentication( AI_Content_Editing_Assistant_Fake_Provider::ID, new ApiKeyRequestAuthentication( $key ) );
 	}
 
 	/**

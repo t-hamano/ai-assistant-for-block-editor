@@ -17,7 +17,7 @@ use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
  * Stands in for the Anthropic provider plugin. It takes an API key and has
  * no models, so tests can give the AI Client a key without the plugin.
  */
-class ACEA_Fake_Provider extends AbstractProvider {
+class AI_Content_Editing_Assistant_Fake_Provider extends AbstractProvider {
 
 	const ID = 'anthropic';
 
