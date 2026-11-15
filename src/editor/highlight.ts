@@ -9,7 +9,7 @@ import { addFilter } from '@wordpress/hooks';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './canvas.scss';
 
 /**
  * How long a changed block stays highlighted, in milliseconds. The
