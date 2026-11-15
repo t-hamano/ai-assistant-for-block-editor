@@ -64,7 +64,7 @@ export function buildSystemPrompt(
 	);
 	if ( siteInfo ) {
 		lines.push(
-			'<site-info> lists the blocks registered on this site with their supports, and the presets and settings of the theme. Use only blocks, supports, and preset slugs that are in it or already in the document.'
+			'<site-info> describes the blocks and the theme.json settings of this site. The skill explains how to read it.'
 		);
 	}
 	return [

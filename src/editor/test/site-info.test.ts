@@ -16,22 +16,39 @@ import { dispatch } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { collectSiteInfo, describeSupports, formatSiteInfo, getSiteInfo } from '../site-info';
+import { getSiteInfo } from '../site-info';
+
+const features = {
+	color: {
+		palette: { theme: [ { slug: 'base', name: 'Base', color: '#ffffff' } ] },
+		defaultPalette: false,
+	},
+	blocks: { 'core/heading': { color: { custom: false } } },
+};
+
+/**
+ * Reads one section of the site information.
+ *
+ * @param text    The site information.
+ * @param heading The section's heading.
+ * @return The section's content.
+ */
+function section( text: string, heading: string ): string {
+	return text.split( `## ${ heading }\n\n` )[ 1 ].split( '\n\n## ' )[ 0 ];
+}
 
 beforeAll( () => {
 	registerCoreBlocks();
 	registerBlockType( 'my-plugin/card', {
 		apiVersion: 3,
 		title: 'Card',
-		description: 'A card with a title.',
 		category: 'design',
 		parent: [ 'core/group' ],
 		attributes: {
-			title: { type: 'string', source: 'html', selector: 'h3' },
 			tone: { type: 'string', enum: [ 'calm', 'loud' ], default: 'calm' },
 			preview: { type: 'string', role: 'local' },
 		},
-		supports: { color: { text: false }, spacing: { padding: true }, html: false },
+		supports: { spacing: { padding: true } },
 		edit: () => null,
 		save: () => null,
 	} );
@@ -45,114 +62,41 @@ beforeAll( () => {
 		save: () => null,
 	} );
 	registerBlockStyle( 'my-plugin/card', { name: 'outlined', label: 'Outlined' } );
-	dispatch( blockEditorStore ).updateSettings( {
-		__experimentalFeatures: {
-			color: {
-				palette: {
-					default: [ { slug: 'black', name: 'Black', color: '#000000' } ],
-					theme: [ { slug: 'base', name: 'Base', color: '#ffffff' } ],
-				},
-				defaultPalette: false,
-				custom: false,
-			},
-			typography: {
-				fontSizes: {
-					theme: [
-						{ slug: 'large', name: 'Large', size: '2rem' },
-						{ slug: 'huge', name: 'Huge', size: 48 },
-					],
-				},
-				fontFamilies: {
-					theme: [ { slug: 'body', name: 'Body', fontFamily: 'Inter, sans-serif' } ],
-				},
-			},
-			spacing: { spacingSizes: { theme: [ { slug: '40', name: '1', size: '1rem' } ] } },
-			layout: { contentSize: '620px', wideSize: '1280px' },
-			blocks: {
-				'core/heading': {
-					color: {
-						palette: { theme: [ { slug: 'accent', name: 'Accent', color: '#ff0000' } ] },
-						custom: true,
-					},
-				},
-				'core/quote': { color: { custom: false } },
-				'my-plugin/hidden': { color: { custom: true } },
-			},
-		},
-	} );
+	dispatch( blockEditorStore ).updateSettings( { __experimentalFeatures: features } );
 } );
 
-describe( 'describeSupports', () => {
-	it( 'lists the style supports without experimental prefixes or editor controls', () => {
-		expect(
-			describeSupports( {
-				align: [ 'wide', 'full' ],
-				html: false,
-				color: { gradients: true, __experimentalDefaultControls: { text: true } },
-				spacing: { margin: [ 'top', 'bottom' ], padding: true },
-				__experimentalBorder: { radius: true, color: false },
-				typography: { fontSize: true, __experimentalFontFamily: true },
-				shadow: true,
-			} )
-		).toBe(
-			'align (wide, full); border: radius; color: gradients, text, background; shadow; spacing: margin (top, bottom), padding; typography: fontSize, fontFamily'
-		);
+describe( 'getSiteInfo', () => {
+	it( 'lists core blocks by name', () => {
+		const names = section( getSiteInfo(), 'Core blocks' ).split( ', ' );
+		expect( names ).toContain( 'paragraph' );
+		expect( names ).not.toContain( 'core/paragraph' );
 	} );
 
-	it( 'leaves out colors the block turns off', () => {
-		expect( describeSupports( { color: { text: false, background: true } } ) ).toBe(
-			'color: background'
-		);
-	} );
-
-	it( 'leaves out colors with every kind turned off', () => {
-		expect( describeSupports( { color: { text: false, background: false } } ) ).toBe( '' );
-	} );
-
-	it( 'is empty for a block without style supports', () => {
-		expect( describeSupports( { html: false, inserter: true } ) ).toBe( '' );
-	} );
-} );
-
-describe( 'collectSiteInfo', () => {
-	it( 'collects the blocks users can insert, with their styles', () => {
-		const { blocks } = collectSiteInfo();
-		const card = blocks.find( ( block ) => block.name === 'my-plugin/card' );
+	it( 'describes blocks from plugins as in their block.json', () => {
+		const [ card, ...others ] = JSON.parse( section( getSiteInfo(), 'Blocks from plugins' ) );
+		expect( others ).toEqual( [] );
 		expect( card ).toMatchObject( {
+			name: 'my-plugin/card',
 			title: 'Card',
 			parent: [ 'core/group' ],
-			styles: [ 'outlined' ],
+			supports: { spacing: { padding: true } },
 		} );
-		expect( blocks.some( ( block ) => block.name === 'core/paragraph' ) ).toBe( true );
-		expect( blocks.some( ( block ) => block.name === 'my-plugin/hidden' ) ).toBe( false );
+		expect( card.attributes.tone ).toEqual( {
+			type: 'string',
+			enum: [ 'calm', 'loud' ],
+			default: 'calm',
+		} );
+		expect( card.attributes.preview ).toBeUndefined();
 	} );
 
-	it( "reads the theme's presets, without defaults the theme turned off", () => {
-		const info = collectSiteInfo();
-		expect( info.colors ).toEqual( [ { slug: 'base', name: 'Base', value: '#ffffff' } ] );
-		expect( info.fontSizes ).toEqual( [
-			{ slug: 'large', name: 'Large', value: '2rem' },
-			{ slug: 'huge', name: 'Huge', value: '48px' },
-		] );
-		expect( info.fontFamilies[ 0 ] ).toMatchObject( { slug: 'body', value: 'Inter, sans-serif' } );
-		expect( info.spacingSizes ).toEqual( [ { slug: '40', name: '1', value: '1rem' } ] );
-		expect( info ).toMatchObject( {
-			customColor: false,
-			customFontSize: true,
-			contentSize: '620px',
-			wideSize: '1280px',
-		} );
+	it( 'lists the block styles', () => {
+		const styles = JSON.parse( section( getSiteInfo(), 'Block styles' ) );
+		expect( styles[ 'my-plugin/card' ] ).toEqual( [ 'outlined' ] );
+		expect( styles[ 'core/button' ] ).toEqual( [ 'fill', 'outline' ] );
 	} );
 
-	it( 'keeps only the settings that blocks change', () => {
-		const { blockSettings } = collectSiteInfo();
-		expect( blockSettings ).toEqual( [
-			{
-				name: 'core/heading',
-				colors: [ { slug: 'accent', name: 'Accent', value: '#ff0000' } ],
-				customColor: true,
-			},
-		] );
+	it( 'passes the theme.json settings as they are', () => {
+		expect( JSON.parse( section( getSiteInfo(), 'theme.json settings' ) ) ).toEqual( features );
 	} );
 
 	it( 'leaves out blocks the editor does not allow', () => {
@@ -160,60 +104,17 @@ describe( 'collectSiteInfo', () => {
 			allowedBlockTypes: [ 'core/paragraph', 'my-plugin/card' ],
 		} );
 		try {
-			expect( collectSiteInfo().blocks.map( ( block ) => block.name ) ).toEqual( [
-				'core/paragraph',
-				'my-plugin/card',
-			] );
-			expect( collectSiteInfo().blockSettings ).toEqual( [] );
+			const text = getSiteInfo();
+			expect( section( text, 'Core blocks' ) ).toBe( 'paragraph' );
+			expect( JSON.parse( section( text, 'Block styles' ) ) ).toEqual( {
+				'my-plugin/card': [ 'outlined' ],
+			} );
 		} finally {
 			dispatch( blockEditorStore ).updateSettings( { allowedBlockTypes: true } );
 		}
 	} );
-} );
-
-describe( 'formatSiteInfo', () => {
-	it( 'describes blocks from plugins with their attributes', () => {
-		const text = getSiteInfo();
-		expect( text ).toContain(
-			'- `my-plugin/card` (Card): color: background; spacing: padding; styles: outlined'
-		);
-		expect( text ).toContain( '  Only directly inside `core/group`.' );
-		expect( text ).toContain( '  - `tone`: string; one of `"calm"`, `"loud"`; default `"calm"`' );
-		expect( text ).toContain( '  - `title`: string; in the HTML `h3`, not in the JSON' );
-		expect( text ).not.toContain( '`preview`' );
-		expect( text ).not.toContain( '`className`:' );
-	} );
-
-	it( 'lists core blocks by name, with their block styles', () => {
-		const text = getSiteInfo();
-		expect( text ).toMatch( /^Core blocks: .*\bparagraph\b.*\.$/m );
-		expect( text ).toContain( '- `core/button`: fill, outline' );
-		expect( text ).not.toContain( '`core/paragraph`' );
-		expect( text ).not.toContain( '`dropCap`' );
-	} );
-
-	it( 'lists the presets and the settings', () => {
-		const text = getSiteInfo();
-		expect( text ).toContain( '- `base`: Base, `#ffffff`' );
-		expect( text ).toContain( '- `large`: Large, `2rem`' );
-		expect( text ).toContain( '- `huge`: Huge, `48px`' );
-		expect( text ).toContain( '- Custom colors: not allowed' );
-		expect( text ).toContain( '- Layout: content width `620px`, wide width `1280px`' );
-	} );
-
-	it( 'lists the settings that blocks change on their own', () => {
-		const text = getSiteInfo();
-		expect( text ).toContain(
-			'### core/heading\n\nColors, for `textColor`, `backgroundColor`, and `borderColor`, and `var:preset|color|<slug>` in `style`:\n- `accent`: Accent, `#ff0000`\n\n- Custom colors: allowed'
-		);
-		expect( text ).not.toContain( '### core/quote' );
-	} );
-
-	it( 'stays short enough to send with every conversation', () => {
-		expect( getSiteInfo().length ).toBeLessThan( 5000 );
-	} );
 
 	it( 'gives the same text for the same site, so the prompt cache holds', () => {
-		expect( formatSiteInfo( collectSiteInfo() ) ).toBe( getSiteInfo() );
+		expect( getSiteInfo() ).toBe( getSiteInfo() );
 	} );
 } );

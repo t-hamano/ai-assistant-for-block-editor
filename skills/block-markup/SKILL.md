@@ -68,6 +68,23 @@ The editor rebuilds each block from its attributes and compares the result with 
 - Use only slugs that are in the site information or already in the document. Do not guess slugs.
 - Use a fixed value, such as `#1e73be` or `28px`, only when no preset fits what the user asked for, only for settings the block supports, and only when the site information allows custom values of that kind.
 
+## Site information
+
+`<site-info>` describes the site:
+
+- **Core blocks**: the core blocks users can insert, without the `core/` prefix.
+- **Blocks from plugins**: each block's `name`, `title`, `parent`, `ancestor`, `allowedBlocks`, `attributes`, and `supports`, as in its `block.json`. Attributes that supports add, such as `className`, `style`, `textColor`, and `align`, may be listed too.
+- **Block styles**: the block styles of each block, for `className` as `is-style-<name>`.
+- **theme.json settings**: the `settings` of `theme.json`, merged from WordPress, the theme, and the user.
+
+Read the settings like this:
+
+- Presets are grouped by origin: `default` from WordPress, `theme`, and `custom` from the user. The `default` ones are not offered when the theme turns them off with `color.defaultPalette`, `color.defaultGradients`, `typography.defaultFontSizes`, `spacing.defaultSpacingSizes`, or `shadow.defaultPresets` set to `false`.
+- Each preset type is used through its slug: `color.palette` in `textColor`, `backgroundColor`, and `borderColor`, `color.gradients` in `gradient`, `typography.fontSizes` in `fontSize`, `typography.fontFamilies` in `fontFamily`, and `spacing.spacingSizes` and `shadow.presets` as `var:preset|spacing|<slug>` and `var:preset|shadow|<slug>` in `style`.
+- Fixed values are allowed unless the setting turns them off: `color.custom`, `color.customGradient`, `typography.customFontSize`, and `spacing.customSpacingSize` set to `false`.
+- `settings.blocks.<block name>` changes the settings for that block only, and replaces the global ones for it.
+- `layout.contentSize` and `layout.wideSize` are the widths of the content and of wide blocks.
+
 ## Nesting
 
 Inner blocks go inside the parent's wrapper element, each with its own delimiters. The parent's HTML stays around them.
