@@ -57,5 +57,13 @@ class Enqueue {
 		);
 
 		wp_set_script_translations( AABE_NAMESPACE, AABE_NAMESPACE );
+
+		wp_enqueue_style(
+			AABE_NAMESPACE,
+			AABE_URL . '/build/style-index.css',
+			array(),
+			$asset_file['version']
+		);
+		wp_style_add_data( AABE_NAMESPACE, 'rtl', 'replace' );
 	}
 }

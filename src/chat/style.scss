@@ -1,0 +1,141 @@
+// The chat fills the sidebar below its header, and only the messages scroll.
+.interface-complementary-area:has(> .aabe-sidebar) {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.aabe-sidebar {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.aabe-chat {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.aabe-chat__messages {
+	flex: 1 1 auto;
+	min-height: 0;
+	padding: var(--wpds-dimension-padding-lg);
+	overflow: auto;
+}
+
+.aabe-chat__message {
+	overflow-wrap: anywhere;
+
+	&.is-user {
+		align-self: flex-end;
+		max-width: 85%;
+		padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+		border-radius: var(--wpds-border-radius-md);
+		background: var(--wpds-color-background-surface-neutral-weak);
+		white-space: pre-wrap;
+	}
+}
+
+.aabe-chat__note {
+	color: var(--wpds-color-foreground-content-neutral-weak);
+}
+
+// Basic styles for the elements that the AI's Markdown answers turn into,
+// such as paragraphs, lists, code, and tables.
+.aabe-chat__markdown {
+
+	> :first-child {
+		margin-top: 0;
+	}
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+
+	p,
+	ul,
+	ol,
+	pre,
+	blockquote,
+	table {
+		margin: 0 0 0.75em;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		margin: 1em 0 0.5em;
+		font-size: inherit;
+		font-weight: var(--wpds-typography-font-weight-emphasis);
+	}
+
+	ul,
+	ol {
+		padding-left: 1.5em;
+	}
+
+	ul {
+		list-style: disc;
+	}
+
+	code {
+		font-family: var(--wpds-typography-font-family-mono);
+	}
+
+	pre {
+		padding: var(--wpds-dimension-padding-sm);
+		overflow-x: auto;
+		border-radius: var(--wpds-border-radius-md);
+		background: var(--wpds-color-background-surface-neutral-weak);
+		overflow-wrap: normal;
+
+		// A block, so the newline that ends the code adds no empty line.
+		code {
+			display: block;
+			padding: 0;
+			background: none;
+		}
+	}
+
+	blockquote {
+		padding-left: 0.75em;
+		border-left: var(--wpds-border-width-md) solid var(--wpds-color-stroke-surface-neutral-weak);
+		color: var(--wpds-color-foreground-content-neutral-weak);
+	}
+
+	table {
+		display: block;
+		max-width: 100%;
+		overflow-x: auto;
+		border-collapse: collapse;
+		overflow-wrap: normal;
+	}
+
+	th,
+	td {
+		padding: 0.25em 0.5em;
+		border: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral);
+		text-align: left;
+	}
+}
+
+.aabe-chat__composer {
+	flex: 0 0 auto;
+	padding: var(--wpds-dimension-padding-lg);
+	border-top: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
+}
+
+.aabe-chat__input {
+	flex: 1 1 auto;
+
+	// The box grows with its text up to about eight lines.
+	textarea {
+		field-sizing: content;
+		max-height: 12em;
+		resize: none;
+	}
+}
