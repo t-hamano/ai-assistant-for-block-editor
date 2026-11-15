@@ -130,9 +130,9 @@ Some server-rendered blocks still save their inner blocks, such as `core/query` 
 
 ## Custom HTML (`core/html`)
 
-Use `core/html` only when its whole content is a single `<svg>` element or a single `<script>` element. Everything else, such as text, headings, lists, images, buttons, tables, forms, and layout, goes in core blocks that the user can edit. A `core/html` block that breaks this rule is rejected.
+Do not write new `core/html` blocks. Text, headings, lists, images, buttons, tables, forms, and layout go in core blocks that the user can edit. A new `core/html` block is rejected.
 
-A `core/html` block that is already in the document may stay as it is. Do not change its content unless the user asks.
+A `core/html` block that is already in the document stays exactly as it is, also inside markup you replace. Do not change its content, even when asked. When the user asks for custom HTML, scripts, or changes to a `core/html` block, tell them to edit the Custom HTML block themselves.
 
 ## Media
 

@@ -35,6 +35,12 @@ describe( 'buildSystemPrompt', () => {
 		expect( prompt ).not.toContain( 'gutenberg:' );
 	} );
 
+	it( 'forbids new custom HTML blocks', () => {
+		const prompt = buildSystemPrompt( '# Title\n' );
+		expect( prompt ).toContain( 'Do not write new `core/html` blocks.' );
+		expect( prompt ).not.toContain( '<script>' );
+	} );
+
 	it( 'keeps the escapes for JSON strings written out', () => {
 		const backslash = String.fromCharCode( 92 );
 		expect( buildSystemPrompt( '# Title\n' ) ).toContain(
