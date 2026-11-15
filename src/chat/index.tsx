@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useEffect, useRef } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { arrowUp } from '@wordpress/icons';
 import { isKeyboardEvent } from '@wordpress/keycodes';
 import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@wordpress/ui';
@@ -12,6 +12,7 @@ import { IconButton, Notice, Spinner, Stack, Text, TextareaControl } from '@word
  */
 import type { AssistantChatMessage } from '../ai/conversation';
 import type { AiChat } from '../ai/use-ai-chat';
+import type { AiUsage } from '../platform';
 import { AnswerMarkdown } from './answer-markdown';
 import './style.scss';
 
@@ -32,6 +33,47 @@ function getActivityLabel( activity: NonNullable< AssistantChatMessage[ 'activit
 		default:
 			return __( 'Waiting for the answer…', 'ai-content-editing-assistant' );
 	}
+}
+
+/**
+ * Describes the tokens an answer used, for example "12,345 input tokens
+ * (10,000 cached), 678 output tokens".
+ *
+ * @param usage The tokens the answer used.
+ */
+export function formatUsage( usage: AiUsage ) {
+	const input = sprintf(
+		/* translators: %s: Number of tokens. */
+		_n( '%s input token', '%s input tokens', usage.inputTokens, 'ai-content-editing-assistant' ),
+		usage.inputTokens.toLocaleString()
+	);
+	const cached = usage.cachedInputTokens
+		? sprintf(
+				/* translators: %s: Number of tokens. */
+				__( '(%s cached)', 'ai-content-editing-assistant' ),
+				usage.cachedInputTokens.toLocaleString()
+			)
+		: '';
+	const output = sprintf(
+		/* translators: %s: Number of tokens. */
+		_n( '%s output token', '%s output tokens', usage.outputTokens, 'ai-content-editing-assistant' ),
+		usage.outputTokens.toLocaleString()
+	);
+
+	return cached
+		? sprintf(
+				/* translators: 1: Input tokens. 2: Cached input tokens. 3: Output tokens. Example: "12,345 input tokens (10,000 cached), 678 output tokens". */
+				__( '%1$s %2$s, %3$s', 'ai-content-editing-assistant' ),
+				input,
+				cached,
+				output
+			)
+		: sprintf(
+				/* translators: 1: Input tokens. 2: Output tokens. Example: "12,345 input tokens, 678 output tokens". */
+				__( '%1$s, %2$s', 'ai-content-editing-assistant' ),
+				input,
+				output
+			);
 }
 
 function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
@@ -81,6 +123,11 @@ function AssistantMessage( { message }: { message: AssistantChatMessage } ) {
 							__( 'The answer could not be loaded.', 'ai-content-editing-assistant' ) }
 					</Notice.Description>
 				</Notice.Root>
+			) }
+			{ message.usage && message.status !== 'streaming' && (
+				<Text variant="body-sm" className="ai-content-editing-assistant-chat__usage">
+					{ formatUsage( message.usage ) }
+				</Text>
 			) }
 		</Stack>
 	);
