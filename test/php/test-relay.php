@@ -122,6 +122,69 @@ class Test_Relay extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests that Google requests go to the model's address, with the model and
+	 * `stream` taken out of the body.
+	 */
+	public function test_relays_the_request_to_google() {
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+
+		$response = $this->chat(
+			array(
+				'provider' => 'google',
+				'body'     => array(
+					'model'    => 'gemini-test',
+					'contents' => array(),
+				),
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent', $this->sent['url'] );
+		$this->assertSame( 'google-key', $this->sent['args']['headers']['x-goog-api-key'] );
+		$this->assertArrayNotHasKey( 'x-api-key', $this->sent['args']['headers'] );
+
+		$body = json_decode( $this->sent['args']['body'], true );
+		$this->assertSame( array( 'contents' => array() ), $body );
+	}
+
+	/**
+	 * Tests that a Google model that would change the address is rejected.
+	 *
+	 * @dataProvider data_invalid_google_models
+	 *
+	 * @param mixed $model The model.
+	 */
+	public function test_invalid_google_model_is_rejected( $model ) {
+		$this->set_fake_api_key( 'google-key', AI_Content_Editing_Assistant_Fake_Google_Provider::class );
+
+		$response = $this->chat(
+			array(
+				'provider' => 'google',
+				'body'     => array( 'model' => $model ),
+			)
+		);
+
+		$this->assertSame( 'ai_content_editing_assistant_invalid_model', $response->as_error()->get_error_code() );
+		$this->assertNull( $this->sent );
+	}
+
+	/**
+	 * Models that must not be put in the address.
+	 *
+	 * @return array
+	 */
+	public static function data_invalid_google_models() {
+		return array(
+			'missing'  => array( null ),
+			'empty'    => array( '' ),
+			'path'     => array( '../files/x' ),
+			'query'    => array( 'gemini?key=x' ),
+			'host'     => array( '@example.com' ),
+			'not text' => array( array( 'gemini' ) ),
+		);
+	}
+
+	/**
 	 * Tests that editors cannot use the route.
 	 */
 	public function test_editor_cannot_chat() {
