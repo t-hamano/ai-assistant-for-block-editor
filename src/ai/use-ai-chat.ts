@@ -40,10 +40,9 @@ export type AiChat = {
  * Runs a conversation with the AI assistant. The selection is captured when
  * a message is sent, and the model's edits are applied to it as they arrive.
  *
- * The first message carries the whole document, and later ones carry it
- * again only when the user changed it since the last answer, so the
- * conversation grows at its end only and the prompt cache covers what came
- * before.
+ * The first message carries the whole document, and later ones carry only
+ * the blocks that changed since the last message, so the conversation
+ * grows at its end only and the prompt cache covers what came before.
  *
  * @param args              Arguments.
  * @param args.ai           The host's connection to the model.
@@ -62,8 +61,6 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 		messagesRef.current = conversation.messages;
 	} );
 	const controllerRef = useRef< AbortController | null >( null );
-	// Reads the document when the answer being streamed ends.
-	const readDocumentRef = useRef< ( () => string | undefined ) | null >( null );
 
 	const send = useCallback(
 		( text: string ) => {
@@ -85,16 +82,11 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 			];
 			const controller = new AbortController();
 			controllerRef.current = controller;
-			// The document as the model knows it: as sent, with the model's
-			// edits. Changes the user makes while the answer streams are left
-			// out, so the next message tells the model about them.
-			let seenDocument = context?.document;
-			const readDocument = () => seenDocument;
-			readDocumentRef.current = readDocument;
 			dispatch( {
 				type: 'START',
 				text: message,
 				context: messageContext,
+				document: context?.document,
 			} );
 
 			// Once the user stops the answer or starts a new conversation, the
@@ -124,15 +116,10 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 						} );
 						return;
 					}
-					const before = target ? target.getDocument() : '';
 					const blocksBefore = takeBlockSnapshot();
 					const result: AiEditResult = target ? target.apply( event.edit ) : { status: 'dropped' };
 					if ( target && result.status === 'applied' ) {
 						highlightChanges( blocksBefore );
-						// When the user also changed the document, the model
-						// does not know it, so the next message sends the
-						// whole document.
-						seenDocument = seenDocument === before ? target.getDocument() : undefined;
 					}
 					// The model tries again after a failed edit, so the
 					// answer shows only the edit that changed the document,
@@ -153,7 +140,6 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 							dispatch( {
 								type: 'FINISH',
 								status: 'done',
-								documentAfter: readDocument(),
 							} );
 						}
 					},
@@ -186,7 +172,6 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 		dispatch( {
 			type: 'FINISH',
 			status: 'stopped',
-			documentAfter: readDocumentRef.current?.(),
 		} );
 	}, [] );
 

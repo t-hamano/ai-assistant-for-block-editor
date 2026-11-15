@@ -19,6 +19,13 @@ export type UserChatMessage = {
 	 * it. Omitted when the document was not available.
 	 */
 	context?: string;
+	/**
+	 * The document when the message was sent. With the context, the model
+	 * knows the whole document as it was then, so the next message tells
+	 * the model only what changed since, also by the model's own edits.
+	 * Omitted when the document was not available.
+	 */
+	document?: string;
 };
 
 export type AssistantChatMessage = {
@@ -48,12 +55,6 @@ export type AssistantChatMessage = {
 	 */
 	usage?: AiUsage;
 	error?: string;
-	/**
-	 * The document when the answer ended, with the answer's edits in it.
-	 * The next message tells the model what changed since. Omitted when the
-	 * document was not available then.
-	 */
-	documentAfter?: string;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -67,7 +68,7 @@ export type Conversation = {
 };
 
 export type ConversationAction =
-	| { type: 'START'; text: string; context?: string }
+	| { type: 'START'; text: string; context?: string; document?: string }
 	| { type: 'APPEND_TEXT'; text: string }
 	| { type: 'ACTIVITY'; activity: AiActivity }
 	| { type: 'EDIT'; edit: AiEdit; applied: boolean }
@@ -76,7 +77,6 @@ export type ConversationAction =
 			type: 'FINISH';
 			status: 'done' | 'stopped' | 'error';
 			error?: string;
-			documentAfter?: string;
 	  }
 	| { type: 'RESET' };
 
@@ -120,6 +120,7 @@ export function conversationReducer(
 						role: 'user',
 						text: action.text,
 						...( action.context === undefined ? {} : { context: action.context } ),
+						...( action.document === undefined ? {} : { document: action.document } ),
 					},
 					{
 						id: uuid(),
@@ -171,7 +172,6 @@ export function conversationReducer(
 				status: action.status,
 				activity: undefined,
 				error: action.error,
-				...( action.documentAfter === undefined ? {} : { documentAfter: action.documentAfter } ),
 			} ) );
 		case 'RESET':
 			return createConversation();
@@ -193,9 +193,9 @@ export function toUserText( text: string, context?: string ): string {
 }
 
 /**
- * Returns the document as the model last saw it: when the answer to the
- * last message still sent to the model ended. `null` when the model has
- * not seen the document, or the answer ended without it.
+ * Returns the document as the model last saw it: when the last message
+ * still sent to the model was sent. `null` when the model has not seen the
+ * document.
  *
  * @param messages The conversation's messages.
  * @return The document, or `null`.
@@ -211,7 +211,7 @@ export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
 		if ( answer?.role === 'assistant' && answer.status === 'error' ) {
 			continue;
 		}
-		return ( answer?.role === 'assistant' ? answer.documentAfter : undefined ) ?? null;
+		return message.document ?? null;
 	}
 	return null;
 }

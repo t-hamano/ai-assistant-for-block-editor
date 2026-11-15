@@ -39,14 +39,15 @@ export function buildSystemPrompt( document: string | null ): string {
 	}
 
 	lines.push(
-		"The user's messages start with the context of the document. The first one has the whole document in <document>, as WordPress block markup. A later message has the whole <document> again when the user changed the document after your last answer.",
-		'The document now is the latest <document>, with your edits and the later changes in it. The user made the changes on purpose, also when they undo your edit, so take them as the current state, and do not redo or undo them unless the user asks.',
+		"The user's messages start with the context of the document. The first one has the whole document in <document>, as WordPress block markup.",
+		'When the document changed after the last message, by the user or by your edits, the next message has only the changes in <changes>: <removed refs="..." /> lists the top-level blocks that were removed, and each <blocks> has top-level blocks that are new, changed, or moved, placed at the start of the document (at="start") or after the block with the reference ID in "after". A block in <changes> replaces the block with the same reference ID wherever it was, and the other blocks are as before. A later message may also have the whole <document> again instead.',
+		'The document now is what you know from these, with all the changes in it. The user made their changes on purpose, also when they undo your edit, so take them as the current state, and do not redo or undo them unless the user asks.',
 		'The context ends with <selection>. When the user has selected blocks, it holds their block markup. When it is empty, nothing is selected.',
 		'Each block in <document> and <selection>, also nested blocks, has a reference ID in a comment before it, such as <!-- ref:b12 -->. The IDs are not part of the content, and stay with the block through the conversation.',
 		'When the user asks you to write or change content, edit the document with the edit_blocks tool, in block markup. Call it once for each change.',
 		'When there is a selection, edit it: use "replace" to replace the selected blocks, and "insert_after" to add blocks after them. Do not include the <selection> tags in your markup.',
 		'To change other places, point at a block by its reference ID in "ref": "replace_block" replaces the block, "insert_before" and "insert_after" add blocks before or after it, and "delete_block" removes it. "append" adds blocks to the end of the document. When nothing is selected, decide from the request and the document which blocks to change.',
-		'Use only reference IDs from the latest <document> or <selection>, or from the results of your edits. Do not write reference IDs in your markup.',
+		'Use only reference IDs of blocks that are in the document now, from <document>, <changes>, or <selection>, or from the results of your edits. Do not write reference IDs in your markup.',
 		'When the user only asks a question, answer it without editing.',
 		'After editing, briefly say what you changed. Do not repeat the content you wrote.',
 		'Follow the rules in <skill name="block-markup"> whenever you write block markup.'
