@@ -6,39 +6,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import {
-	applyChange,
-	buildMessageContext,
-	formatDocument,
-	formatSelection,
-} from '../document-context';
+import { applyChange, buildMessageContext } from '../document-context';
 import { joinAroundSelection } from '../edit-target';
-
-describe( 'formatDocument', () => {
-	it( 'shows the document', () => {
-		expect( formatDocument( '# Title\n\nOne.\n' ) ).toBe(
-			'<document>\n# Title\n\nOne.\n</document>'
-		);
-	} );
-
-	it( 'shows an empty document', () => {
-		expect( formatDocument( '' ) ).toBe( '<document>\n</document>' );
-	} );
-} );
-
-describe( 'formatSelection', () => {
-	it( 'gives the text of the selection', () => {
-		expect(
-			formatSelection( joinAroundSelection( '# Title\n', 'One.\n\nTwo.\n', 'Three.\n' ) )
-		).toBe( '<selection>\nOne.\n\nTwo.\n</selection>' );
-	} );
-
-	it( 'is empty when nothing is selected', () => {
-		expect( formatSelection( joinAroundSelection( '# Title\n', '', 'One.\n' ) ) ).toBe(
-			'<selection></selection>'
-		);
-	} );
-} );
 
 describe( 'buildMessageContext', () => {
 	const context = joinAroundSelection( 'One.\n', 'Two.\n', '' );
@@ -58,7 +27,7 @@ describe( 'buildMessageContext', () => {
 	it( 'sends the whole document again when it changed', () => {
 		const result = buildMessageContext( context, 'Old.\n' );
 		expect( result ).toContain( 'The user changed the document after your last answer.' );
-		expect( result ).toContain( formatDocument( context.document ) );
+		expect( result ).toContain( '<document>\nOne.\n\nTwo.\n</document>' );
 	} );
 
 	it( 'sends the empty document when the user removed everything', () => {

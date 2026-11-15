@@ -9,7 +9,7 @@ import { SELECTION_END, SELECTION_START, type EditContext } from './edit-target'
  * @param document The document.
  * @return The `<document>` block.
  */
-export function formatDocument( document: string ): string {
+function formatDocument( document: string ): string {
 	return [ '<document>', document.replace( /\n+$/, '' ), '</document>' ]
 		.filter( ( part ) => part !== '' )
 		.join( '\n' );
@@ -37,7 +37,7 @@ export function applyChange( seen: string, before: string, after: string ): stri
  * @param context The selection and the document.
  * @return The `<selection>` block.
  */
-export function formatSelection( context: EditContext ): string {
+function formatSelection( context: EditContext ): string {
 	const selection = context.selection.replace( /\n+$/, '' );
 	if ( ! selection ) {
 		return `${ SELECTION_START }${ SELECTION_END }`;
