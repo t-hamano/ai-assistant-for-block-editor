@@ -6,6 +6,32 @@
 
 Select blocks or text in the block editor and edit them by chatting with AI. The plugin uses the API keys registered on the Connectors screen in WordPress core.
 
+## Features
+
+### Edit What You Select, or the Whole Post
+
+![Edit What You Select, or the Whole Post](https://raw.githubusercontent.com/t-hamano/ai-content-editing-assistant/main/.wordpress-org/screenshot-1.jpg)
+
+Select one or more blocks, or just a few words inside a block, and tell the AI what you want to change. With nothing selected, the AI reads the whole post and decides where to edit, insert, or delete blocks. Changed blocks are outlined and changed text is highlighted, and every edit is a single undo step.
+
+### Knows Your Site, Saves Tokens
+
+![Knows Your Site, Saves Tokens](https://raw.githubusercontent.com/t-hamano/ai-content-editing-assistant/main/.wordpress-org/screenshot-2.jpg)
+
+The AI automatically knows your site's blocks and theme presets, so its edits fit your site. Long posts are sent as an outline and the AI reads only the parts it needs, and repeated context is cached, keeping token usage low. Each answer shows the tokens it used.
+
+### Streaming Answers
+
+![Streaming Answers](https://raw.githubusercontent.com/t-hamano/ai-content-editing-assistant/main/.wordpress-org/screenshot-3.jpg)
+
+Answers from Anthropic, OpenAI, and Google stream into the chat as they are written, so you don't have to wait for the whole reply.
+
+### Built on WordPress Connectors
+
+![Built on WordPress Connectors](https://raw.githubusercontent.com/t-hamano/ai-content-editing-assistant/main/.wordpress-org/screenshot-4.jpg)
+
+The plugin uses the API keys registered on the Connectors screen in WordPress core, so there are no extra keys to manage. Press the gear icon to choose from the providers and models available through your connectors, and your choice is saved for each user.
+
 ## Requirements
 
 * WordPress 7.1 or later
