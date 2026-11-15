@@ -126,7 +126,6 @@ class Models {
 			array(
 				'headers'     => array_merge( $provider['headers'], array( $provider['key'] => ( $provider['key_prefix'] ?? '' ) . $api_key ) ),
 				'timeout'     => self::TIMEOUT,
-				// A redirect would send the key to the new address as well.
 				'redirection' => 0,
 			)
 		);

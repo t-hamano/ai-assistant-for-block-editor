@@ -205,7 +205,6 @@ class Relay {
 				'headers'     => $headers,
 				'body'        => wp_json_encode( $body ),
 				'timeout'     => self::TIMEOUT,
-				// A redirect would send the key to the new address as well.
 				'redirection' => 0,
 			)
 		);
