@@ -32,9 +32,19 @@ Skill 1 has two files:
    ```
 
 3. Find the latest WordPress release on <https://wordpress.org/download/releases/>. The `@wordpress/block-library` version it bundles is the `wp-X.Y` dist-tag above. If the tag does not exist yet, read `package.json` on the `X.Y` branch of <https://github.com/WordPress/wordpress-develop>.
-4. Target the Gutenberg release's packages, because the plugin is tested with the latest Gutenberg. Write down the old and new versions of WordPress, Gutenberg, and `@wordpress/block-library`. If none of these versions changed and `Requires at least` did not go up since the last update, stop and report that skill 1 is already up to date. When only `Requires at least` went up, skip steps 2 and 3 and go on from step 4, looking for rules and examples that the skill left out because the old minimum did not support them.
+4. Target the Gutenberg release's packages, because the plugin is tested with the latest Gutenberg. Write down the old and new versions of WordPress, Gutenberg, and `@wordpress/block-library`. If none of these versions changed and `Requires at least` did not go up since the last update, stop and report that skill 1 is already up to date. When only `Requires at least` went up, save the baseline, skip steps 3 and 4, and go on from step 5, looking for rules and examples that the skill left out because the old minimum did not support them.
 
-### 2. Bump the `@wordpress/*` dependencies
+### 2. Save a baseline evaluation
+
+Before changing anything, run the evaluation on the current skill so that step 7 has something to compare with. It sends the fixed requests in `scripts/evaluation/cases.json` to a real model and saves the results to `artifacts/evaluation/`, which is not committed. See `scripts/evaluation/README.md`.
+
+```sh
+ANTHROPIC_API_KEY=... npm run evaluate:skill -- --runs 3
+```
+
+Note the path of the saved file. If no API key is available, run `npm run evaluate:skill -- --dry-run` to check that the requests still build, and write in the pull request that the evaluation was not run.
+
+### 3. Bump the `@wordpress/*` dependencies
 
 1. In `package.json`, set every exactly pinned `@wordpress/*` package in `dependencies` and `devDependencies` to the version published with the target Gutenberg release. Leave `@wordpress/scripts` and `@wordpress/env`, which use `^` ranges, alone. Find each version with:
 
@@ -45,7 +55,7 @@ Skill 1 has two files:
 2. Run `npm install` so that `package-lock.json` matches. `.npmrc` sets `save-exact`.
 3. Run `npm run lint:types`, `npm run build`, and `npm run test:unit`. If the plugin's own code breaks, stop and report it: that fix belongs in its own pull request, merged first.
 
-### 3. Regenerate the reference
+### 4. Regenerate the reference
 
 ```sh
 npm run generate:block-reference
@@ -53,7 +63,7 @@ npm run generate:block-reference
 
 The script rewrites only the generated parts, and copies `wordpress` and `gutenberg` from the frontmatter of `SKILL.md` into `core-blocks.md`. It warns when a block is no longer in the block library and its handwritten notes were dropped. Keep those warnings for the pull request.
 
-### 4. Find what changed
+### 5. Find what changed
 
 1. Read the diff of the generated reference. It shows new and removed blocks, added and removed attributes, and changes in the markup that `save()` writes:
 
@@ -75,7 +85,7 @@ The script rewrites only the generated parts, and copies `wordpress` and `gutenb
 
 4. Make a short list of changes that affect how the AI should write markup, such as a new wrapper element, a renamed class, a new required attribute, or a block that moved to a self-closing comment.
 
-### 5. Fix the handwritten parts
+### 6. Fix the handwritten parts
 
 - Edit `SKILL.md` only when a change affects a common rule, such as how attributes map to classes and styles, nesting, dynamic blocks, or presets.
 - Add or fix "Common mistakes" under a block in `core-blocks.md` only for mistakes the new markup makes likely, or that the evaluation shows.
@@ -83,7 +93,7 @@ The script rewrites only the generated parts, and copies `wordpress` and `gutenb
 - Do not add markup that is invalid on the minimum supported version.
 - Keep the writing style of the existing files: short sentences that tell the AI what to write.
 
-### 6. Verify
+### 7. Verify
 
 1. Run the checks. `test:unit` parses every example in skill 1 and fails when one is not valid:
 
@@ -93,23 +103,27 @@ The script rewrites only the generated parts, and copies `wordpress` and `gutenb
    npm run test:unit
    ```
 
-2. Run the evaluation with the old and the new skill, and compare the first-try pass rate and the number of retries.
+2. Run the evaluation again with the same provider, model, and number of runs, and compare it with the baseline from step 2. The printed Markdown summary shows the first-try pass rate and retries for both, and goes in the pull request:
 
-   > **Provisional.** The evaluation request set and measurement script are not in the repository yet. Until they are, run `npm run test:unit` only, and write in the pull request that the evaluation was not run. When the script lands, replace this step with its exact commands.
+   ```sh
+   ANTHROPIC_API_KEY=... npm run evaluate:skill -- --runs 3 --compare artifacts/evaluation/<baseline>.json
+   ```
+
+   Answers vary between runs, so look into drops across several cases or in "Did what was asked" rather than a small drop on one case.
 
 3. If the evaluation gets worse, undo the handwritten changes one at a time until you find the cause, and fix it before going on.
 
-### 7. Update the frontmatter
+### 8. Update the frontmatter
 
 1. In `skills/block-markup/SKILL.md`, set `wordpress`, `gutenberg`, `block-library`, and `generated` (today's date, `YYYY-MM-DD`).
 2. Run `npm run generate:block-reference` again so that `core-blocks.md` gets the same `wordpress` and `gutenberg`. Its `generated` date changes only when something in the reference changed.
 3. Run `npm run lint:block-reference` to confirm the reference is up to date.
 
-### 8. Open a pull request
+### 9. Open a pull request
 
 Commit on a new branch named after the target, for example `update/block-markup-skill-gutenberg-24-5`. The description covers:
 
 - The old and new versions of WordPress, Gutenberg, and `@wordpress/block-library`.
-- A summary of the block changes from step 4: new, removed, and changed blocks and attributes, with any handwritten notes the generator dropped.
+- A summary of the block changes from step 5: new, removed, and changed blocks and attributes, with any handwritten notes the generator dropped.
 - The rules and "Common mistakes" fixed by hand, and why.
 - The evaluation results before and after (first-try pass rate and retries), or a note that the evaluation was not run.
