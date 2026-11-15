@@ -1461,7 +1461,7 @@ Attributes:
 Example:
 
 ```html
-<!-- wp:post-date /-->
+<!-- wp:post-date {"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /-->
 ```
 <!-- generated:end -->
 

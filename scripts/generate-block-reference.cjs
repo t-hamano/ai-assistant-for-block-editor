@@ -195,13 +195,12 @@ function buildExample( blocks, blockType ) {
 	const block = blockType.example
 		? blocks.getBlockFromExample( blockType.name, blockType.example )
 		: blocks.createBlock( blockType.name );
-	const markup = blocks.serialize( removeMisplacedBlocks( blocks, block, [] ) );
+	// Parsing migrates a block that is saved in a deprecated form, such as a post date without its binding, so the example shows the form the editor saves.
+	const parsed = blocks.parse( blocks.serialize( removeMisplacedBlocks( blocks, block, [] ) ) );
+	const markup = blocks.serialize( parsed );
 
-	const problems = blocks.parse( markup ).flatMap( function collect( parsed ) {
-		return [
-			...( parsed.isValid ? [] : [ parsed.name ] ),
-			...parsed.innerBlocks.flatMap( collect ),
-		];
+	const problems = parsed.flatMap( function collect( item ) {
+		return [ ...( item.isValid ? [] : [ item.name ] ), ...item.innerBlocks.flatMap( collect ) ];
 	} );
 	if ( problems.length ) {
 		throw new Error(
