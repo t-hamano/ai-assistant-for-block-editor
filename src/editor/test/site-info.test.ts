@@ -56,13 +56,28 @@ beforeAll( () => {
 				custom: false,
 			},
 			typography: {
-				fontSizes: { theme: [ { slug: 'large', name: 'Large', size: '2rem' } ] },
+				fontSizes: {
+					theme: [
+						{ slug: 'large', name: 'Large', size: '2rem' },
+						{ slug: 'huge', name: 'Huge', size: 48 },
+					],
+				},
 				fontFamilies: {
 					theme: [ { slug: 'body', name: 'Body', fontFamily: 'Inter, sans-serif' } ],
 				},
 			},
 			spacing: { spacingSizes: { theme: [ { slug: '40', name: '1', size: '1rem' } ] } },
 			layout: { contentSize: '620px', wideSize: '1280px' },
+			blocks: {
+				'core/heading': {
+					color: {
+						palette: { theme: [ { slug: 'accent', name: 'Accent', color: '#ff0000' } ] },
+						custom: true,
+					},
+				},
+				'core/quote': { color: { custom: false } },
+				'my-plugin/hidden': { color: { custom: true } },
+			},
 		},
 	} );
 } );
@@ -115,7 +130,10 @@ describe( 'collectSiteInfo', () => {
 	it( "reads the theme's presets, without defaults the theme turned off", () => {
 		const info = collectSiteInfo();
 		expect( info.colors ).toEqual( [ { slug: 'base', name: 'Base', value: '#ffffff' } ] );
-		expect( info.fontSizes ).toEqual( [ { slug: 'large', name: 'Large', value: '2rem' } ] );
+		expect( info.fontSizes ).toEqual( [
+			{ slug: 'large', name: 'Large', value: '2rem' },
+			{ slug: 'huge', name: 'Huge', value: '48px' },
+		] );
 		expect( info.fontFamilies[ 0 ] ).toMatchObject( { slug: 'body', value: 'Inter, sans-serif' } );
 		expect( info.spacingSizes ).toEqual( [ { slug: '40', name: '1', value: '1rem' } ] );
 		expect( info ).toMatchObject( {
@@ -124,6 +142,32 @@ describe( 'collectSiteInfo', () => {
 			contentSize: '620px',
 			wideSize: '1280px',
 		} );
+	} );
+
+	it( 'keeps only the settings that blocks change', () => {
+		const { blockSettings } = collectSiteInfo();
+		expect( blockSettings ).toEqual( [
+			{
+				name: 'core/heading',
+				colors: [ { slug: 'accent', name: 'Accent', value: '#ff0000' } ],
+				customColor: true,
+			},
+		] );
+	} );
+
+	it( 'leaves out blocks the editor does not allow', () => {
+		dispatch( blockEditorStore ).updateSettings( {
+			allowedBlockTypes: [ 'core/paragraph', 'my-plugin/card' ],
+		} );
+		try {
+			expect( collectSiteInfo().blocks.map( ( block ) => block.name ) ).toEqual( [
+				'core/paragraph',
+				'my-plugin/card',
+			] );
+			expect( collectSiteInfo().blockSettings ).toEqual( [] );
+		} finally {
+			dispatch( blockEditorStore ).updateSettings( { allowedBlockTypes: true } );
+		}
 	} );
 } );
 
@@ -152,8 +196,17 @@ describe( 'formatSiteInfo', () => {
 		const text = getSiteInfo();
 		expect( text ).toContain( '- `base`: Base, `#ffffff`' );
 		expect( text ).toContain( '- `large`: Large, `2rem`' );
+		expect( text ).toContain( '- `huge`: Huge, `48px`' );
 		expect( text ).toContain( '- Custom colors: not allowed' );
 		expect( text ).toContain( '- Layout: content width `620px`, wide width `1280px`' );
+	} );
+
+	it( 'lists the settings that blocks change on their own', () => {
+		const text = getSiteInfo();
+		expect( text ).toContain(
+			'### core/heading\n\nColors, for `textColor`, `backgroundColor`, and `borderColor`, and `var:preset|color|<slug>` in `style`:\n- `accent`: Accent, `#ff0000`\n\n- Custom colors: allowed'
+		);
+		expect( text ).not.toContain( '### core/quote' );
 	} );
 
 	it( 'stays short enough to send with every conversation', () => {

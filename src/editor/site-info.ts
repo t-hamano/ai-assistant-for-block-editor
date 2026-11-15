@@ -42,11 +42,9 @@ export type Preset = {
 };
 
 /**
- * What the site offers for writing blocks: its blocks, the theme's
- * presets, and what the theme allows beyond them.
+ * The theme's presets, and what it allows beyond them.
  */
-export type SiteInfo = {
-	blocks: SiteBlock[];
+export type ThemeSettings = {
 	colors: Preset[];
 	gradients: Preset[];
 	fontSizes: Preset[];
@@ -57,6 +55,20 @@ export type SiteInfo = {
 	customGradient: boolean;
 	customFontSize: boolean;
 	customSpacingSize: boolean;
+};
+
+/**
+ * What the site offers for writing blocks: its blocks, the theme's
+ * presets, and what the theme allows beyond them, for all blocks and for
+ * the blocks the theme sets on their own.
+ */
+export type SiteInfo = ThemeSettings & {
+	blocks: SiteBlock[];
+	/**
+	 * The settings of blocks that differ from the settings for all blocks,
+	 * with only the ones that differ.
+	 */
+	blockSettings: ( Partial< ThemeSettings > & { name: string } )[];
 	contentSize?: string;
 	wideSize?: string;
 };
@@ -308,47 +320,101 @@ function describePresets( title: string, presets: Preset[] ): string[] {
 }
 
 /**
+ * Describes the presets and the custom value settings. Settings that are
+ * left out are not described.
+ *
+ * @param settings The settings.
+ * @return The lines.
+ */
+function describeThemeSettings( settings: Partial< ThemeSettings > ): string[] {
+	const allowed = ( value: boolean ) => ( value ? 'allowed' : 'not allowed' );
+	const presets = (
+		title: string,
+		list: Preset[] | undefined,
+		empty = list !== undefined
+	): string[] => {
+		if ( list?.length ) {
+			return describePresets( title, list );
+		}
+		return empty ? [ '', `${ title } none` ] : [];
+	};
+	const flags = (
+		[
+			[ 'Custom colors', settings.customColor ],
+			[ 'Custom gradients', settings.customGradient ],
+			[ 'Custom font sizes', settings.customFontSize ],
+			[ 'Custom spacing sizes', settings.customSpacingSize ],
+		] as const
+	 )
+		.filter( ( [ , value ] ) => value !== undefined )
+		.map( ( [ label, value ] ) => `- ${ label }: ${ allowed( value as boolean ) }` );
+	return [
+		...presets(
+			`Colors, for \`textColor\`, \`backgroundColor\`, and \`borderColor\`, and \`var:preset|color|<slug>\` in \`style\`:`,
+			settings.colors
+		),
+		...presets( `Gradients, for \`gradient\`:`, settings.gradients ),
+		...presets( `Font sizes, for \`fontSize\`:`, settings.fontSizes ),
+		...presets( `Font families, for \`fontFamily\`:`, settings.fontFamilies ),
+		...presets(
+			`Spacing sizes, for \`var:preset|spacing|<slug>\` in \`style.spacing\`:`,
+			settings.spacingSizes
+		),
+		...presets(
+			`Shadows, for \`var:preset|shadow|<slug>\` in \`style.shadow\`:`,
+			settings.shadows
+		),
+		...( flags.length ? [ '', ...flags ] : [] ),
+	];
+}
+
+/**
  * Writes the site information for the model.
  *
  * @param info The site information.
  * @return The text.
  */
 export function formatSiteInfo( info: SiteInfo ): string {
-	const allowed = ( value: boolean ) => ( value ? 'allowed' : 'not allowed' );
+	const { blocks, blockSettings, contentSize, wideSize, ...global } = info;
 	const layout = [
-		info.contentSize && `content width \`${ info.contentSize }\``,
-		info.wideSize && `wide width \`${ info.wideSize }\``,
+		contentSize && `content width \`${ contentSize }\``,
+		wideSize && `wide width \`${ wideSize }\``,
 	].filter( Boolean );
-	return [
+	const lines = [
 		'## Blocks',
 		'',
-		...describeBlocks( info.blocks ),
-		'',
-		'## Presets',
-		...describePresets(
-			'Colors, for `textColor`, `backgroundColor`, and `borderColor`, and `var:preset|color|<slug>` in `style`:',
-			info.colors
-		),
-		...describePresets( 'Gradients, for `gradient`:', info.gradients ),
-		...describePresets( 'Font sizes, for `fontSize`:', info.fontSizes ),
-		...describePresets( 'Font families, for `fontFamily`:', info.fontFamilies ),
-		...describePresets(
-			'Spacing sizes, for `var:preset|spacing|<slug>` in `style.spacing`:',
-			info.spacingSizes
-		),
-		...describePresets(
-			'Shadows, for `var:preset|shadow|<slug>` in `style.shadow`:',
-			info.shadows
-		),
+		...describeBlocks( blocks ),
 		'',
 		'## Theme settings',
-		'',
-		`- Custom colors: ${ allowed( info.customColor ) }`,
-		`- Custom gradients: ${ allowed( info.customGradient ) }`,
-		`- Custom font sizes: ${ allowed( info.customFontSize ) }`,
-		`- Custom spacing sizes: ${ allowed( info.customSpacingSize ) }`,
+		...describeThemeSettings( global ),
 		...( layout.length ? [ `- Layout: ${ layout.join( ', ' ) }` ] : [] ),
-	].join( '\n' );
+	];
+	if ( blockSettings.length ) {
+		lines.push(
+			'',
+			'## Block settings',
+			'',
+			'The theme sets these blocks on their own. For them, these settings replace the ones above.'
+		);
+		for ( const { name, ...settings } of blockSettings ) {
+			lines.push( '', `### ${ name }`, ...describeThemeSettings( settings ) );
+		}
+	}
+	return lines.join( '\n' );
+}
+
+/**
+ * Writes the value of a preset. A number is a size in pixels, as the
+ * editor reads font sizes.
+ *
+ * @param value The value.
+ * @return The value as text, or `undefined` when it is not one.
+ */
+function describeValue( value: unknown ): string | undefined {
+	if ( typeof value === 'number' && Number.isFinite( value ) ) {
+		return `${ value }px`;
+	}
+	return typeof value === 'string' ? value : undefined;
 }
 
 /**
@@ -386,7 +452,7 @@ function readPresets(
 			presets.set( preset.slug, {
 				slug: preset.slug,
 				name: typeof preset.name === 'string' ? preset.name : undefined,
-				value: typeof presetValue === 'string' ? presetValue : undefined,
+				value: describeValue( presetValue ),
 			} );
 		}
 	}
@@ -448,12 +514,58 @@ export function collectSiteInfo(): SiteInfo {
 
 	const editorSettings = select( blockEditorStore ).getSettings() as Record< string, unknown >;
 	const features = editorSettings.__experimentalFeatures;
-	const setting = ( path: string ) => get( features, path );
-	const isOn = ( path: string ) => setting( path ) !== false;
-	const value = ( key: string ) => ( preset: Record< string, unknown > ) => preset[ key ];
+	const global = readThemeSettings( ( path ) => get( features, path ), editorSettings );
+
+	const allowedBlockTypes = editorSettings.allowedBlockTypes;
+	const allowed = blocks.filter( ( block ) =>
+		Array.isArray( allowedBlockTypes ) ? allowedBlockTypes.includes( block.name ) : true
+	);
+
+	const perBlock = get( features, 'blocks' );
+	const blockSettings =
+		perBlock && typeof perBlock === 'object'
+			? Object.keys( perBlock )
+					.filter( ( name ) => allowed.some( ( block ) => block.name === name ) )
+					.sort()
+					.map( ( name ) => {
+						const settings = readThemeSettings(
+							( path ) => get( perBlock, `${ name }.${ path }` ) ?? get( features, path ),
+							editorSettings
+						);
+						const changed = ( Object.keys( settings ) as ( keyof ThemeSettings )[] ).filter(
+							( key ) => JSON.stringify( settings[ key ] ) !== JSON.stringify( global[ key ] )
+						);
+						return {
+							name,
+							...Object.fromEntries( changed.map( ( key ) => [ key, settings[ key ] ] ) ),
+						};
+					} )
+					.filter( ( settings ) => Object.keys( settings ).length > 1 )
+			: [];
 
 	return {
-		blocks,
+		blocks: allowedBlockTypes === false ? [] : allowed,
+		...global,
+		blockSettings,
+		contentSize: ( get( features, 'layout.contentSize' ) as string | undefined ) ?? undefined,
+		wideSize: ( get( features, 'layout.wideSize' ) as string | undefined ) ?? undefined,
+	};
+}
+
+/**
+ * Reads the presets and the custom value settings.
+ *
+ * @param setting        Reads a setting by its path in `theme.json`.
+ * @param editorSettings The editor settings, for the older settings.
+ * @return The settings.
+ */
+function readThemeSettings(
+	setting: ( path: string ) => unknown,
+	editorSettings: Record< string, unknown >
+): ThemeSettings {
+	const isOn = ( path: string ) => setting( path ) !== false;
+	const value = ( key: string ) => ( preset: Record< string, unknown > ) => preset[ key ];
+	return {
 		colors: readPresets(
 			setting( 'color.palette' ) ?? editorSettings.colors,
 			isOn( 'color.defaultPalette' ),
@@ -486,8 +598,6 @@ export function collectSiteInfo(): SiteInfo {
 		customFontSize:
 			isOn( 'typography.customFontSize' ) && editorSettings.disableCustomFontSizes !== true,
 		customSpacingSize: isOn( 'spacing.customSpacingSize' ),
-		contentSize: ( setting( 'layout.contentSize' ) as string | undefined ) ?? undefined,
-		wideSize: ( setting( 'layout.wideSize' ) as string | undefined ) ?? undefined,
 	};
 }
 
