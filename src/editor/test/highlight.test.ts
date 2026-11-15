@@ -109,11 +109,11 @@ describe( 'highlightBlocks', () => {
 
 	it( 'keeps a block highlighted for the full time when it changes again', () => {
 		highlightBlocks( [ 'a' ] );
-		vi.advanceTimersByTime( HIGHLIGHT_DURATION - 1000 );
+		vi.advanceTimersByTime( HIGHLIGHT_DURATION / 2 );
 		highlightBlocks( [ 'a' ] );
-		vi.advanceTimersByTime( HIGHLIGHT_DURATION - 1000 );
+		vi.advanceTimersByTime( HIGHLIGHT_DURATION / 2 );
 		expect( isHighlighted( 'a' ) ).toBe( true );
-		vi.advanceTimersByTime( 1000 );
+		vi.advanceTimersByTime( HIGHLIGHT_DURATION / 2 );
 		expect( isHighlighted( 'a' ) ).toBe( false );
 	} );
 } );
