@@ -144,18 +144,19 @@ describe( 'validateMarkup', () => {
 		expect( problems[ 0 ] ).toContain( '"size" is not an attribute of the test/text block' );
 	} );
 
-	it( 'allows core/html only for SVG, scripts, and HTML already in the document', () => {
-		expect( validateMarkup( html( '<svg viewBox="0 0 1 1"></svg>' ) ).problems ).toEqual( [] );
-		expect( validateMarkup( html( '<script>run();</script>' ) ).problems ).toEqual( [] );
+	it( 'allows core/html only when it is already in the document, unchanged', () => {
 		expect(
 			validateMarkup( html( '<p>Kept</p>' ), new Set( [ '<p>Kept</p>' ] ) ).problems
 		).toEqual( [] );
-		expect( validateMarkup( html( '<svg></svg><h2>Title</h2><svg></svg>' ) ).problems ).toEqual( [
-			expect.stringContaining( 'Use core/html only for' ),
-		] );
-		expect( validateMarkup( html( '<h2>Title</h2><p>Text</p>' ) ).problems ).toEqual( [
-			expect.stringContaining( 'Use core/html only for' ),
-		] );
+		for ( const content of [
+			'<svg viewBox="0 0 1 1"></svg>',
+			'<script>run();</script>',
+			'<p>Changed</p>',
+		] ) {
+			expect( validateMarkup( html( content ), new Set( [ '<p>Kept</p>' ] ) ).problems ).toEqual( [
+				expect.stringContaining( 'You cannot write core/html blocks' ),
+			] );
+		}
 	} );
 
 	it( 'accepts attribute values of a deprecated version', () => {

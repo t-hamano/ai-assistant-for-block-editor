@@ -82,34 +82,6 @@ export type MarkupValidation = {
 };
 
 /**
- * Inline SVG or a script is the only content `core/html` may hold, since
- * blocks have no equivalent for it.
- */
-const ALLOWED_HTML = [ 'svg', 'script' ];
-
-/**
- * Whether the HTML is one element that `core/html` may hold, with nothing
- * beside it.
- *
- * @param html The HTML.
- * @return Whether it is.
- */
-function isAllowedHtml( html: string ): boolean {
-	const template = document.createElement( 'template' );
-	template.innerHTML = html;
-	const nodes = Array.from( template.content.childNodes ).filter(
-		( node ) =>
-			node.nodeType !== node.COMMENT_NODE &&
-			! ( node.nodeType === node.TEXT_NODE && ! node.textContent?.trim() )
-	);
-	return (
-		nodes.length === 1 &&
-		nodes[ 0 ].nodeType === nodes[ 0 ].ELEMENT_NODE &&
-		ALLOWED_HTML.includes( ( nodes[ 0 ] as Element ).localName )
-	);
-}
-
-/**
  * Formats a validation message, which the parser logs like the console
  * does: a format string whose `%s`, `%o` placeholders take the arguments
  * that follow.
@@ -283,9 +255,11 @@ function checkRawBlocks(
 		const problems = checkAttributes( raw );
 		if ( name === 'core/html' ) {
 			const html = raw.innerHTML.trim();
-			if ( html && ! existingHtml.has( html ) && ! isAllowedHtml( html ) ) {
+			// Only the user writes custom HTML, so that instructions in the
+			// document cannot make the model add scripts to the site.
+			if ( html && ! existingHtml.has( html ) ) {
 				problems.push(
-					'Use core/html only for an inline SVG or a script. Write text, headings, lists, images, and layout as core blocks, such as core/paragraph, core/heading, core/list, core/image, and core/group, so that the user can edit them.'
+					'You cannot write core/html blocks, and core/html blocks in the document must be kept exactly as they are. Write the content as core blocks, such as core/paragraph, core/heading, core/list, core/image, and core/group. When the user needs custom HTML, tell them to add or edit it themselves.'
 				);
 			}
 		}
