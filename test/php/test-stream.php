@@ -1,6 +1,6 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  */
 
 /**
@@ -12,7 +12,7 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that the answer is passed on as it arrives, with the provider's status and content type.
 	 */
 	public function test_passes_the_answer_on() {
-		$stream = new AABE_Test_Stream();
+		$stream = new AI_Content_Editing_Assistant_Test_Stream();
 
 		$stream->read_header( null, "HTTP/1.1 100 Continue\r\n" );
 		$stream->read_header( null, "HTTP/2 200\r\n" );
@@ -30,7 +30,7 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that an error from the provider keeps its status and content type.
 	 */
 	public function test_passes_an_error_on() {
-		$stream = new AABE_Test_Stream();
+		$stream = new AI_Content_Editing_Assistant_Test_Stream();
 
 		$stream->read_header( null, "HTTP/2 401\r\n" );
 		$stream->read_header( null, "Content-Type: application/json\r\n" );
@@ -46,7 +46,7 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that nothing is sent before the answer arrives.
 	 */
 	public function test_output_starts_with_the_answer() {
-		$stream = new AABE_Test_Stream();
+		$stream = new AI_Content_Editing_Assistant_Test_Stream();
 
 		$stream->read_header( null, "HTTP/2 200\r\n" );
 
@@ -57,7 +57,7 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that an error is returned when the provider cannot be reached.
 	 */
 	public function test_unreachable_provider_is_an_error() {
-		$error = ( new AABE_Test_Stream() )->send( 'http://127.0.0.1:9/', array(), '{}' );
+		$error = ( new AI_Content_Editing_Assistant_Test_Stream() )->send( 'http://127.0.0.1:9/', array(), '{}' );
 
 		$this->assertWPError( $error );
 		$this->assertSame( 502, $error->get_error_data()['status'] );

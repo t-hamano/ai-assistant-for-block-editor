@@ -53,7 +53,7 @@ module.exports = [
 			'@wordpress/i18n-text-domain': [
 				'error',
 				{
-					allowedTextDomain: 'ai-assistant-for-block-editor',
+					allowedTextDomain: 'ai-content-editing-assistant',
 				},
 			],
 		},

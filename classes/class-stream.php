@@ -1,11 +1,11 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  * @author Aki Hamano
  * @license GPL-2.0+
  */
 
-namespace AI_Assistant_For_Block_Editor;
+namespace AI_Content_Editing_Assistant;
 
 use WP_Error;
 
@@ -82,8 +82,8 @@ class Stream {
 		}
 
 		return new WP_Error(
-			'aabe_provider_unreachable',
-			$error ? $error : __( 'The provider did not answer.', 'ai-assistant-for-block-editor' ),
+			'ai_content_editing_assistant_provider_unreachable',
+			$error ? $error : __( 'The provider did not answer.', 'ai-content-editing-assistant' ),
 			array( 'status' => 502 )
 		);
 	}

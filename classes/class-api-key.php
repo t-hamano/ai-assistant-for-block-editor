@@ -1,11 +1,11 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  * @author Aki Hamano
  * @license GPL-2.0+
  */
 
-namespace AI_Assistant_For_Block_Editor;
+namespace AI_Content_Editing_Assistant;
 
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication;

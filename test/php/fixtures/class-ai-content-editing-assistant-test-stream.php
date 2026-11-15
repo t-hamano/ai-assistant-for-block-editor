@@ -1,15 +1,15 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  */
 
-use AI_Assistant_For_Block_Editor\Stream;
+use AI_Content_Editing_Assistant\Stream;
 
 /**
  * A stream that records the status and content type it would send, instead
  * of sending headers and closing the test's output buffers.
  */
-class AABE_Test_Stream extends Stream {
+class AI_Content_Editing_Assistant_Test_Stream extends Stream {
 
 	/**
 	 * The status and content type at the time the output started, if it did.

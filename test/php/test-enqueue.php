@@ -1,26 +1,26 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  */
 
-use AI_Assistant_For_Block_Editor\Enqueue;
+use AI_Content_Editing_Assistant\Enqueue;
 
 /**
  * Tests for the Enqueue class.
  */
 class Test_Enqueue extends WP_UnitTestCase {
 
-	use AABE_Fake_Api_Key;
+	use AI_Content_Editing_Assistant_Fake_Api_Key;
 
 	/**
 	 * Removes the script and style enqueued by a test.
 	 */
 	public function tear_down() {
 		$this->set_fake_api_key( '' );
-		wp_dequeue_script( AABE_NAMESPACE );
-		wp_deregister_script( AABE_NAMESPACE );
-		wp_dequeue_style( AABE_NAMESPACE );
-		wp_deregister_style( AABE_NAMESPACE );
+		wp_dequeue_script( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );
+		wp_deregister_script( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );
+		wp_dequeue_style( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );
+		wp_deregister_style( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );
 
 		parent::tear_down();
 	}
@@ -51,15 +51,15 @@ class Test_Enqueue extends WP_UnitTestCase {
 
 		( new Enqueue() )->enqueue_editor_scripts();
 
-		$this->assertFalse( wp_script_is( AABE_NAMESPACE ) );
-		$this->assertFalse( wp_style_is( AABE_NAMESPACE ) );
+		$this->assertFalse( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertFalse( wp_style_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
 	}
 
 	/**
 	 * Tests that the script and style are enqueued for administrators.
 	 */
 	public function test_script_is_enqueued_for_administrator() {
-		if ( ! file_exists( AABE_PATH . '/build/index.asset.php' ) ) {
+		if ( ! file_exists( AI_CONTENT_EDITING_ASSISTANT_PATH . '/build/index.asset.php' ) ) {
 			$this->markTestSkipped( 'The script is only enqueued when the plugin is built.' );
 		}
 
@@ -68,8 +68,8 @@ class Test_Enqueue extends WP_UnitTestCase {
 
 		( new Enqueue() )->enqueue_editor_scripts();
 
-		$this->assertTrue( wp_script_is( AABE_NAMESPACE ) );
-		$this->assertTrue( wp_style_is( AABE_NAMESPACE ) );
+		$this->assertTrue( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertTrue( wp_style_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
 	}
 
 	/**
@@ -80,7 +80,7 @@ class Test_Enqueue extends WP_UnitTestCase {
 
 		( new Enqueue() )->enqueue_editor_scripts();
 
-		$this->assertFalse( wp_script_is( AABE_NAMESPACE ) );
-		$this->assertFalse( wp_style_is( AABE_NAMESPACE ) );
+		$this->assertFalse( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertFalse( wp_style_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
 	}
 }

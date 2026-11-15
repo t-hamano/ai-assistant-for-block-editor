@@ -1,5 +1,5 @@
 {
-	"name": "ai-assistant-for-block-editor",
+	"name": "ai-content-editing-assistant",
 	"version": "0.1.0",
 	"description": "Select blocks or text in the block editor and edit them by chatting with AI.",
 	"author": "Aki Hamano",
@@ -10,10 +10,10 @@
 		"ai",
 		"assistant"
 	],
-	"homepage": "https://github.com/t-hamano/ai-assistant-for-block-editor",
-	"repository": "git+https://github.com/t-hamano/ai-assistant-for-block-editor.git",
+	"homepage": "https://github.com/t-hamano/ai-content-editing-assistant",
+	"repository": "git+https://github.com/t-hamano/ai-content-editing-assistant.git",
 	"bugs": {
-		"url": "https://github.com/t-hamano/ai-assistant-for-block-editor/issues"
+		"url": "https://github.com/t-hamano/ai-content-editing-assistant/issues"
 	},
 	"engines": {
 		"node": ">=24.22.1",
@@ -23,7 +23,7 @@
 		"classes",
 		"src",
 		"build",
-		"ai-assistant-for-block-editor.php"
+		"ai-content-editing-assistant.php"
 	],
 	"dependencies": {
 		"@wordpress/icons": "20.0.0",
@@ -70,7 +70,7 @@
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"format": "wp-scripts format",
 		"test:unit": "wp-scripts test-unit-js",
-		"test:php": "wp-env --config .wp-env.test.json run cli --env-cwd=wp-content/plugins/ai-assistant-for-block-editor vendor/bin/phpunit",
+		"test:php": "wp-env --config .wp-env.test.json run cli --env-cwd=wp-content/plugins/ai-content-editing-assistant vendor/bin/phpunit",
 		"prepare": "husky"
 	},
 	"lint-staged": {

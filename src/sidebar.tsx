@@ -22,7 +22,7 @@ const SIDEBAR_NAME = 'ai-assistant';
 const ai = createAnthropicPlatform( () => selectStore( editorStore ).getCurrentPostId() as number );
 
 export default function Sidebar() {
-	const title = __( 'AI Assistant', 'ai-assistant-for-block-editor' );
+	const title = __( 'AI Assistant', 'ai-content-editing-assistant' );
 	const isVisualEditor = useSelect(
 		( select ) => select( editorStore ).getEditorMode() === 'visual',
 		[]
@@ -48,14 +48,14 @@ export default function Sidebar() {
 				name={ SIDEBAR_NAME }
 				title={ title }
 				icon={ icon }
-				className="aabe-sidebar"
+				className="ai-content-editing-assistant-sidebar"
 				// @ts-expect-error `PluginSidebar` passes `header` on to `ComplementaryArea`, but its types leave it out.
 				header={
 					<>
 						<h2 className="interface-complementary-area-header__title">{ title }</h2>
 						<IconButton
 							icon={ plus }
-							label={ __( 'New conversation', 'ai-assistant-for-block-editor' ) }
+							label={ __( 'New conversation', 'ai-content-editing-assistant' ) }
 							variant="minimal"
 							tone="neutral"
 							size="compact"

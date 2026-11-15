@@ -1,6 +1,6 @@
 <?php
 /**
- * @package AI_Assistant_For_Block_Editor
+ * @package AI_Content_Editing_Assistant
  */
 
 /**
@@ -8,7 +8,7 @@
  */
 class Test_Relay extends WP_UnitTestCase {
 
-	use AABE_Fake_Api_Key;
+	use AI_Content_Editing_Assistant_Fake_Api_Key;
 
 	/**
 	 * The request that was sent to the provider, if any.
@@ -58,7 +58,7 @@ class Test_Relay extends WP_UnitTestCase {
 	 * @return WP_REST_Response
 	 */
 	private function chat( array $params = array() ) {
-		$request = new WP_REST_Request( 'POST', '/' . AABE_NAMESPACE . '/v1/chat' );
+		$request = new WP_REST_Request( 'POST', '/' . AI_CONTENT_EDITING_ASSISTANT_NAMESPACE . '/v1/chat' );
 		$request->set_header( 'content-type', 'application/json' );
 		$request->set_body(
 			wp_json_encode(
@@ -131,7 +131,7 @@ class Test_Relay extends WP_UnitTestCase {
 
 		$response = $this->chat();
 
-		$this->assertSame( 'aabe_no_api_key', $response->as_error()->get_error_code() );
+		$this->assertSame( 'ai_content_editing_assistant_no_api_key', $response->as_error()->get_error_code() );
 		$this->assertNull( $this->sent );
 	}
 
