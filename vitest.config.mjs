@@ -10,5 +10,9 @@ export default defineConfig( {
 	test: {
 		include: [ 'src/**/test/**/*.test.{ts,tsx}' ],
 		passWithNoTests: true,
+		server: {
+			// WordPress packages import JSON without import attributes, which Node does not load on its own.
+			deps: { inline: [ /@wordpress\// ] },
+		},
 	},
 } );

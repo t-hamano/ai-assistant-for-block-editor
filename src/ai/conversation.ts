@@ -32,11 +32,14 @@ export type AssistantChatMessage = {
 	 * while the model goes on to say what it changed.
 	 */
 	activity?: 'waiting' | AiActivity;
-	edit?: AiEdit;
 	/**
-	 * `applied` when the edit changed the document, and `dropped` when the
-	 * selection it was for no longer exists, for example after switching
-	 * editor modes.
+	 * The edits that changed the document, in order.
+	 */
+	edits?: AiEdit[];
+	/**
+	 * `applied` when an edit changed the document, and `dropped` when the
+	 * selection the edits were for no longer exists, for example after
+	 * switching editor modes.
 	 */
 	editStatus?: 'applied' | 'dropped';
 	/**
@@ -141,8 +144,9 @@ export function conversationReducer(
 		case 'EDIT':
 			return updateAnswer( conversation, ( message ) => ( {
 				...message,
-				edit: action.edit,
-				editStatus: action.applied ? 'applied' : 'dropped',
+				...( action.applied
+					? { edits: [ ...( message.edits ?? [] ), action.edit ], editStatus: 'applied' }
+					: { editStatus: message.editStatus ?? 'dropped' } ),
 				activity: 'waiting',
 			} ) );
 		case 'USAGE':
@@ -215,7 +219,7 @@ export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
 /**
  * Converts the conversation into the messages sent to the model. An
  * exchange whose answer failed is left out, together with its question, and
- * an edit is sent only when it changed the document.
+ * only the edits that changed the document are sent.
  *
  * @param messages The conversation's messages.
  * @return The messages for the model.
@@ -233,15 +237,15 @@ export function toAiMessages( messages: ChatMessage[] ): AiMessage[] {
 				text: toUserText( message.text, message.context ),
 			} );
 		} else if ( message.status !== 'error' ) {
-			const edit = message.editStatus === 'applied' ? message.edit : undefined;
+			const { edits } = message;
 			// An answer stopped before it said anything has nothing to send.
-			if ( ! message.text && ! edit ) {
+			if ( ! message.text && ! edits ) {
 				return;
 			}
 			result.push( {
 				role: 'assistant',
 				text: message.text,
-				...( edit ? { edit } : {} ),
+				...( edits ? { edits } : {} ),
 			} );
 		}
 	} );

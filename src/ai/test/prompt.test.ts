@@ -24,7 +24,7 @@ describe( 'buildSystemPrompt', () => {
 	it( 'covers editing with and without a selection', () => {
 		const prompt = buildSystemPrompt( '# Title\n' );
 		expect( prompt ).toContain( 'When there is a selection, edit it' );
-		expect( prompt ).toContain( 'without asking them to select it' );
+		expect( prompt ).toContain( 'When nothing is selected' );
 	} );
 
 	it( 'asks for answers only when the document is not available', () => {

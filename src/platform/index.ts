@@ -10,11 +10,11 @@ export type AiMessage =
 			role: 'assistant';
 			text: string;
 			/**
-			 * The edit the assistant made to the document while answering,
-			 * if any. The host sends it back to the model as part of the
-			 * conversation.
+			 * The edits the assistant made to the document while answering,
+			 * in order. The host sends them back to the model as part of
+			 * the conversation.
 			 */
-			edit?: AiEdit;
+			edits?: AiEdit[];
 	  };
 
 /**
@@ -24,19 +24,19 @@ export type AiEdit =
 	| {
 			/**
 			 * `replace` replaces the selection it was given, and
-			 * `insert_after` inserts the Markdown after it.
+			 * `insert_after` inserts the markup after it.
 			 */
 			action: 'replace' | 'insert_after';
-			markdown: string;
+			markup: string;
 	  }
 	| {
 			/**
 			 * Replaces the one place in the document whose text is `find`
-			 * with the Markdown, wherever the selection is.
+			 * with the markup, wherever the selection is.
 			 */
 			action: 'replace_text';
 			find: string;
-			markdown: string;
+			markup: string;
 	  };
 
 /**

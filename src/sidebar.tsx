@@ -3,7 +3,7 @@
  */
 import { select as selectStore, useSelect } from '@wordpress/data';
 import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
-import { useCallback, useEffect } from '@wordpress/element';
+import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { plus } from '@wordpress/icons';
 import { IconButton } from '@wordpress/ui';
@@ -13,6 +13,7 @@ import { IconButton } from '@wordpress/ui';
  */
 import { useAiChat } from './ai/use-ai-chat';
 import { Chat } from './chat';
+import { createBlockTarget } from './editor/block-target';
 import icon from './icon';
 import { createAnthropicPlatform } from './platform/anthropic';
 
@@ -26,9 +27,7 @@ export default function Sidebar() {
 		( select ) => select( editorStore ).getEditorMode() === 'visual',
 		[]
 	);
-	// The edit target for the selected blocks comes with the edit tool.
-	const createTarget = useCallback( () => null, [] );
-	const chat = useAiChat( { ai, createTarget } );
+	const chat = useAiChat( { ai, createTarget: createBlockTarget } );
 	const { stop, reset } = chat;
 
 	// The conversation is about the blocks, so it ends when the user
