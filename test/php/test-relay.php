@@ -229,7 +229,15 @@ class Test_Relay extends WP_UnitTestCase {
 	public function test_relays_the_request_to_openai() {
 		$this->set_fake_api_key( 'openai-key', AI_Content_Editing_Assistant_Fake_OpenAI_Provider::class );
 
-		$response = $this->chat( array( 'provider' => 'openai' ) );
+		$response = $this->chat(
+			array(
+				'provider' => 'openai',
+				'body'     => array(
+					'model' => 'test-model',
+					'input' => array(),
+				),
+			)
+		);
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'https://api.openai.com/v1/responses', $this->sent['url'] );
