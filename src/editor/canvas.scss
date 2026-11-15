@@ -1,5 +1,6 @@
-// The block editor copies stylesheets with `.wp-block` selectors into the
-// canvas iframe, so these rules reach the blocks there.
+// These rules style the blocks in the editor canvas. They are built into
+// `index.css`, which is loaded into the canvas iframe on
+// `enqueue_block_assets`, apart from the sidebar styles in `style-index.css`.
 
 // The same overlay as the block editor draws on multi-selected blocks,
 // faded out over the same time as `HIGHLIGHT_DURATION`.
