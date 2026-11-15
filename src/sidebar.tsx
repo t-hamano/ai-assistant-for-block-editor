@@ -35,6 +35,7 @@ export default function Sidebar() {
 	const chat = useAiChat( { ai, createTarget: createBlockTarget } );
 	const { stop, reset } = chat;
 	const [ isSettingsOpen, setIsSettingsOpen ] = useState( false );
+	const [ draft, setDraft ] = useState( '' );
 
 	// The conversation is about the blocks, so it ends when the user
 	// switches to the code editor.
@@ -54,11 +55,7 @@ export default function Sidebar() {
 				name={ SIDEBAR_NAME }
 				title={ title }
 				icon={ icon }
-				className={
-					isSettingsOpen
-						? 'ai-content-editing-assistant-sidebar is-settings-open'
-						: 'ai-content-editing-assistant-sidebar'
-				}
+				className="ai-content-editing-assistant-sidebar"
 				// @ts-expect-error `PluginSidebar` passes `header` on to `ComplementaryArea`, but its types leave it out.
 				header={
 					<>
@@ -84,9 +81,16 @@ export default function Sidebar() {
 					</>
 				}
 			>
-				{ isSettingsOpen && <ModelSettings onClose={ () => setIsSettingsOpen( false ) } /> }
-				{ /* The chat stays mounted under the settings, so the draft is kept. */ }
-				<Chat chat={ chat } isAvailable={ isVisualEditor } />
+				{ isSettingsOpen ? (
+					<ModelSettings onClose={ () => setIsSettingsOpen( false ) } />
+				) : (
+					<Chat
+						chat={ chat }
+						isAvailable={ isVisualEditor }
+						draft={ draft }
+						onDraftChange={ setDraft }
+					/>
+				) }
 			</PluginSidebar>
 		</>
 	);
