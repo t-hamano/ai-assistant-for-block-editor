@@ -24,7 +24,8 @@
 		"src",
 		"skills",
 		"build",
-		"ai-content-editing-assistant.php"
+		"ai-content-editing-assistant.php",
+		"uninstall.php"
 	],
 	"dependencies": {
 		"@wordpress/icons": "20.0.0",
