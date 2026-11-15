@@ -21,6 +21,7 @@ import {
 	toAnthropicMessages,
 	toEdit,
 } from '../anthropic';
+import { READ_TOOLS } from '../read-tools';
 import { streamBody } from './stream-body';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
@@ -50,7 +51,7 @@ describe( 'buildAnthropicBody', () => {
 			max_tokens: expect.any( Number ),
 			cache_control: { type: 'ephemeral' },
 			system: [ { type: 'text', text: 'Be brief.', cache_control: { type: 'ephemeral' } } ],
-			tools: [ EDIT_TOOL ],
+			tools: [ EDIT_TOOL, ...READ_TOOLS ],
 			messages,
 		} );
 	} );
@@ -232,10 +233,10 @@ describe( 'readAnthropicStream', () => {
 } );
 
 describe( 'createAnthropicPlatform', () => {
-	const toolCall = ( input: string ) => [
+	const toolCall = ( input: string, name = 'edit_blocks' ) => [
 		sse( 'content_block_start', {
 			index: 0,
-			content_block: { type: 'tool_use', id: 'toolu_1', name: 'edit_blocks', input: {} },
+			content_block: { type: 'tool_use', id: 'toolu_1', name, input: {} },
 		} ),
 		sse( 'content_block_delta', {
 			index: 0,
@@ -289,6 +290,28 @@ describe( 'createAnthropicPlatform', () => {
 				],
 			},
 		] );
+	} );
+
+	it( 'reads the document for the model, and sends what it found back', async () => {
+		const bodies = respond( toolCall( '{"refs":["b2"]}', 'read_blocks' ), text );
+		const onEvent = vi.fn();
+		const readBlocks = vi.fn( () => ( { status: 'done' as const, content: '<p>Two</p>' } ) );
+
+		await createAnthropicPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite b2' } ],
+			onEvent,
+			read: readBlocks,
+			signal: new AbortController().signal,
+		} );
+
+		expect( readBlocks ).toHaveBeenCalledWith( { tool: 'read_blocks', refs: [ 'b2' ] } );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'activity', activity: 'reading' } );
+		expect( onEvent ).not.toHaveBeenCalledWith( expect.objectContaining( { type: 'edit' } ) );
+		expect( bodies[ 1 ].messages[ 2 ] ).toEqual( {
+			role: 'user',
+			content: [ { type: 'tool_result', tool_use_id: 'toolu_1', content: '<p>Two</p>' } ],
+		} );
 	} );
 
 	it( 'gives up after the model fails to fix its edit three times', async () => {

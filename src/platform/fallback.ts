@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
+import { READ_TOOLS, runRead } from './read-tools';
 
 /**
  * How many failed edits the model may try again in one answer.
@@ -24,6 +25,15 @@ export const FALLBACK_EDIT_TOOL = {
 	description: EDIT_TOOL.description,
 	parameters: EDIT_TOOL.input_schema,
 };
+
+/**
+ * The read tools, as function declarations of the AI Client.
+ */
+export const FALLBACK_READ_TOOLS = READ_TOOLS.map( ( tool ) => ( {
+	name: tool.name,
+	description: tool.description,
+	parameters: tool.input_schema,
+} ) );
 
 /**
  * A part of a message, as the AI Client has it: text, a function call, or a
@@ -150,17 +160,30 @@ export function readFallbackAnswer(
 }
 
 /**
- * Applies the edits the model asked for, and builds the responses to send
- * back.
+ * Applies the edits the model asked for, runs its reads, and builds the
+ * responses to send back.
  *
  * @param calls   The function call parts.
  * @param onEvent Applies each edit.
- * @return The responses, and how many edits failed.
+ * @param read    Reads the document.
+ * @return The responses, and how many calls failed.
  */
-function runTools( calls: FallbackPart[], onEvent: AiChatRequest[ 'onEvent' ] ) {
+function runTools(
+	calls: FallbackPart[],
+	onEvent: AiChatRequest[ 'onEvent' ],
+	read: AiChatRequest[ 'read' ]
+) {
 	let failures = 0;
 	const results = calls.map( ( part ): FallbackPart => {
 		const call = part.functionCall ?? {};
+		const found = runRead( call.name, call.args, read );
+		if ( found ) {
+			if ( found.status === 'failed' ) {
+				failures++;
+			}
+			const response = found.status === 'failed' ? found.reason : found.content;
+			return { functionResponse: { id: call.id, name: call.name, response } };
+		}
 		const edit = call.name === EDIT_TOOL.name ? toEdit( call.args ) : null;
 		let result: AiEditResult;
 		if ( ! edit ) {
@@ -205,7 +228,7 @@ export function createFallbackPlatform(
 	return {
 		// The sidebar only loads when the site can answer.
 		hasApiKey: async () => true,
-		async chat( { system, messages, onEvent, signal } ) {
+		async chat( { system, messages, onEvent, read, signal } ) {
 			const conversation = toFallbackMessages( messages );
 			let failures = 0;
 			for (;;) {
@@ -218,7 +241,7 @@ export function createFallbackPlatform(
 							post_id: getPostId(),
 							system,
 							messages: conversation,
-							tools: [ FALLBACK_EDIT_TOOL ],
+							tools: [ FALLBACK_EDIT_TOOL, ...FALLBACK_READ_TOOLS ],
 							models,
 						},
 						signal,
@@ -240,7 +263,7 @@ export function createFallbackPlatform(
 				if ( ! calls.length ) {
 					return;
 				}
-				const tools = runTools( calls, onEvent );
+				const tools = runTools( calls, onEvent, read );
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

@@ -15,6 +15,7 @@ import type { AiStreamEvent } from '..';
 import { EDIT_TOOL } from '../anthropic';
 import {
 	OPENAI_EDIT_TOOL,
+	OPENAI_READ_TOOLS,
 	OPENAI_MODEL,
 	buildOpenAiBody,
 	createOpenAiPlatform,
@@ -63,7 +64,7 @@ describe( 'buildOpenAiBody', () => {
 			model: OPENAI_MODEL,
 			max_output_tokens: expect.any( Number ),
 			instructions: 'Be brief.',
-			tools: [ OPENAI_EDIT_TOOL ],
+			tools: [ OPENAI_EDIT_TOOL, ...OPENAI_READ_TOOLS ],
 			input,
 			store: false,
 			include: [ 'reasoning.encrypted_content' ],

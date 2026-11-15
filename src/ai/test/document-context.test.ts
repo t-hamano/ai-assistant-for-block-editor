@@ -155,6 +155,25 @@ describe( 'buildMessageContext', () => {
 		);
 	} );
 
+	it( 'sends an outline instead of a long document', () => {
+		const blocks = Array.from( { length: 400 }, ( _, n ) => paragraph( `b${ n + 1 }`, long ) );
+		const result = buildMessageContext( { document: doc( ...blocks ), selection: '' }, null );
+		expect( result ).not.toContain( '<document>' );
+		expect( result ).toMatch( /^<outline>\nb1 core\/paragraph: Lorem ipsum/ );
+		expect( result ).toContain( '\nb400 core/paragraph: ' );
+		expect( result.length ).toBeLessThan( doc( ...blocks ).length / 2 );
+	} );
+
+	it( 'sends the outline of a long document again when the changes are longer', () => {
+		const blocks = Array.from( { length: 400 }, ( _, n ) => paragraph( `b${ n + 1 }`, long ) );
+		const previous = doc( ...blocks );
+		const document = doc( ...blocks.map( ( block ) => block.replace( 'Lorem', 'Ipsum' ) ) );
+		const result = buildMessageContext( { document, selection: '' }, seen( previous ) );
+		expect( result ).toMatch(
+			/^The document changed after your last answer, or has blocks you added\. This is the outline of the document now\.\n\n<outline>\n/
+		);
+	} );
+
 	it( 'sends only the selection when nothing changed', () => {
 		expect( buildMessageContext( context, seen( context.document ) ) ).toBe(
 			'<selection>\nTwo.\n</selection>'
