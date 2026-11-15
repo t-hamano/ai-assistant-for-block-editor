@@ -13,6 +13,36 @@ Select blocks or text in the block editor and edit them by chatting with AI. The
 * PHP 8.3 or later
 * An AI provider plugin, such as AI Provider for Anthropic, with an API key on the Connectors screen. The AI assistant does not appear until a key is set
 
+## Usage
+
+1. Open a post or page in the block editor.
+2. Open the AI Assistant sidebar from the sparkle icon in the top toolbar, or from **AI Assistant** in the Options menu.
+3. Choose what to edit:
+   * **Blocks**: select one or more blocks. Only the selected blocks are changed.
+   * **Text inside a block**: select a few words. Only that text is changed.
+   * **Nothing**: the AI reads the whole post and decides where to edit, insert, or delete blocks.
+4. Type what you want, such as "Translate this into Japanese" or "Make this heading shorter", and press **Send**. The answer appears as it is written, and you can press **Stop** at any time.
+5. Changed blocks are outlined, and changed text is colored for a few seconds. If the first change is off screen, the editor scrolls to it. With reduced motion turned on, only the color is shown.
+
+Each edit is a single undo step, so you can take it back with the editor's Undo button. Press **New conversation** (the plus icon) to start over.
+
+### Choosing the provider and model
+
+By default, the AI assistant picks a provider in the order Anthropic, OpenAI, Google, and uses a recommended model from that provider. To choose them yourself, press the gear icon at the top right of the sidebar. Only providers with an API key and their models are listed. The choice is saved for each user.
+
+## Limitations
+
+* Only administrators can use the AI assistant. There is no setting to allow other roles.
+* Answers stream only for Anthropic, OpenAI, and Google. Other providers run through the AI Client in WordPress and show the answer all at once.
+* The AI edits post content only. Global Styles, templates, and template parts are out of scope.
+* When a text selection spans more than one block, the whole blocks are edited.
+* Every edit is checked before it is applied, and broken markup is never applied. If the AI fails to write valid markup three times in one answer, the chat shows that the edit could not be made.
+* Styling is limited to what each block and the theme allow, and theme presets are used where possible.
+* The AI does not add new images or files. It only uses media that is already in the post or that you give it.
+* Long posts (over about 60,000 characters of block markup) are sent as an outline, and the AI reads only the parts it needs. This saves tokens, but the AI may miss context it did not read.
+* The conversation is not saved. It is cleared when you reload the editor.
+* Your content is sent to the AI provider. See the "External services" section of [readme.txt](readme.txt) for what is sent and when.
+
 ## How to build
 
 ```sh
