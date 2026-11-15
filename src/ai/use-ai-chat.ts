@@ -40,10 +40,10 @@ export type AiChat = {
  * Runs a conversation with the AI assistant. The selection is captured when
  * a message is sent, and the model's edits are applied to it as they arrive.
  *
- * The first message carries the whole document, and later ones carry it
- * again only when the user changed it since the last answer, so the
- * conversation grows at its end only and the prompt cache covers what came
- * before.
+ * The first message carries the whole document, and later ones carry only
+ * the blocks that changed since the last answer, and the blocks the model
+ * added, whose reference IDs it has not seen. The conversation grows at its
+ * end only, so the prompt cache covers what came before.
  *
  * @param args              Arguments.
  * @param args.ai           The host's connection to the model.
@@ -95,6 +95,7 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 				type: 'START',
 				text: message,
 				context: messageContext,
+				document: context?.document,
 			} );
 
 			// Once the user stops the answer or starts a new conversation, the

@@ -16,6 +16,7 @@ import { createElement } from '@wordpress/element';
  * Internal dependencies
  */
 import { getClientIdByRef, getRef, serializeWithRefs, stripRefs } from '../block-refs';
+import { splitTopLevelBlocks } from '../../ai/document-context';
 
 beforeAll( () => {
 	registerBlockType( 'test/text', {
@@ -71,5 +72,21 @@ describe( 'serializeWithRefs', () => {
 		expect( getRef( block.clientId ) ).toBe( ref );
 		expect( getClientIdByRef( ref ) ).toBe( block.clientId );
 		expect( getClientIdByRef( 'b0' ) ).toBeUndefined();
+	} );
+} );
+
+describe( 'splitTopLevelBlocks with serializeWithRefs', () => {
+	it( 'splits the serialized document at its top-level blocks', () => {
+		const first = createBlock( 'test/text', { content: 'One.' } );
+		const box = createBlock( 'test/box', {}, [
+			createBlock( 'test/text', { content: 'Inside.' } ),
+			createBlock( 'test/text', { content: 'Also inside.' } ),
+		] );
+		const blocks = splitTopLevelBlocks( serializeWithRefs( [ first, box ] ) );
+		expect( blocks?.map( ( block ) => block.ref ) ).toEqual( [
+			getRef( first.clientId ),
+			getRef( box.clientId ),
+		] );
+		expect( blocks?.[ 1 ].markup ).toBe( serializeWithRefs( [ box ] ) );
 	} );
 } );

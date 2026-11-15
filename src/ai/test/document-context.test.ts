@@ -6,7 +6,145 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import { buildMessageContext } from '../document-context';
+import { buildMessageContext, formatChanges, splitTopLevelBlocks } from '../document-context';
+
+const paragraph = ( ref: string, text: string ) =>
+	`<!-- ref:${ ref } --><!-- wp:paragraph -->\n<p>${ text }</p>\n<!-- /wp:paragraph -->`;
+
+const group = ( ref: string, inner: string ) =>
+	`<!-- ref:${ ref } --><!-- wp:group {"layout":{"type":"constrained"}} -->\n<div class="wp-block-group">${ inner }</div>\n<!-- /wp:group -->`;
+
+const doc = ( ...blocks: string[] ) => blocks.join( '\n\n' );
+
+const seen = ( known: string, shown = known ) => ( { known, shown } );
+
+// A long paragraph, so that sending the changes is shorter than the whole document.
+const long = 'Lorem ipsum dolor sit amet. '.repeat( 10 );
+
+describe( 'splitTopLevelBlocks', () => {
+	it( 'splits the document into top-level blocks with their nested blocks', () => {
+		const inner = paragraph( 'b3', 'Inside.' );
+		const document = doc(
+			paragraph( 'b1', 'One.' ),
+			group( 'b2', inner ),
+			'<!-- ref:b4 --><!-- wp:latest-posts {"postsToShow":3} /-->'
+		);
+		expect( splitTopLevelBlocks( document ) ).toEqual( [
+			{ ref: 'b1', markup: paragraph( 'b1', 'One.' ) },
+			{ ref: 'b2', markup: group( 'b2', inner ) },
+			{ ref: 'b4', markup: '<!-- ref:b4 --><!-- wp:latest-posts {"postsToShow":3} /-->' },
+		] );
+	} );
+
+	it( 'returns null for content without a reference ID', () => {
+		expect( splitTopLevelBlocks( doc( paragraph( 'b1', 'One.' ), '<p>Classic.</p>' ) ) ).toBeNull();
+		expect(
+			splitTopLevelBlocks( '<!-- wp:paragraph -->\n<p>One.</p>\n<!-- /wp:paragraph -->' )
+		).toBeNull();
+	} );
+
+	it( 'returns null for unbalanced or repeated blocks', () => {
+		expect( splitTopLevelBlocks( '<!-- ref:b1 --><!-- wp:group --><div></div>' ) ).toBeNull();
+		expect(
+			splitTopLevelBlocks( doc( paragraph( 'b1', 'One.' ), paragraph( 'b1', 'Two.' ) ) )
+		).toBeNull();
+	} );
+} );
+
+describe( 'formatChanges', () => {
+	it( 'lists changed, added, and removed blocks by reference ID', () => {
+		const previous = doc(
+			paragraph( 'b1', 'One.' ),
+			paragraph( 'b2', 'Two.' ),
+			paragraph( 'b3', 'Three.' )
+		);
+		const document = doc(
+			paragraph( 'b1', 'One!' ),
+			paragraph( 'b2', 'Two.' ),
+			paragraph( 'b4', 'New.' ),
+			paragraph( 'b5', 'Newer.' )
+		);
+		expect( formatChanges( document, seen( previous ) ) ).toBe(
+			[
+				'<changes>',
+				'<removed refs="b3" />',
+				'<blocks at="start">',
+				paragraph( 'b1', 'One!' ),
+				'</blocks>',
+				'<blocks after="b2">',
+				paragraph( 'b4', 'New.' ),
+				paragraph( 'b5', 'Newer.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'sends a moved block at its new place', () => {
+		const previous = doc(
+			paragraph( 'b1', 'One.' ),
+			paragraph( 'b2', 'Two.' ),
+			paragraph( 'b3', 'Three.' )
+		);
+		const document = doc(
+			paragraph( 'b2', 'Two.' ),
+			paragraph( 'b3', 'Three.' ),
+			paragraph( 'b1', 'One.' )
+		);
+		expect( formatChanges( document, seen( previous ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b3">',
+				paragraph( 'b1', 'One.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'sends the whole top-level block when a nested block changed', () => {
+		const previous = group( 'b1', paragraph( 'b2', 'Inside.' ) );
+		const document = group( 'b1', paragraph( 'b2', 'Changed.' ) );
+		expect( formatChanges( document, seen( previous ) ) ).toContain( document );
+	} );
+
+	it( 'sends the blocks the model added, whose reference IDs it has not seen', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Added.' ) );
+		expect( formatChanges( known, seen( known, shown ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b1">',
+				paragraph( 'b2', 'Added.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'sends a block the user restored after the model removed it', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Two.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ) );
+		expect( formatChanges( shown, seen( known, shown ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b1">',
+				paragraph( 'b2', 'Two.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'returns an empty string when the model knows the document', () => {
+		const document = doc( paragraph( 'b1', 'One.' ) );
+		expect( formatChanges( document, seen( document ) ) ).toBe( '' );
+	} );
+
+	it( 'returns null when the changes cannot be told by reference ID', () => {
+		expect( formatChanges( '<p>Classic.</p>', seen( paragraph( 'b1', 'One.' ) ) ) ).toBeNull();
+	} );
+} );
 
 describe( 'buildMessageContext', () => {
 	const context = { document: 'One.\n\nTwo.\n', selection: 'Two.\n' };
@@ -18,21 +156,58 @@ describe( 'buildMessageContext', () => {
 	} );
 
 	it( 'sends only the selection when nothing changed', () => {
-		expect( buildMessageContext( context, context.document ) ).toBe(
+		expect( buildMessageContext( context, seen( context.document ) ) ).toBe(
 			'<selection>\nTwo.\n</selection>'
 		);
 	} );
 
-	it( 'sends the whole document again when it changed', () => {
-		const result = buildMessageContext( context, 'Old.\n' );
-		expect( result ).toContain( 'The user changed the document after your last answer.' );
+	it( 'sends only the changed blocks', () => {
+		const previous = doc(
+			paragraph( 'b1', long ),
+			paragraph( 'b2', long ),
+			paragraph( 'b3', 'Old.' )
+		);
+		const document = doc(
+			paragraph( 'b1', long ),
+			paragraph( 'b2', long ),
+			paragraph( 'b4', 'New.' )
+		);
+		const result = buildMessageContext( { document, selection: '' }, seen( previous ) );
+		expect( result ).toBe(
+			[
+				'The document changed after your last answer, or has blocks you added. These are the changes.',
+				[
+					'<changes>',
+					'<removed refs="b3" />',
+					'<blocks after="b2">',
+					paragraph( 'b4', 'New.' ),
+					'</blocks>',
+					'</changes>',
+				].join( '\n' ),
+				'<selection></selection>',
+			].join( '\n\n' )
+		);
+		expect( result ).not.toContain( long );
+	} );
+
+	it( 'sends the whole document again when that is shorter', () => {
+		const previous = doc( paragraph( 'b1', 'One.' ) );
+		const document = doc( paragraph( 'b2', 'Two.' ) );
+		const result = buildMessageContext( { document, selection: '' }, seen( previous ) );
+		expect( result ).toContain( 'This is the whole document now.' );
+		expect( result ).toContain( `<document>\n${ document }\n</document>` );
+	} );
+
+	it( 'sends the whole document again when the changes cannot be told by reference ID', () => {
+		const result = buildMessageContext( context, seen( 'Old.\n' ) );
+		expect( result ).toContain( 'This is the whole document now.' );
 		expect( result ).toContain( '<document>\nOne.\n\nTwo.\n</document>' );
 	} );
 
 	it( 'sends the empty document when the user removed everything', () => {
 		const empty = { document: '', selection: '' };
-		expect( buildMessageContext( empty, 'One.\n' ) ).toBe(
-			'The user changed the document after your last answer. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
+		expect( buildMessageContext( empty, seen( 'One.\n' ) ) ).toBe(
+			'The document changed after your last answer, or has blocks you added. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
 		);
 	} );
 } );

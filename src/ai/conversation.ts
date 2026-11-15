@@ -19,6 +19,12 @@ export type UserChatMessage = {
 	 * it. Omitted when the document was not available.
 	 */
 	context?: string;
+	/**
+	 * The document when the message was sent. With the context, the model
+	 * has seen the whole document as it was then, with the reference IDs of
+	 * its blocks. Omitted when the document was not available.
+	 */
+	document?: string;
 };
 
 export type AssistantChatMessage = {
@@ -67,7 +73,7 @@ export type Conversation = {
 };
 
 export type ConversationAction =
-	| { type: 'START'; text: string; context?: string }
+	| { type: 'START'; text: string; context?: string; document?: string }
 	| { type: 'APPEND_TEXT'; text: string }
 	| { type: 'ACTIVITY'; activity: AiActivity }
 	| { type: 'EDIT'; edit: AiEdit; applied: boolean }
@@ -120,6 +126,7 @@ export function conversationReducer(
 						role: 'user',
 						text: action.text,
 						...( action.context === undefined ? {} : { context: action.context } ),
+						...( action.document === undefined ? {} : { document: action.document } ),
 					},
 					{
 						id: uuid(),
@@ -193,6 +200,23 @@ export function toUserText( text: string, context?: string ): string {
 }
 
 /**
+ * What the model knows about the document after the last exchange still
+ * sent to the model.
+ */
+export type SeenDocument = {
+	/**
+	 * The document when the answer ended, with the answer's edits in it.
+	 */
+	known: string;
+	/**
+	 * The document when the message was sent. The model has seen the
+	 * reference IDs in it, but not those of the blocks its edits added in
+	 * earlier answers.
+	 */
+	shown: string;
+};
+
+/**
  * Returns the document as the model last saw it: when the answer to the
  * last message still sent to the model ended. `null` when the model has
  * not seen the document, or the answer ended without it.
@@ -200,7 +224,7 @@ export function toUserText( text: string, context?: string ): string {
  * @param messages The conversation's messages.
  * @return The document, or `null`.
  */
-export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
+export function getLastSeenDocument( messages: ChatMessage[] ): SeenDocument | null {
 	for ( let index = messages.length - 1; index >= 0; index-- ) {
 		const message = messages[ index ];
 		if ( message.role !== 'user' ) {
@@ -211,7 +235,11 @@ export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
 		if ( answer?.role === 'assistant' && answer.status === 'error' ) {
 			continue;
 		}
-		return ( answer?.role === 'assistant' ? answer.documentAfter : undefined ) ?? null;
+		const known = answer?.role === 'assistant' ? answer.documentAfter : undefined;
+		if ( known === undefined || message.document === undefined ) {
+			return null;
+		}
+		return { known, shown: message.document };
 	}
 	return null;
 }

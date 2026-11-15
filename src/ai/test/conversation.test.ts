@@ -192,38 +192,26 @@ describe( 'document context', () => {
 		} );
 	} );
 
-	it( 'returns the document when the last answer ended', () => {
+	it( 'returns the document when the last answer ended, and when it was sent', () => {
 		const { messages } = run(
-			{ type: 'START', text: 'One', context: 'A' },
+			{ type: 'START', text: 'One', context: 'A', document: 'Zero.\n' },
 			{ type: 'APPEND_TEXT', text: 'Done.' },
-			{
-				type: 'FINISH',
-				status: 'done',
-				documentAfter: 'First.\n',
-			},
-			{ type: 'START', text: 'Two', context: 'B' },
-			{
-				type: 'FINISH',
-				status: 'stopped',
-				documentAfter: 'Second.\n',
-			}
+			{ type: 'FINISH', status: 'done', documentAfter: 'First.\n' },
+			{ type: 'START', text: 'Two', context: 'B', document: 'First.\n' },
+			{ type: 'FINISH', status: 'stopped', documentAfter: 'Second.\n' }
 		);
-		expect( getLastSeenDocument( messages ) ).toBe( 'Second.\n' );
+		expect( getLastSeenDocument( messages ) ).toEqual( { known: 'Second.\n', shown: 'First.\n' } );
 	} );
 
 	it( 'skips an exchange whose answer failed', () => {
 		const { messages } = run(
-			{ type: 'START', text: 'One', context: 'A' },
+			{ type: 'START', text: 'One', context: 'A', document: 'Zero.\n' },
 			{ type: 'APPEND_TEXT', text: 'Done.' },
-			{
-				type: 'FINISH',
-				status: 'done',
-				documentAfter: 'First.\n',
-			},
-			{ type: 'START', text: 'Two', context: 'B' },
+			{ type: 'FINISH', status: 'done', documentAfter: 'First.\n' },
+			{ type: 'START', text: 'Two', context: 'B', document: 'First.\n' },
 			{ type: 'FINISH', status: 'error', error: 'Failed' }
 		);
-		expect( getLastSeenDocument( messages ) ).toBe( 'First.\n' );
+		expect( getLastSeenDocument( messages ) ).toEqual( { known: 'First.\n', shown: 'Zero.\n' } );
 	} );
 
 	it( 'returns null without a document', () => {
