@@ -247,6 +247,19 @@ describe( 'highlightChanges', () => {
 		expect( container.querySelector( 'p' )?.className ).not.toContain( HIGHLIGHT_CLASS_NAME );
 	} );
 
+	it( 'highlights the whole block when the browser cannot color text', () => {
+		vi.stubGlobal( 'Highlight', undefined );
+		const { one } = setUp();
+		render( one, 'One' );
+		const before = takeBlockSnapshot();
+		dispatch( blockEditorStore ).updateBlockAttributes( one, { content: 'Ones' } );
+		render( one, 'Ones' );
+		flushSync( () => highlightChanges( before ) );
+		flushSync( () => vi.advanceTimersByTime( 16 ) );
+
+		expect( container.querySelector( 'p' )?.className ).toBe( HIGHLIGHT_CLASS_NAME );
+	} );
+
 	it( 'announces the change', () => {
 		const { one, inner } = setUp();
 		const before = takeBlockSnapshot();

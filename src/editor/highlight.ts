@@ -207,6 +207,11 @@ export function createTextRange( element: Element, start: number, end: number ):
 	return null;
 }
 
+function supportsTextHighlight( view: Window ): boolean {
+	const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
+	return !! css?.highlights && !! CustomHighlight;
+}
+
 /**
  * Colors the text that changed in each highlighted block, in each window
  * that shows some of it.
@@ -220,12 +225,10 @@ function paintTextHighlight() {
 		}
 	}
 	for ( const view of new Set( [ ...paintedViews, ...rangesByView.keys() ] ) ) {
-		const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
-		// Browsers without the CSS Custom Highlight API show only the
-		// block highlight.
-		if ( ! css?.highlights || ! CustomHighlight ) {
+		if ( ! supportsTextHighlight( view ) ) {
 			continue;
 		}
+		const { CSS: css, Highlight: CustomHighlight } = view as Window & typeof globalThis;
 		const ranges = rangesByView.get( view );
 		if ( ranges ) {
 			css.highlights.set( TEXT_HIGHLIGHT_NAME, new CustomHighlight( ...ranges ) );
@@ -245,7 +248,10 @@ function paintTextHighlight() {
 function highlightText( clientId: string ): boolean {
 	const previous = previousTexts.get( clientId );
 	const element = getBlockElement( clientId );
-	if ( previous === undefined || ! element ) {
+	// Browsers without the CSS Custom Highlight API show the block
+	// highlight instead.
+	const view = element?.ownerDocument.defaultView;
+	if ( previous === undefined || ! element || ! view || ! supportsTextHighlight( view ) ) {
 		return false;
 	}
 	const changed = diffText( previous, element.textContent ?? '' );
