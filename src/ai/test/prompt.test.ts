@@ -30,7 +30,13 @@ describe( 'buildSystemPrompt', () => {
 	it( 'explains the reference IDs and the edits by them', () => {
 		const prompt = buildSystemPrompt( '# Title\n' );
 		expect( prompt ).toContain( '<!-- ref:b12 -->' );
-		for ( const action of [ 'replace_block', 'insert_before', 'delete_block', 'append' ] ) {
+		for ( const action of [
+			'replace_block',
+			'insert_before',
+			'delete_block',
+			'append',
+			'replace_text',
+		] ) {
 			expect( prompt ).toContain( `"${ action }"` );
 		}
 	} );

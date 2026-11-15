@@ -147,6 +147,9 @@ A `core/html` block that is already in the document stays exactly as it is, also
 - `replace_block` replaces one block with everything inside it. When you change a parent, write all its inner blocks too. To change one inner block, point `replace_block` at that inner block instead of its parent.
 - Change the smallest block that holds the change. Rewording one paragraph in a group replaces that paragraph, not the group.
 - To remove a block, use `delete_block`. Do not replace it with empty markup.
+- For a small change in the text of a block, such as fixing a typo or rewording a sentence, use `replace_text` instead of writing the whole block again.
+- Choose `find` so that it appears only once in the document: copy it exactly, with its spaces, line breaks, and inline HTML, and add a few words around it when the same text appears elsewhere. Keep it short, and inside one block when you can.
+- `find` and its `markup` together must leave valid block markup. Do not cut a block delimiter or an HTML tag in half, and do not change attributes with `replace_text`: replace the block instead.
 - Keep the block type unless the user asks for another one. Rewording a paragraph keeps it a paragraph.
 - Keep the existing attributes of a block when you change its text, and keep the existing inner blocks when you change its parent.
 - Write the markup the current version of the block saves, also when the document has an older form of it.

@@ -14,6 +14,7 @@ class Enqueue {
 	 */
 	public function __construct() {
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_scripts' ) );
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_canvas_styles' ) );
 	}
 
 	/**
@@ -28,15 +29,20 @@ class Enqueue {
 	}
 
 	/**
+	 * Whether the assistant is shown to the current user
+	 *
+	 * @return bool
+	 */
+	private static function is_enabled() {
+		// The assistant needs an API key, so it is not shown at all without one.
+		return self::can_use() && Api_Key::has_any();
+	}
+
+	/**
 	 * Enqueue block editor scripts
 	 */
 	public function enqueue_editor_scripts() {
-		if ( ! self::can_use() ) {
-			return;
-		}
-
-		// The assistant needs an API key, so it is not shown at all without one.
-		if ( ! Api_Key::has_any() ) {
+		if ( ! self::is_enabled() ) {
 			return;
 		}
 
@@ -70,5 +76,34 @@ class Enqueue {
 			$asset_file['version']
 		);
 		wp_style_add_data( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, 'rtl', 'replace' );
+	}
+
+	/**
+	 * Enqueue the styles for the blocks in the editor canvas
+	 *
+	 * They are loaded on `enqueue_block_assets` so that they reach the canvas
+	 * iframe. That hook also runs on the front end, where they are not needed.
+	 */
+	public function enqueue_canvas_styles() {
+		if ( ! is_admin() || ! self::is_enabled() ) {
+			return;
+		}
+
+		$asset_path = AI_CONTENT_EDITING_ASSISTANT_PATH . '/build/index.asset.php';
+
+		if ( ! file_exists( $asset_path ) || ! file_exists( AI_CONTENT_EDITING_ASSISTANT_PATH . '/build/index.css' ) ) {
+			return;
+		}
+
+		$asset_file = include $asset_path;
+		$handle     = AI_CONTENT_EDITING_ASSISTANT_NAMESPACE . '-canvas';
+
+		wp_enqueue_style(
+			$handle,
+			AI_CONTENT_EDITING_ASSISTANT_URL . '/build/index.css',
+			array(),
+			$asset_file['version']
+		);
+		wp_style_add_data( $handle, 'rtl', 'replace' );
 	}
 }

@@ -211,4 +211,62 @@ describe( 'createBlockTarget', () => {
 		} );
 		expect( documentNow() ).toBe( [ 'Newer', 'Two' ].map( paragraph ).join( '\n\n' ) );
 	} );
+	it( 'replaces text that appears once, in the block that holds it', () => {
+		const [ first, second ] = setUp( 'One', 'Two words', 'Three' );
+		dispatch( blockEditorStore ).selectBlock( first );
+		const target = createBlockTarget();
+
+		const result = target.apply( { action: 'replace_text', find: 'Two', markup: 'Second' } );
+		expect( result ).toEqual( { status: 'applied', refs: [ expect.any( String ) ] } );
+		expect( ( result as { refs: string[] } ).refs[ 0 ] ).not.toBe( getRef( second ) );
+		expect( documentNow() ).toBe(
+			[ 'One', 'Second words', 'Three' ].map( paragraph ).join( '\n\n' )
+		);
+		// The selection stays where it was.
+		expect( select( blockEditorStore ).getSelectedBlockClientId() ).toBe( first );
+		expect( select( blockEditorStore ).getBlock( first ) ).not.toBeNull();
+	} );
+
+	it( 'replaces text across blocks, and keeps the blocks that stay the same', () => {
+		const [ first, second ] = setUp( 'One', 'Two', 'Three' );
+		const target = createBlockTarget();
+
+		// The reference IDs the model copies from the document are left out.
+		const result = target.apply( {
+			action: 'replace_text',
+			find: `One</p>\n<!-- /wp:test/paragraph -->\n\n<!-- ref:${ getRef( second ) } --><!-- wp:test/paragraph -->\n<p>Two`,
+			markup: `One</p>\n<!-- /wp:test/paragraph -->\n\n<!-- wp:test/paragraph -->\n<p>2`,
+		} );
+		expect( result ).toEqual( { status: 'applied', refs: [ expect.any( String ) ] } );
+		expect( select( blockEditorStore ).getBlock( first ) ).not.toBeNull();
+		expect( documentNow() ).toBe( [ 'One', '2', 'Three' ].map( paragraph ).join( '\n\n' ) );
+	} );
+
+	it( 'fails when the text is not in the document, or in more than one place', () => {
+		setUp( 'Same', 'Same' );
+		const target = createBlockTarget();
+
+		expect( target.apply( { action: 'replace_text', find: 'Other', markup: 'New' } ) ).toEqual( {
+			status: 'failed',
+			reason: expect.stringContaining( 'not in the document' ),
+		} );
+		expect( target.apply( { action: 'replace_text', find: 'Same', markup: 'New' } ) ).toEqual( {
+			status: 'failed',
+			reason: expect.stringContaining( 'appears 2 times' ),
+		} );
+		expect( documentNow() ).toBe( [ 'Same', 'Same' ].map( paragraph ).join( '\n\n' ) );
+	} );
+
+	it( 'does not apply a text replacement that breaks the markup', () => {
+		setUp( 'One' );
+
+		expect(
+			createBlockTarget().apply( {
+				action: 'replace_text',
+				find: '<p>One</p>',
+				markup: '<div>One</div>',
+			} )
+		).toMatchObject( { status: 'failed' } );
+		expect( documentNow() ).toBe( paragraph( 'One' ) );
+	} );
 } );

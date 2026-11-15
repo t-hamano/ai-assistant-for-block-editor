@@ -34,6 +34,7 @@ export const EDIT_TOOL = {
 		'Edits the document in the block editor. Call it once for each change.',
 		'"replace" replaces the selected blocks with the markup. "insert_after" without "ref" inserts the markup after the selected blocks, or at the end of the document when nothing is selected.',
 		'With "ref", the reference ID of a block in the document, "replace_block" replaces that block, inner blocks included, "insert_before" and "insert_after" insert the markup before or after it, and "delete_block" removes it. "append" adds the markup to the end of the document.',
+		'"replace_text" replaces the "find" text, which must appear only once in the document, with the markup, for small changes such as a word or a sentence.',
 	].join( ' ' ),
 	// Long markup arrives as it is written, instead of all at once at the end.
 	eager_input_streaming: true,
@@ -49,6 +50,7 @@ export const EDIT_TOOL = {
 					'insert_before',
 					'delete_block',
 					'append',
+					'replace_text',
 				],
 			},
 			ref: {
@@ -56,9 +58,15 @@ export const EDIT_TOOL = {
 				description:
 					'The reference ID of the block to edit, such as "b12", from the <!-- ref:b12 --> before it.',
 			},
+			find: {
+				type: 'string',
+				description:
+					'For "replace_text", the markup to replace, copied exactly from the document. It may be text inside a block, or whole blocks.',
+			},
 			markup: {
 				type: 'string',
-				description: 'The new content, as block markup. Empty for "delete_block".',
+				description:
+					'The new content, as block markup. For "replace_text", what replaces "find". Empty for "delete_block".',
 			},
 		},
 		required: [ 'action' ],
@@ -169,7 +177,7 @@ export function buildAnthropicBody( system: string, messages: AnthropicMessage[]
  * @return The edit, or `null` when the input does not match the tool.
  */
 export function toEdit( input: unknown ): AiEdit | null {
-	const { action, markup = '', ref } = ( input ?? {} ) as Record< string, unknown >;
+	const { action, markup = '', ref, find } = ( input ?? {} ) as Record< string, unknown >;
 	if ( typeof markup !== 'string' || ( ref !== undefined && typeof ref !== 'string' ) ) {
 		return null;
 	}
@@ -187,6 +195,9 @@ export function toEdit( input: unknown ): AiEdit | null {
 			return ref && markup ? { action, ref, markup } : null;
 		case 'delete_block':
 			return ref ? { action, ref, markup: '' } : null;
+		case 'replace_text':
+			// An empty markup removes the text.
+			return typeof find === 'string' && find ? { action, find, markup } : null;
 	}
 	return null;
 }
@@ -360,7 +371,7 @@ function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] 
 			} else if ( ! edit ) {
 				result = {
 					status: 'failed',
-					reason: `Call ${ EDIT_TOOL.name } with "action" set to one of ${ EDIT_TOOL.input_schema.properties.action.enum.join( ', ' ) }, "markup" set to block markup, and for "replace_block", "insert_before", and "delete_block", "ref" set to the reference ID of a block.`,
+					reason: `Call ${ EDIT_TOOL.name } with "action" set to one of ${ EDIT_TOOL.input_schema.properties.action.enum.join( ', ' ) }, "markup" set to block markup, for "replace_block", "insert_before", and "delete_block", "ref" set to the reference ID of a block, and for "replace_text", "find" set to the text to replace.`,
 				};
 			} else {
 				result = onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' };
