@@ -47,7 +47,8 @@ describe( 'buildAnthropicBody', () => {
 		expect( buildAnthropicBody( 'Be brief.', messages ) ).toEqual( {
 			model: ANTHROPIC_MODEL,
 			max_tokens: expect.any( Number ),
-			system: 'Be brief.',
+			cache_control: { type: 'ephemeral' },
+			system: [ { type: 'text', text: 'Be brief.', cache_control: { type: 'ephemeral' } } ],
 			tools: [ EDIT_TOOL ],
 			messages,
 		} );

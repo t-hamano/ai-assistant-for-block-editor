@@ -8,7 +8,7 @@ export default defineConfig( {
 		jsx: { runtime: 'automatic' },
 	},
 	test: {
-		include: [ 'src/**/test/**/*.test.{ts,tsx}' ],
+		include: [ 'src/**/test/**/*.test.{ts,tsx}', 'scripts/**/test/**/*.test.ts' ],
 		passWithNoTests: true,
 		server: {
 			// WordPress packages import JSON without import attributes, which Node does not load on its own.
