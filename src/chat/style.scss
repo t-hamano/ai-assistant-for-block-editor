@@ -1,8 +1,15 @@
-// The chat fills the sidebar, and only the messages scroll.
-.aabe-sidebar {
+// The chat fills the sidebar below its header, and only the messages scroll.
+.interface-complementary-area:has(> .aabe-sidebar) {
 	display: flex;
 	flex-direction: column;
-	height: 100%;
+	overflow: hidden;
+}
+
+.aabe-sidebar {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
 }
 
 .aabe-chat {
