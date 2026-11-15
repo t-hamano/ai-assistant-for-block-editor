@@ -3,9 +3,10 @@
  */
 import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, isRTL } from '@wordpress/i18n';
+import { chevronLeft, chevronRight } from '@wordpress/icons';
 import { store as preferencesStore } from '@wordpress/preferences';
-import { Button, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
+import { IconButton, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -119,12 +120,20 @@ export function ModelSettings( { onClose }: Props ) {
 
 	return (
 		<Stack className="ai-content-editing-assistant-settings" direction="column" gap="lg">
-			{ content }
-			<Stack direction="row" justify="flex-end">
-				<Button variant="outline" onClick={ onClose }>
-					{ __( 'Back to the chat', 'ai-content-editing-assistant' ) }
-				</Button>
+			<Stack direction="row" align="center" gap="sm">
+				<IconButton
+					icon={ isRTL() ? chevronRight : chevronLeft }
+					label={ __( 'Back', 'ai-content-editing-assistant' ) }
+					variant="minimal"
+					tone="neutral"
+					size="compact"
+					onClick={ onClose }
+				/>
+				<Text variant="heading-md" render={ <h2 /> }>
+					{ __( 'Model', 'ai-content-editing-assistant' ) }
+				</Text>
 			</Stack>
+			{ content }
 		</Stack>
 	);
 }
