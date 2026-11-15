@@ -38,7 +38,7 @@ class Relay {
 	/**
 	 * How long to wait for the provider, in seconds
 	 */
-	const TIMEOUT = 120;
+	const TIMEOUT = 300;
 
 	/**
 	 * Constructor
@@ -72,6 +72,10 @@ class Relay {
 						'type'     => 'object',
 						'required' => true,
 					),
+					'stream'   => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 				),
 			)
 		);
@@ -89,6 +93,9 @@ class Relay {
 
 	/**
 	 * Sends the request to the provider and returns its answer
+	 *
+	 * With `stream`, the answer is passed on as it arrives. Otherwise it comes
+	 * back whole, for servers that hold streamed answers back.
 	 *
 	 * @param WP_REST_Request $request The request.
 	 * @return WP_REST_Response|WP_Error
@@ -117,20 +124,32 @@ class Relay {
 
 		$provider = self::PROVIDERS[ $provider_id ];
 		$body     = $request->get_param( 'body' );
+		$stream   = (bool) $request->get_param( 'stream' );
+		$headers  = array_merge(
+			$provider['headers'],
+			array(
+				'content-type'   => 'application/json',
+				$provider['key'] => $api_key,
+			)
+		);
 
-		// The answer comes back whole until the relay streams it.
-		$body['stream'] = false;
+		$body['stream'] = $stream;
+
+		if ( $stream ) {
+			$error = ( new Stream() )->send( $provider['url'], $headers, wp_json_encode( $body ) );
+
+			if ( $error ) {
+				return $error;
+			}
+
+			// The answer has been sent, so WordPress must not send a response of its own.
+			exit;
+		}
 
 		$response = wp_remote_post(
 			$provider['url'],
 			array(
-				'headers' => array_merge(
-					$provider['headers'],
-					array(
-						'content-type'   => 'application/json',
-						$provider['key'] => $api_key,
-					)
-				),
+				'headers' => $headers,
 				'body'    => wp_json_encode( $body ),
 				'timeout' => self::TIMEOUT,
 			)
