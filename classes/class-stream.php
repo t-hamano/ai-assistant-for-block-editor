@@ -85,15 +85,7 @@ class Stream {
 
 		if ( $this->started ) {
 			if ( $error && ! connection_aborted() ) {
-				// Tells the browser that the answer stopped partway, as an event of its
-				// own after what has arrived.
-				$message = CURLE_OPERATION_TIMEDOUT === curl_errno( $handle ) // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno
-					? __( 'The provider took too long to answer, so the answer was stopped.', 'ai-content-editing-assistant' )
-					: __( 'The connection to the provider was lost before the answer was finished.', 'ai-content-editing-assistant' );
-
-				// The empty lines end an event the provider may have left unfinished.
-				echo "\n\nevent: " . self::ERROR_EVENT . "\ndata: " . wp_json_encode( array( 'message' => $message ) ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				flush();
+				$this->send_error( CURLE_OPERATION_TIMEDOUT === curl_errno( $handle ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno
 			}
 			return null;
 		}
@@ -146,6 +138,22 @@ class Stream {
 		}
 
 		return strlen( $data );
+	}
+
+	/**
+	 * Tells the browser that the provider's answer stopped partway, as an
+	 * event of its own after what has arrived
+	 *
+	 * @param bool $timed_out Whether the provider took too long.
+	 */
+	public function send_error( bool $timed_out ) {
+		$message = $timed_out
+			? __( 'The provider took too long to answer, so the answer was stopped.', 'ai-content-editing-assistant' )
+			: __( 'The connection to the provider was lost before the answer was finished.', 'ai-content-editing-assistant' );
+
+		// The empty lines end an event the provider may have left unfinished.
+		echo "\n\nevent: " . self::ERROR_EVENT . "\ndata: " . wp_json_encode( array( 'message' => $message ) ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		flush();
 	}
 
 	/**
