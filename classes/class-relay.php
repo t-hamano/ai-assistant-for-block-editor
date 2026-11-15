@@ -141,9 +141,11 @@ class Relay {
 		}
 
 		// Sites can turn AI off, or stop prompts, as they do for the AI Client.
-		// The hook is the AI Client's own, so it is not prefixed.
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-		if ( ! wp_supports_ai() || apply_filters( 'wp_ai_client_prevent_prompt', false, wp_ai_client_prompt()->using_provider( $provider_id ) ) ) {
+		if (
+			! wp_supports_ai() ||
+			// The hook is the AI Client's own, so it is not prefixed.
+			apply_filters( 'wp_ai_client_prevent_prompt', false, wp_ai_client_prompt()->using_provider( $provider_id ) ) // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+		) {
 			return new WP_Error(
 				'ai_content_editing_assistant_prompt_prevented',
 				__( 'The site does not allow AI requests.', 'ai-content-editing-assistant' ),
