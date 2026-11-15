@@ -105,9 +105,13 @@ export function Chat( { chat, isAvailable }: Props ) {
 		}
 	};
 
-	// Enter sends, and Shift+Enter adds a line. Enter that confirms an IME
-	// conversion does neither.
+	// Enter sends, and Shift+Enter adds a line.
 	const onKeyDown = ( event: React.KeyboardEvent< HTMLTextAreaElement > ) => {
+		// Keys that control an IME conversion are left to the IME. Some
+		// browsers, such as Safari, report them with key code 229 only.
+		if ( event.nativeEvent.isComposing || event.keyCode === 229 ) {
+			return;
+		}
 		// Undo and redo act on the draft, not on the post.
 		if (
 			isKeyboardEvent.primary( event.nativeEvent, 'z' ) ||
@@ -117,7 +121,7 @@ export function Chat( { chat, isAvailable }: Props ) {
 			event.stopPropagation();
 			return;
 		}
-		if ( event.key === 'Enter' && ! event.shiftKey && ! event.nativeEvent.isComposing ) {
+		if ( event.key === 'Enter' && ! event.shiftKey ) {
 			event.preventDefault();
 			submit();
 		}
