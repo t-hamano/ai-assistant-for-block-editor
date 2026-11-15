@@ -1,0 +1,50 @@
+{
+	"appearanceTools": true,
+	"layout": { "contentSize": "720px", "wideSize": "1200px" },
+	"color": {
+		"custom": true,
+		"defaultPalette": false,
+		"text": true,
+		"background": true,
+		"link": true,
+		"palette": {
+			"theme": [
+				{ "slug": "base", "name": "Base", "color": "#ffffff" },
+				{ "slug": "contrast", "name": "Contrast", "color": "#111111" },
+				{ "slug": "accent-1", "name": "Accent 1", "color": "#1e73be" },
+				{ "slug": "accent-2", "name": "Accent 2", "color": "#d94f30" },
+				{ "slug": "accent-3", "name": "Accent 3", "color": "#f4efe6" }
+			]
+		}
+	},
+	"typography": {
+		"customFontSize": true,
+		"defaultFontSizes": false,
+		"lineHeight": true,
+		"fontSizes": {
+			"theme": [
+				{ "slug": "small", "name": "Small", "size": "0.875rem" },
+				{ "slug": "medium", "name": "Medium", "size": "1.125rem" },
+				{ "slug": "large", "name": "Large", "size": "1.5rem" },
+				{ "slug": "x-large", "name": "Extra Large", "size": "2.25rem" }
+			]
+		}
+	},
+	"spacing": {
+		"defaultSpacingSizes": false,
+		"margin": true,
+		"padding": true,
+		"blockGap": true,
+		"units": [ "px", "em", "rem", "%", "vw" ],
+		"spacingSizes": {
+			"theme": [
+				{ "slug": "20", "name": "Tiny", "size": "0.5rem" },
+				{ "slug": "30", "name": "Small", "size": "1rem" },
+				{ "slug": "40", "name": "Medium", "size": "1.5rem" },
+				{ "slug": "50", "name": "Large", "size": "2.5rem" },
+				{ "slug": "60", "name": "Extra Large", "size": "4rem" }
+			]
+		}
+	},
+	"border": { "color": true, "radius": true, "style": true, "width": true }
+}

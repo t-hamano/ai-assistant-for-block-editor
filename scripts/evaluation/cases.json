@@ -1,0 +1,265 @@
+[
+	{
+		"id": "rewrite-paragraph",
+		"request": "Rewrite this paragraph to be shorter and friendlier.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/paragraph" ]
+		}
+	},
+	{
+		"id": "paragraph-to-list",
+		"request": "Turn this into a bulleted list.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Packing list</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>For the trip, bring a rain jacket, hiking boots, a water bottle, and a small first aid kit.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/list", "core/list-item" ]
+		}
+	},
+	{
+		"id": "heading-level",
+		"request": "Make this a level 3 heading.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 2 ]
+		},
+		"expect": {
+			"text": [ "\"level\":3", "<h3" ]
+		}
+	},
+	{
+		"id": "paragraph-presets",
+		"request": "Make this paragraph large, in the Accent 1 color.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"text": [ "\"textColor\":\"accent-1\"", "\"fontSize\":\"large\"" ]
+		}
+	},
+	{
+		"id": "text-to-table",
+		"request": "Show this as a table with a header row.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Opening hours</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Monday to Friday: 9:00 to 18:00. Saturday: 10:00 to 16:00. Sunday: closed.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/table" ],
+			"text": [ "<thead" ]
+		}
+	},
+	{
+		"id": "two-columns",
+		"request": "Put these two paragraphs side by side in two columns.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Plans</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The Basic plan includes one site and email support.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>The Pro plan includes ten sites and phone support.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ],
+			"to": [ 2 ]
+		},
+		"expect": {
+			"blocks": [ "core/columns", "core/column" ],
+			"text": [ "Basic plan", "Pro plan" ]
+		}
+	},
+	{
+		"id": "group-background",
+		"request": "Wrap these in a group with the Accent 3 background and medium padding.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 2 ],
+			"to": [ 4 ]
+		},
+		"expect": {
+			"blocks": [ "core/group" ],
+			"text": [ "\"backgroundColor\":\"accent-3\"", "spacing|40" ]
+		}
+	},
+	{
+		"id": "add-button",
+		"request": "Add a button after this paragraph that says \"Contact us\" and links to /contact.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 8 ]
+		},
+		"expect": {
+			"blocks": [ "core/buttons", "core/button" ],
+			"text": [ "/contact", "Contact us" ]
+		}
+	},
+	{
+		"id": "paragraph-to-quote",
+		"request": "Make this a quote, cited to Maria Lopez.",
+		"document": "<!-- wp:paragraph -->\n<p>Our team said:</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>The four-day week gave me my Fridays back, and I do better work on the other days.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/quote" ],
+			"text": [ "Maria Lopez" ]
+		}
+	},
+	{
+		"id": "split-list-item",
+		"request": "Split this item into two items.",
+		"document": "<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Milk</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Bread and butter</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Eggs</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->",
+		"select": {
+			"block": [ 0, 1 ]
+		},
+		"expect": {
+			"text": [ ">Bread</li>", "utter</li>" ],
+			"absent": [ "Bread and butter" ]
+		}
+	},
+	{
+		"id": "image-caption",
+		"request": "Add the caption \"Sunset over the bay\" and describe the image in its alt text.",
+		"document": "<!-- wp:paragraph -->\n<p>We ended the day at the harbor.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:image -->\n<figure class=\"wp-block-image\"><img src=\"https://example.com/sunset.jpg\" alt=\"\"/></figure>\n<!-- /wp:image -->",
+		"select": {
+			"block": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/image" ],
+			"text": [ "Sunset over the bay", "wp-element-caption" ]
+		}
+	},
+	{
+		"id": "faq-details",
+		"request": "Turn this question and answer into a collapsible block.",
+		"document": "<!-- wp:heading {\"level\":3} -->\n<h3 class=\"wp-block-heading\">Can I cancel at any time?</h3>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Yes. You can cancel from your account page, and you will not be charged again.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 0 ],
+			"to": [ 1 ]
+		},
+		"expect": {
+			"blocks": [ "core/details" ],
+			"text": [ "cancel at any time" ]
+		}
+	},
+	{
+		"id": "japanese-add-list",
+		"request": "この見出しの下に、要点を3つ箇条書きで追加してください。",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">リモートワークのメリット</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>多くの会社がリモートワークを続けています。</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 0 ]
+		},
+		"expect": {
+			"blocks": [ "core/list", "core/list-item" ]
+		}
+	},
+	{
+		"id": "text-bold",
+		"request": "Make this bold.",
+		"document": "<!-- wp:paragraph -->\n<p>Back up your site before you update. This is the most important step.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 0 ],
+			"text": "most important step"
+		},
+		"expect": {
+			"text": [ "<strong>most important step</strong>" ]
+		}
+	},
+	{
+		"id": "text-link",
+		"request": "Link this to https://developer.wordpress.org/.",
+		"document": "<!-- wp:paragraph -->\n<p>For details, see the WordPress developer documentation.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 0 ],
+			"text": "WordPress developer documentation"
+		},
+		"expect": {
+			"text": [ "href=\"https://developer.wordpress.org/\"" ]
+		}
+	},
+	{
+		"id": "text-translate",
+		"request": "Translate this sentence into Japanese.",
+		"document": "<!-- wp:paragraph -->\n<p>Welcome to our shop. Everything ships free this week.</p>\n<!-- /wp:paragraph -->",
+		"select": {
+			"block": [ 0 ],
+			"text": "Everything ships free this week."
+		},
+		"expect": {
+			"text": [ "Welcome to our shop." ],
+			"absent": [ "Everything ships free" ]
+		}
+	},
+	{
+		"id": "text-in-list-item",
+		"request": "Make this italic.",
+		"document": "<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Read the <strong>release notes</strong> first</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Then update the plugins</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->",
+		"select": {
+			"block": [ 0, 0 ],
+			"text": "release notes"
+		},
+		"expect": {
+			"text": [ "<em>", "release notes" ]
+		}
+	},
+	{
+		"id": "fix-typos",
+		"request": "Fix the typos in the whole post.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">How to recieve updates</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Sign up for teh newsletter to get updates every week.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>You can unsubscribe at any time, and we never share you email.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"absent": [ "recieve", "teh ", "share you email" ]
+		}
+	},
+	{
+		"id": "rename-everywhere",
+		"request": "Change the company name from Acme to Globex everywhere.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"text": [ "Globex" ],
+			"absent": [ "Acme" ]
+		}
+	},
+	{
+		"id": "delete-section",
+		"request": "Remove the section about pricing.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"text": [ "What comes next" ],
+			"absent": [ "Pricing", "cost Acme nothing" ]
+		}
+	},
+	{
+		"id": "add-separator",
+		"request": "Add a separator before the \"What comes next\" section.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"blocks": [ "core/separator" ]
+		}
+	},
+	{
+		"id": "append-summary",
+		"request": "Add a \"Summary\" heading and a two-sentence summary at the end.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"text": [ "Summary" ]
+		}
+	},
+	{
+		"id": "media-text",
+		"request": "After the first paragraph, add a media and text block with the image https://example.com/team.jpg on the left and a sentence about our team on the right.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"blocks": [ "core/media-text" ],
+			"text": [ "https://example.com/team.jpg" ]
+		}
+	},
+	{
+		"id": "cover-heading",
+		"request": "Turn the first heading into a cover with the background image https://example.com/hero.jpg.",
+		"document": "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Why we moved to a four-day week</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Last spring, Acme tried a four-day week for three months. Nobody was sure it would work.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What changed</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Meetings were cut in half, and every team agreed on two focus days without calls.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Fewer meetings</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Shared focus days</li>\n<!-- /wp:list-item -->\n\n<!-- wp:list-item -->\n<li>Clear weekly goals</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pricing</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>The trial cost Acme nothing extra, because the same work fit into four days.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">What comes next</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Acme will keep the four-day week and review it again next year.</p>\n<!-- /wp:paragraph -->",
+		"expect": {
+			"blocks": [ "core/cover" ],
+			"text": [ "https://example.com/hero.jpg", "four-day week" ]
+		}
+	}
+]

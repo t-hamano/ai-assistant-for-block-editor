@@ -79,6 +79,7 @@
 		"lint:block-reference": "npm run generate:block-reference -- --check",
 		"format": "wp-scripts format",
 		"generate:block-reference": "node scripts/generate-block-reference.cjs",
+		"evaluate:skill": "node scripts/evaluate-skill.mjs",
 		"test:unit": "wp-scripts test-unit-js",
 		"test:php": "wp-env --config .wp-env.test.json run cli --env-cwd=wp-content/plugins/ai-content-editing-assistant vendor/bin/phpunit",
 		"prepare": "husky"
