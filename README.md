@@ -11,6 +11,7 @@ Select blocks or text in the block editor and edit them by chatting with AI. The
 
 * WordPress 7.1 or later
 * PHP 8.3 or later
+* An AI provider plugin, such as AI Provider for Anthropic, with an API key on the Connectors screen. The AI assistant does not appear until a key is set
 
 ## How to build
 

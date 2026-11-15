@@ -9,6 +9,19 @@
 		{
 			"step": "installPlugin",
 			"pluginData": {
+				"resource": "wordpress.org/plugins",
+				"slug": "ai-provider-for-anthropic"
+			}
+		},
+		{
+			"step": "setSiteOptions",
+			"options": {
+				"connectors_ai_anthropic_api_key": "preview-placeholder-key"
+			}
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
 				"resource": "url",
 				"url": "{{ARTIFACT_URL:ai-assistant-for-block-editor}}"
 			}
