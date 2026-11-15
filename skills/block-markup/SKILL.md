@@ -77,13 +77,26 @@ The editor rebuilds each block from its attributes and compares the result with 
 - **Block styles**: the block styles of each block, for `className` as `is-style-<name>`.
 - **theme.json settings**: the `settings` of `theme.json`, merged from WordPress, the theme, and the user.
 
-Read the settings like this:
+Read the settings the way `theme.json` defines them:
 
-- Presets are grouped by origin: `default` from WordPress, `theme`, and `custom` from the user. The `default` ones are not offered when the theme turns them off with `color.defaultPalette`, `color.defaultGradients`, `typography.defaultFontSizes`, `spacing.defaultSpacingSizes`, or `shadow.defaultPresets` set to `false`.
-- Each preset type is used through its slug: `color.palette` in `textColor`, `backgroundColor`, and `borderColor`, `color.gradients` in `gradient`, `typography.fontSizes` in `fontSize`, `typography.fontFamilies` in `fontFamily`, and `spacing.spacingSizes` and `shadow.presets` as `var:preset|spacing|<slug>` and `var:preset|shadow|<slug>` in `style`.
-- Fixed values are allowed unless the setting turns them off: `color.custom`, `color.customGradient`, `typography.customFontSize`, and `spacing.customSpacingSize` set to `false`.
-- `settings.blocks.<block name>` changes the settings for that block only, and replaces the global ones for it.
-- `layout.contentSize` and `layout.wideSize` are the widths of the content and of wide blocks.
+- Presets are grouped by origin: `default` from WordPress, `theme`, and `custom` from the user. The `default` ones are offered only while `color.defaultPalette`, `color.defaultGradients`, `typography.defaultFontSizes`, `spacing.defaultSpacingSizes`, `shadow.defaultPresets`, or `dimensions.defaultAspectRatios` is not `false`.
+- Use each preset by its slug:
+
+| Setting | In the block |
+| --- | --- |
+| `color.palette` | `textColor`, `backgroundColor`, `borderColor`, or `var:preset\|color\|<slug>` in `style` |
+| `color.gradients` | `gradient` |
+| `typography.fontSizes` | `fontSize` |
+| `typography.fontFamilies` | `fontFamily` |
+| `spacing.spacingSizes` | `var:preset\|spacing\|<slug>` in `style.spacing` |
+| `shadow.presets` | `var:preset\|shadow\|<slug>` in `style.shadow` |
+
+- A setting set to `false` turns off what it allows. `color.custom`, `color.customGradient`, `typography.customFontSize`, and `spacing.customSpacingSize` allow fixed values instead of presets. Others allow a style at all, such as `color.text`, `color.background`, `color.link`, `typography.lineHeight`, `typography.fontWeight`, `typography.letterSpacing`, `spacing.margin`, `spacing.padding`, `border.color`, `border.radius`, `border.style`, `border.width`, and `dimensions.minHeight`.
+- `appearanceTools: true` turns these on together, unless a setting turns one off: `background.backgroundImage`, `background.backgroundSize`, and `background.gradient`; `border.color`, `border.radius`, `border.style`, and `border.width`; `color.link`, `color.heading`, `color.button`, and `color.caption`; `dimensions.aspectRatio`, `dimensions.height`, `dimensions.minHeight`, `dimensions.minWidth`, and `dimensions.width`; `position.sticky`; `spacing.blockGap`, `spacing.margin`, and `spacing.padding`; `typography.lineHeight` and `typography.textColumns`.
+- `spacing.units` lists the units allowed for fixed spacing values.
+- `blocks.<block name>` has settings for that block only. They replace the global ones for it.
+- `layout.contentSize` is the width of the content, and `layout.wideSize` the width of `alignwide` blocks.
+- A style is available only when both the block's `supports` and these settings allow it.
 
 ## Nesting
 
