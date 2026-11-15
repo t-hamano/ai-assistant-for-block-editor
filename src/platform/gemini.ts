@@ -12,7 +12,7 @@ import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
 import { readSse } from './sse';
 
 /**
- * The model that answers. It becomes selectable with the model list.
+ * The model that answers when no other model is chosen.
  */
 export const GEMINI_MODEL = 'gemini-3.1-pro-preview';
 
@@ -104,11 +104,12 @@ export function toGeminiContents( messages: AiMessage[] ): GeminiContent[] {
  *
  * @param system   The system prompt.
  * @param contents The contents.
+ * @param model    The model that answers.
  * @return The request body.
  */
-export function buildGeminiBody( system: string, contents: GeminiContent[] ) {
+export function buildGeminiBody( system: string, contents: GeminiContent[], model = GEMINI_MODEL ) {
 	return {
-		model: GEMINI_MODEL,
+		model,
 		systemInstruction: { parts: [ { text: system } ] },
 		contents,
 		tools: [ { functionDeclarations: [ GEMINI_EDIT_TOOL ] } ],
@@ -323,9 +324,10 @@ function runTools( answer: GeminiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
  * which adds the site's API key on the server.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param model     The model that answers.
  * @return The connection.
  */
-export function createGeminiPlatform( getPostId: () => number ): AiPlatform {
+export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MODEL ): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
@@ -342,7 +344,7 @@ export function createGeminiPlatform( getPostId: () => number ): AiPlatform {
 							provider: 'google',
 							post_id: getPostId(),
 							stream: true,
-							body: buildGeminiBody( system, contents ),
+							body: buildGeminiBody( system, contents, model ),
 						},
 						parse: false,
 						signal,

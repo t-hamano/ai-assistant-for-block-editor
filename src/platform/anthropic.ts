@@ -11,7 +11,7 @@ import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsag
 import { readSse } from './sse';
 
 /**
- * The model that answers. It becomes selectable with the model list.
+ * The model that answers when no other model is chosen.
  */
 export const ANTHROPIC_MODEL = 'claude-opus-5-5';
 
@@ -159,11 +159,16 @@ const CACHE_CONTROL = { type: 'ephemeral' } as const;
  *
  * @param system   The system prompt.
  * @param messages The messages.
+ * @param model    The model that answers.
  * @return The request body.
  */
-export function buildAnthropicBody( system: string, messages: AnthropicMessage[] ) {
+export function buildAnthropicBody(
+	system: string,
+	messages: AnthropicMessage[],
+	model = ANTHROPIC_MODEL
+) {
 	return {
-		model: ANTHROPIC_MODEL,
+		model,
 		max_tokens: MAX_TOKENS,
 		cache_control: CACHE_CONTROL,
 		system: [ { type: 'text', text: system, cache_control: CACHE_CONTROL } ],
@@ -399,9 +404,13 @@ function runTools( answer: AnthropicAnswer, onEvent: AiChatRequest[ 'onEvent' ] 
  * adds the site's API key on the server.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param model     The model that answers.
  * @return The connection.
  */
-export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
+export function createAnthropicPlatform(
+	getPostId: () => number,
+	model = ANTHROPIC_MODEL
+): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
@@ -418,7 +427,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 							provider: 'anthropic',
 							post_id: getPostId(),
 							stream: true,
-							body: buildAnthropicBody( system, conversation ),
+							body: buildAnthropicBody( system, conversation, model ),
 						},
 						parse: false,
 						signal,
