@@ -37,6 +37,9 @@ Only users with administrator privileges can use this plugin, because requests a
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. Install an AI provider plugin and set its API key on the Connectors screen.
 
+== Screenshots ==
+1. Select text or blocks, ask the AI, and see the changes in the editor
+
 == External services ==
 This plugin sends content to an AI provider to edit it. It connects only to the provider whose API key is set on the Connectors screen, and only when an administrator uses the AI assistant in the block editor.
 
