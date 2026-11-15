@@ -27,6 +27,14 @@ describe( 'buildSystemPrompt', () => {
 		expect( prompt ).toContain( 'When nothing is selected' );
 	} );
 
+	it( 'explains the reference IDs and the edits by them', () => {
+		const prompt = buildSystemPrompt( '# Title\n' );
+		expect( prompt ).toContain( '<!-- ref:b12 -->' );
+		for ( const action of [ 'replace_block', 'insert_before', 'delete_block', 'append' ] ) {
+			expect( prompt ).toContain( `"${ action }"` );
+		}
+	} );
+
 	it( 'includes the block markup rules without their frontmatter', () => {
 		const prompt = buildSystemPrompt( '# Title\n' );
 		expect( prompt ).toContain( '<skill name="block-markup">' );

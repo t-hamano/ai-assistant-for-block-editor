@@ -8,7 +8,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
-import { EDIT_TOOL, readErrorMessage, toEdit } from './anthropic';
+import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropic';
 import { readSse } from './sse';
 
 /**
@@ -228,7 +228,7 @@ function runTools( answer: OpenAiAnswer, onEvent: AiChatRequest[ 'onEvent' ] ) {
 			failures++;
 			text = result.reason;
 		} else if ( result.status === 'applied' ) {
-			text = APPLIED;
+			text = describeApplied( result.refs );
 		} else {
 			text = 'The selected blocks no longer exist, so the edit was not applied.';
 		}
