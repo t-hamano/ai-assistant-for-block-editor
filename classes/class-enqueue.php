@@ -18,12 +18,24 @@ class Enqueue {
 	}
 
 	/**
+	 * Whether the current user can use the AI assistant
+	 *
+	 * Only administrators can use it, because requests are sent with the site's
+	 * API keys. On a multisite network the keys can be shared by every site, so
+	 * only super admins can use it there.
+	 *
+	 * @return bool
+	 */
+	public static function can_use() {
+		return current_user_can( is_multisite() ? 'manage_network_options' : 'manage_options' );
+	}
+
+	/**
 	 * Enqueue block editor scripts
 	 */
 	public function enqueue_editor_scripts() {
-		// Only administrators can use the assistant, because requests are sent with
-		// the site's API keys. It needs an API key, so it is not shown without one.
-		if ( ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
+		// The assistant needs an API key, so it is not shown without one.
+		if ( ! self::can_use() || ! Api_Key::has_any() ) {
 			return;
 		}
 
@@ -66,7 +78,7 @@ class Enqueue {
 	 * iframe. That hook also runs on the front end, where they are not needed.
 	 */
 	public function enqueue_canvas_styles() {
-		if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! Api_Key::has_any() ) {
+		if ( ! is_admin() || ! self::can_use() || ! Api_Key::has_any() ) {
 			return;
 		}
 

@@ -169,7 +169,7 @@ class Relay {
 	 * @return bool
 	 */
 	public function can_chat( WP_REST_Request $request ) {
-		return current_user_can( 'manage_options' ) && current_user_can( 'edit_post', $request->get_param( 'post_id' ) );
+		return Enqueue::can_use() && current_user_can( 'edit_post', $request->get_param( 'post_id' ) );
 	}
 
 	/**
