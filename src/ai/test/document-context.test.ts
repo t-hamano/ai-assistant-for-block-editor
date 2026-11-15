@@ -16,6 +16,8 @@ const group = ( ref: string, inner: string ) =>
 
 const doc = ( ...blocks: string[] ) => blocks.join( '\n\n' );
 
+const seen = ( known: string, shown = known ) => ( { known, shown } );
+
 // A long paragraph, so that sending the changes is shorter than the whole document.
 const long = 'Lorem ipsum dolor sit amet. '.repeat( 10 );
 
@@ -62,7 +64,7 @@ describe( 'formatChanges', () => {
 			paragraph( 'b4', 'New.' ),
 			paragraph( 'b5', 'Newer.' )
 		);
-		expect( formatChanges( document, previous ) ).toBe(
+		expect( formatChanges( document, seen( previous ) ) ).toBe(
 			[
 				'<changes>',
 				'<removed refs="b3" />',
@@ -89,7 +91,7 @@ describe( 'formatChanges', () => {
 			paragraph( 'b3', 'Three.' ),
 			paragraph( 'b1', 'One.' )
 		);
-		expect( formatChanges( document, previous ) ).toBe(
+		expect( formatChanges( document, seen( previous ) ) ).toBe(
 			[
 				'<changes>',
 				'<blocks after="b3">',
@@ -103,11 +105,44 @@ describe( 'formatChanges', () => {
 	it( 'sends the whole top-level block when a nested block changed', () => {
 		const previous = group( 'b1', paragraph( 'b2', 'Inside.' ) );
 		const document = group( 'b1', paragraph( 'b2', 'Changed.' ) );
-		expect( formatChanges( document, previous ) ).toContain( document );
+		expect( formatChanges( document, seen( previous ) ) ).toContain( document );
+	} );
+
+	it( 'sends the blocks the model added, whose reference IDs it has not seen', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Added.' ) );
+		expect( formatChanges( known, seen( known, shown ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b1">',
+				paragraph( 'b2', 'Added.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'sends a block the user restored after the model removed it', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Two.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ) );
+		expect( formatChanges( shown, seen( known, shown ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b1">',
+				paragraph( 'b2', 'Two.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'returns an empty string when the model knows the document', () => {
+		const document = doc( paragraph( 'b1', 'One.' ) );
+		expect( formatChanges( document, seen( document ) ) ).toBe( '' );
 	} );
 
 	it( 'returns null when the changes cannot be told by reference ID', () => {
-		expect( formatChanges( '<p>Classic.</p>', paragraph( 'b1', 'One.' ) ) ).toBeNull();
+		expect( formatChanges( '<p>Classic.</p>', seen( paragraph( 'b1', 'One.' ) ) ) ).toBeNull();
 	} );
 } );
 
@@ -121,7 +156,7 @@ describe( 'buildMessageContext', () => {
 	} );
 
 	it( 'sends only the selection when nothing changed', () => {
-		expect( buildMessageContext( context, context.document ) ).toBe(
+		expect( buildMessageContext( context, seen( context.document ) ) ).toBe(
 			'<selection>\nTwo.\n</selection>'
 		);
 	} );
@@ -137,10 +172,10 @@ describe( 'buildMessageContext', () => {
 			paragraph( 'b2', long ),
 			paragraph( 'b4', 'New.' )
 		);
-		const result = buildMessageContext( { document, selection: '' }, previous );
+		const result = buildMessageContext( { document, selection: '' }, seen( previous ) );
 		expect( result ).toBe(
 			[
-				'The document changed after the last message, by the user or by your edits. These are the changes.',
+				'The document changed after your last answer, or has blocks you added. These are the changes.',
 				[
 					'<changes>',
 					'<removed refs="b3" />',
@@ -158,21 +193,21 @@ describe( 'buildMessageContext', () => {
 	it( 'sends the whole document again when that is shorter', () => {
 		const previous = doc( paragraph( 'b1', 'One.' ) );
 		const document = doc( paragraph( 'b2', 'Two.' ) );
-		const result = buildMessageContext( { document, selection: '' }, previous );
+		const result = buildMessageContext( { document, selection: '' }, seen( previous ) );
 		expect( result ).toContain( 'This is the whole document now.' );
 		expect( result ).toContain( `<document>\n${ document }\n</document>` );
 	} );
 
 	it( 'sends the whole document again when the changes cannot be told by reference ID', () => {
-		const result = buildMessageContext( context, 'Old.\n' );
+		const result = buildMessageContext( context, seen( 'Old.\n' ) );
 		expect( result ).toContain( 'This is the whole document now.' );
 		expect( result ).toContain( '<document>\nOne.\n\nTwo.\n</document>' );
 	} );
 
 	it( 'sends the empty document when the user removed everything', () => {
 		const empty = { document: '', selection: '' };
-		expect( buildMessageContext( empty, 'One.\n' ) ).toBe(
-			'The document changed after the last message, by the user or by your edits. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
+		expect( buildMessageContext( empty, seen( 'One.\n' ) ) ).toBe(
+			'The document changed after your last answer, or has blocks you added. This is the whole document now.\n\n<document>\n</document>\n\n<selection></selection>'
 		);
 	} );
 } );

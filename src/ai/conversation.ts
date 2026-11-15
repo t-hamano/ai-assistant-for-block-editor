@@ -21,9 +21,8 @@ export type UserChatMessage = {
 	context?: string;
 	/**
 	 * The document when the message was sent. With the context, the model
-	 * knows the whole document as it was then, so the next message tells
-	 * the model only what changed since, also by the model's own edits.
-	 * Omitted when the document was not available.
+	 * has seen the whole document as it was then, with the reference IDs of
+	 * its blocks. Omitted when the document was not available.
 	 */
 	document?: string;
 };
@@ -55,6 +54,12 @@ export type AssistantChatMessage = {
 	 */
 	usage?: AiUsage;
 	error?: string;
+	/**
+	 * The document when the answer ended, with the answer's edits in it.
+	 * The next message tells the model what changed since. Omitted when the
+	 * document was not available then.
+	 */
+	documentAfter?: string;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -77,6 +82,7 @@ export type ConversationAction =
 			type: 'FINISH';
 			status: 'done' | 'stopped' | 'error';
 			error?: string;
+			documentAfter?: string;
 	  }
 	| { type: 'RESET' };
 
@@ -172,6 +178,7 @@ export function conversationReducer(
 				status: action.status,
 				activity: undefined,
 				error: action.error,
+				...( action.documentAfter === undefined ? {} : { documentAfter: action.documentAfter } ),
 			} ) );
 		case 'RESET':
 			return createConversation();
@@ -193,14 +200,31 @@ export function toUserText( text: string, context?: string ): string {
 }
 
 /**
- * Returns the document as the model last saw it: when the last message
- * still sent to the model was sent. `null` when the model has not seen the
- * document.
+ * What the model knows about the document after the last exchange still
+ * sent to the model.
+ */
+export type SeenDocument = {
+	/**
+	 * The document when the answer ended, with the answer's edits in it.
+	 */
+	known: string;
+	/**
+	 * The document when the message was sent. The model has seen the
+	 * reference IDs in it, but not those of the blocks its edits added in
+	 * earlier answers.
+	 */
+	shown: string;
+};
+
+/**
+ * Returns the document as the model last saw it: when the answer to the
+ * last message still sent to the model ended. `null` when the model has
+ * not seen the document, or the answer ended without it.
  *
  * @param messages The conversation's messages.
  * @return The document, or `null`.
  */
-export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
+export function getLastSeenDocument( messages: ChatMessage[] ): SeenDocument | null {
 	for ( let index = messages.length - 1; index >= 0; index-- ) {
 		const message = messages[ index ];
 		if ( message.role !== 'user' ) {
@@ -211,7 +235,11 @@ export function getLastSeenDocument( messages: ChatMessage[] ): string | null {
 		if ( answer?.role === 'assistant' && answer.status === 'error' ) {
 			continue;
 		}
-		return message.document ?? null;
+		const known = answer?.role === 'assistant' ? answer.documentAfter : undefined;
+		if ( known === undefined || message.document === undefined ) {
+			return null;
+		}
+		return { known, shown: message.document };
 	}
 	return null;
 }

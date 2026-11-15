@@ -1,6 +1,7 @@
 /**
  * Internal dependencies
  */
+import type { SeenDocument } from './conversation';
 import { SELECTION_END, SELECTION_START, type EditContext } from './edit-target';
 
 /**
@@ -81,9 +82,24 @@ export function splitTopLevelBlocks( document: string ): TopLevelBlock[] | null 
 }
 
 /**
- * Finds which blocks of the document now are as the model knows them, in
- * the same order: the longest run they have in common with the blocks the
- * model was told about.
+ * Matches a reference ID comment, and takes the ID.
+ */
+const REF = /<!--\s*ref:([a-z0-9]+)\s*-->/gi;
+
+/**
+ * Lists the reference IDs in the markup, also those of nested blocks.
+ *
+ * @param markup The markup.
+ * @return The reference IDs.
+ */
+function collectRefs( markup: string ): Set< string > {
+	return new Set( [ ...markup.matchAll( REF ) ].map( ( match ) => match[ 1 ].toLowerCase() ) );
+}
+
+/**
+ * Finds the blocks of the document now that the model knows as they are,
+ * in the same order: the longest run they have in common with the blocks
+ * the model knows.
  *
  * @param previous The blocks the model knows.
  * @param current  The blocks now.
@@ -120,22 +136,30 @@ function findUnchanged( previous: TopLevelBlock[], current: TopLevelBlock[] ): b
 }
 
 /**
- * Describes how the document changed since the model last saw it, by
+ * Describes how the document differs from what the model knows, by
  * reference ID: the blocks that were removed, and the blocks that are new
- * or changed, or moved, with the block they come after.
+ * or changed, or moved, with the block they come after. Blocks the model's
+ * own edits added are sent too, because the model has not seen their
+ * reference IDs.
  *
  * @param document The document now.
- * @param previous The document the model knows.
- * @return The `<changes>` block, or `null` when the changes cannot be told
- *         by reference ID.
+ * @param seen     What the model knows about the document.
+ * @return The `<changes>` block, an empty string when nothing changed, or
+ *         `null` when the changes cannot be told by reference ID.
  */
-export function formatChanges( document: string, previous: string ): string | null {
-	const before = splitTopLevelBlocks( previous );
+export function formatChanges( document: string, seen: SeenDocument ): string | null {
+	const before = splitTopLevelBlocks( seen.known );
 	const after = splitTopLevelBlocks( document );
 	if ( ! before || ! after || before.length * after.length > MAX_COMPARED * MAX_COMPARED ) {
 		return null;
 	}
-	const unchanged = findUnchanged( before, after );
+	const shownRefs = collectRefs( seen.shown );
+	const matched = findUnchanged( before, after );
+	const unchanged = after.map(
+		( block, index ) =>
+			matched[ index ] &&
+			[ ...collectRefs( block.markup ) ].every( ( ref ) => shownRefs.has( ref ) )
+	);
 	const refs = new Set( after.map( ( block ) => block.ref ) );
 	const removed = before.map( ( block ) => block.ref ).filter( ( ref ) => ! refs.has( ref ) );
 
@@ -155,6 +179,9 @@ export function formatChanges( document: string, previous: string ): string | nu
 		const position = index === 0 ? 'at="start"' : `after="${ after[ index - 1 ].ref }"`;
 		parts.push( `<blocks ${ position }>\n${ block.markup }` );
 	} );
+	if ( ! parts.length ) {
+		return '';
+	}
 	return [
 		'<changes>',
 		...parts.map( ( part ) => ( part.startsWith( '<blocks' ) ? `${ part }\n</blocks>` : part ) ),
@@ -191,35 +218,40 @@ function formatSelection( context: EditContext ): string {
 /**
  * Builds what goes before the user's message to tell the model about the
  * document. The first message has the whole document. A later one has only
- * the blocks that changed since the last message, by the user or by the
- * model's edits, so the model also learns the reference IDs of the blocks
- * it added. The whole document is sent again when that is shorter, or when
- * the changes cannot be told by reference ID. The selection comes last.
+ * the blocks that differ from what the model knows, by the user's changes
+ * after the last answer, and the blocks the model's edits added, so the
+ * model learns their reference IDs. The whole document is sent again when
+ * that is shorter, or when the changes cannot be told by reference ID. The
+ * selection comes last.
  *
- * @param context  The selection and the document now.
- * @param previous The document as it was when the last message was sent,
- *                 or `null` when the model has not seen it.
+ * @param context The selection and the document now.
+ * @param seen    What the model knows about the document, or `null` when
+ *                it has not seen it.
  * @return The context for the message.
  */
-export function buildMessageContext( context: EditContext, previous: string | null ): string {
+export function buildMessageContext( context: EditContext, seen: SeenDocument | null ): string {
 	const parts: string[] = [];
 	const { document } = context;
-	if ( previous === null ) {
-		parts.push( formatDocument( document ) );
-	} else if ( previous !== document ) {
-		const changes = formatChanges( document, previous );
-		const whole = formatDocument( document );
-		if ( changes !== null && changes.length < whole.length ) {
+	const changes = seen === null ? null : formatChanges( document, seen );
+	const whole = formatDocument( document );
+	if ( seen === null ) {
+		parts.push( whole );
+	} else if ( changes !== null && changes.length < whole.length ) {
+		if ( changes ) {
 			parts.push(
-				'The document changed after the last message, by the user or by your edits. These are the changes.',
+				'The document changed after your last answer, or has blocks you added. These are the changes.',
 				changes
 			);
-		} else {
-			parts.push(
-				'The document changed after the last message, by the user or by your edits. This is the whole document now.',
-				whole
-			);
 		}
+	} else if (
+		changes !== null ||
+		seen.known !== document ||
+		[ ...collectRefs( document ) ].some( ( ref ) => ! collectRefs( seen.shown ).has( ref ) )
+	) {
+		parts.push(
+			'The document changed after your last answer, or has blocks you added. This is the whole document now.',
+			whole
+		);
 	}
 	parts.push( formatSelection( context ) );
 	return parts.join( '\n\n' );
