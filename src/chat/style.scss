@@ -41,6 +41,8 @@
 	color: var(--wpds-color-foreground-content-neutral-weak);
 }
 
+// Basic styles for the elements that the AI's Markdown answers turn into,
+// such as paragraphs, lists, code, and tables.
 .aabe-chat__markdown {
 
 	> :first-child {
