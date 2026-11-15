@@ -1,0 +1,130 @@
+/**
+ * WordPress dependencies
+ */
+import { useSelect } from '@wordpress/data';
+import { useEffect, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
+import { store as preferencesStore } from '@wordpress/preferences';
+import { Button, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
+
+/**
+ * Internal dependencies
+ */
+import { listProviderOptions, type ProviderOption } from '../platform/select';
+import { readModelChoice, setModelChoice } from './model-choice';
+import './style.scss';
+
+type Item = { label: string; value: string | null };
+
+type Props = {
+	/**
+	 * Called when the user is done and goes back to the chat.
+	 */
+	onClose: () => void;
+};
+
+/**
+ * Lets the user choose the provider and model that answer, from the
+ * providers that have an API key. The choice is saved for the user.
+ *
+ * @param props         The props.
+ * @param props.onClose Called when the user goes back to the chat.
+ */
+export function ModelSettings( { onClose }: Props ) {
+	const choice = useSelect( ( select ) => readModelChoice( select( preferencesStore ).get ), [] );
+	const [ providers, setProviders ] = useState< ProviderOption[] | null >( null );
+	const [ hasError, setHasError ] = useState( false );
+
+	useEffect( () => {
+		let isCurrent = true;
+		listProviderOptions().then(
+			( options ) => isCurrent && setProviders( options ),
+			() => isCurrent && setHasError( true )
+		);
+		return () => {
+			isCurrent = false;
+		};
+	}, [] );
+
+	const automatic: Item = {
+		label: __( 'Automatic', 'ai-content-editing-assistant' ),
+		value: null,
+	};
+	const provider = providers?.find( ( option ) => option.id === choice?.provider );
+	const providerItems: Item[] = [
+		automatic,
+		...( providers ?? [] ).map( ( option ) => ( { label: option.name, value: option.id } ) ),
+	];
+	// A model the user chose stays listed after the provider retired it, so
+	// the choice is shown as it was saved.
+	const modelIds =
+		provider && choice && ! provider.models.includes( choice.model )
+			? [ choice.model, ...provider.models ]
+			: ( provider?.models ?? [] );
+	const modelItems: Item[] = modelIds.map( ( id ) => ( { label: id, value: id } ) );
+
+	let content;
+	if ( hasError ) {
+		content = (
+			<Notice.Root intent="error">
+				<Notice.Description>
+					{ __( 'The providers could not be loaded.', 'ai-content-editing-assistant' ) }
+				</Notice.Description>
+			</Notice.Root>
+		);
+	} else if ( ! providers ) {
+		content = <Spinner aria-label={ __( 'Loading…', 'ai-content-editing-assistant' ) } />;
+	} else if ( providers.length === 0 ) {
+		content = (
+			<Text variant="body-sm" className="ai-content-editing-assistant-settings__note">
+				{ __(
+					'The model is chosen by the AI Client, because none of Anthropic, OpenAI, and Google is connected in Connectors.',
+					'ai-content-editing-assistant'
+				) }
+			</Text>
+		);
+	} else {
+		content = (
+			<>
+				<SelectControl
+					label={ __( 'Provider', 'ai-content-editing-assistant' ) }
+					description={ __(
+						'Only providers connected in Connectors are listed. Automatic uses the first of Anthropic, OpenAI, and Google that is connected.',
+						'ai-content-editing-assistant'
+					) }
+					items={ providerItems }
+					value={
+						providerItems.find( ( item ) => item.value === ( provider?.id ?? null ) ) ?? automatic
+					}
+					onValueChange={ ( item: Item | null ) => {
+						const next = providers.find( ( option ) => option.id === item?.value );
+						setModelChoice( next ? { provider: next.id, model: next.models[ 0 ] ?? '' } : null );
+					} }
+				/>
+				{ provider && choice && (
+					<SelectControl
+						label={ __( 'Model', 'ai-content-editing-assistant' ) }
+						items={ modelItems }
+						value={ modelItems.find( ( item ) => item.value === choice.model ) ?? null }
+						onValueChange={ ( item: Item | null ) => {
+							if ( item?.value ) {
+								setModelChoice( { provider: provider.id, model: item.value } );
+							}
+						} }
+					/>
+				) }
+			</>
+		);
+	}
+
+	return (
+		<Stack className="ai-content-editing-assistant-settings" direction="column" gap="lg">
+			{ content }
+			<Stack direction="row" justify="flex-end">
+				<Button variant="outline" onClick={ onClose }>
+					{ __( 'Back to the chat', 'ai-content-editing-assistant' ) }
+				</Button>
+			</Stack>
+		</Stack>
+	);
+}

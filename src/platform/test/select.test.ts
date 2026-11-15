@@ -15,7 +15,13 @@ import { createAnthropicPlatform } from '../anthropic';
 import { createFallbackPlatform } from '../fallback';
 import { createGeminiPlatform } from '../gemini';
 import { createOpenAiPlatform } from '../openai';
-import { PROVIDERS, chooseModel, createAutoPlatform, selectPlatform } from '../select';
+import {
+	PROVIDERS,
+	chooseModel,
+	createAutoPlatform,
+	listProviderOptions,
+	selectPlatform,
+} from '../select';
 
 vi.mock( '@wordpress/api-fetch', () => ( { default: vi.fn() } ) );
 vi.mock( '../anthropic', async ( importOriginal ) => ( {
@@ -110,6 +116,39 @@ describe( 'selectPlatform', () => {
 		expect( createOpenAiPlatform ).not.toHaveBeenCalled();
 	} );
 
+	it( 'uses the provider and model the user chose', async () => {
+		mockModels( { anthropic: list( 'claude-opus-6' ), openai: list( 'gpt-7', 'gpt-6' ) } );
+
+		expect( await selectPlatform( getPostId, { provider: 'openai', model: 'gpt-6' } ) ).toEqual( {
+			name: 'openai',
+		} );
+		expect( createOpenAiPlatform ).toHaveBeenCalledWith( getPostId, 'gpt-6' );
+		expect( createAnthropicPlatform ).not.toHaveBeenCalled();
+	} );
+
+	it( 'chooses another model of the chosen provider when the model was retired', async () => {
+		mockModels( { openai: list( 'gpt-7' ) } );
+
+		await selectPlatform( getPostId, { provider: 'openai', model: 'gpt-5-old' } );
+		expect( createOpenAiPlatform ).toHaveBeenCalledWith( getPostId, 'gpt-7' );
+	} );
+
+	it( 'keeps the chosen model when the list could not be loaded', async () => {
+		mockModels( { openai: { code: 'ai_content_editing_assistant_provider_unreachable' } } );
+
+		await selectPlatform( getPostId, { provider: 'openai', model: 'gpt-6' } );
+		expect( createOpenAiPlatform ).toHaveBeenCalledWith( getPostId, 'gpt-6' );
+	} );
+
+	it( 'chooses automatically when the chosen provider has no key', async () => {
+		mockModels( { google: list( 'gemini-4-pro' ) } );
+
+		expect(
+			await selectPlatform( getPostId, { provider: 'anthropic', model: 'claude-opus-6' } )
+		).toEqual( { name: 'google' } );
+		expect( createGeminiPlatform ).toHaveBeenCalledWith( getPostId, 'gemini-4-pro' );
+	} );
+
 	it( 'falls back to the AI Client with the same order without a key', async () => {
 		mockModels( {} );
 
@@ -119,6 +158,20 @@ describe( 'selectPlatform', () => {
 		expect( models.map( ( [ provider ] ) => provider ) ).toEqual(
 			PROVIDERS.flatMap( ( provider ) => provider.recommended.map( () => provider.id ) )
 		);
+	} );
+} );
+
+describe( 'listProviderOptions', () => {
+	it( 'lists the providers with a key, and the models that can chat, recommended first', async () => {
+		mockModels( {
+			openai: list( 'gpt-image-2', 'gpt-7', openai.recommended[ 1 ], 'gpt-4.1' ),
+			google: { code: 'ai_content_editing_assistant_provider_unreachable' },
+		} );
+
+		expect( await listProviderOptions() ).toEqual( [
+			{ id: 'openai', name: 'OpenAI', models: [ openai.recommended[ 1 ], 'gpt-7' ] },
+			{ id: 'google', name: 'Google', models: google.recommended },
+		] );
 	} );
 } );
 
@@ -139,6 +192,25 @@ describe( 'createAutoPlatform', () => {
 		expect( chat ).toHaveBeenCalledWith( request );
 		expect( createGeminiPlatform ).toHaveBeenCalledTimes( 1 );
 		expect( apiFetch ).toHaveBeenCalledTimes( 3 );
+	} );
+
+	it( 'chooses again when the user chooses another model', async () => {
+		const chat = vi.fn();
+		vi.mocked( createOpenAiPlatform ).mockReturnValue( { hasApiKey: vi.fn(), chat } );
+		mockModels( { openai: list( 'gpt-7', 'gpt-6' ) } );
+
+		let choice = { provider: 'openai', model: 'gpt-7' };
+		const ai = createAutoPlatform( getPostId, () => choice );
+		const request = {} as Parameters< typeof chat >[ 0 ];
+		await ai.chat( request );
+		await ai.chat( request );
+		choice = { provider: 'openai', model: 'gpt-6' };
+		await ai.chat( request );
+
+		expect( vi.mocked( createOpenAiPlatform ).mock.calls ).toEqual( [
+			[ getPostId, 'gpt-7' ],
+			[ getPostId, 'gpt-6' ],
+		] );
 	} );
 
 	it( 'chooses again when the choice could not be made', async () => {

@@ -21,6 +21,10 @@ type Provider = {
 	 */
 	id: string;
 	/**
+	 * The provider's name, shown to the user.
+	 */
+	name: string;
+	/**
 	 * The models to use, best first.
 	 */
 	recommended: string[];
@@ -39,12 +43,14 @@ type Provider = {
 export const PROVIDERS: Provider[] = [
 	{
 		id: 'anthropic',
+		name: 'Anthropic',
 		recommended: [ ANTHROPIC_MODEL, 'claude-opus-5', 'claude-sonnet-5-5' ],
 		canChat: ( model ) => /^claude-(?:opus|sonnet)-(?:[4-9]|\d{2,})/.test( model ),
 		create: createAnthropicPlatform,
 	},
 	{
 		id: 'openai',
+		name: 'OpenAI',
 		recommended: [ OPENAI_MODEL, 'gpt-5' ],
 		// OpenAI also lists models for images, audio, and search.
 		canChat: ( model ) =>
@@ -54,6 +60,7 @@ export const PROVIDERS: Provider[] = [
 	},
 	{
 		id: 'google',
+		name: 'Google',
 		recommended: [ GEMINI_MODEL, 'gemini-2.5-pro' ],
 		canChat: ( model ) =>
 			/^gemini-(?:2\.5|[3-9]|\d{2,})/.test( model ) &&
@@ -118,15 +125,77 @@ async function loadModels( provider: string ): Promise< Model[] | null | false >
 }
 
 /**
- * Chooses how the assistant answers: from the first provider in
- * `PROVIDERS` that has an API key, with its model from `chooseModel()`.
- * Without any of them, the answer comes through the AI Client, which is
- * given the same order to choose from.
+ * A provider and model the user chose to answer with, instead of the ones
+ * `selectPlatform()` chooses.
+ */
+export type ModelChoice = { provider: string; model: string };
+
+/**
+ * A provider the user can choose, with the models it can chat with.
+ */
+export type ProviderOption = {
+	id: string;
+	name: string;
+	/**
+	 * The models, recommended ones first. When the provider could not list
+	 * its models, only the recommended ones.
+	 */
+	models: string[];
+};
+
+/**
+ * Lists the providers that have an API key, in the order they are chosen
+ * in, with the models the user can choose from.
+ *
+ * @return The providers.
+ */
+export async function listProviderOptions(): Promise< ProviderOption[] > {
+	const options = await Promise.all(
+		PROVIDERS.map( async ( provider ): Promise< ProviderOption | null > => {
+			const models = await loadModels( provider.id );
+			if ( models === false ) {
+				return null;
+			}
+			const ids = models ? models.map( ( model ) => model.id ) : provider.recommended;
+			const recommended = provider.recommended.filter( ( model ) => ids.includes( model ) );
+			const others = ids.filter(
+				( model ) => provider.canChat( model ) && ! recommended.includes( model )
+			);
+			return { id: provider.id, name: provider.name, models: [ ...recommended, ...others ] };
+		} )
+	);
+	return options.filter( ( option ) => option !== null );
+}
+
+/**
+ * Chooses how the assistant answers. The provider and model the user chose
+ * come first, while the provider has an API key. When the model is no longer
+ * in the provider's list, `chooseModel()` picks another one.
+ *
+ * Otherwise, the answer comes from the first provider in `PROVIDERS` that has
+ * an API key, with its model from `chooseModel()`. Without any of them, the
+ * answer comes through the AI Client, which is given the same order to choose
+ * from.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param choice    The provider and model the user chose, if any.
  * @return The connection.
  */
-export async function selectPlatform( getPostId: () => number ): Promise< AiPlatform > {
+export async function selectPlatform(
+	getPostId: () => number,
+	choice?: ModelChoice | null
+): Promise< AiPlatform > {
+	const chosen = choice && PROVIDERS.find( ( provider ) => provider.id === choice.provider );
+	if ( chosen ) {
+		const models = await loadModels( chosen.id );
+		if ( models !== false ) {
+			const model =
+				! models || models.some( ( { id } ) => id === choice!.model )
+					? choice!.model
+					: chooseModel( chosen, models );
+			return chosen.create( getPostId, model );
+		}
+	}
 	for ( const provider of PROVIDERS ) {
 		const models = await loadModels( provider.id );
 		if ( models !== false ) {
@@ -143,19 +212,31 @@ export async function selectPlatform( getPostId: () => number ): Promise< AiPlat
 
 /**
  * Connects the AI assistant to the provider and model `selectPlatform()`
- * chooses. The choice is made when the first message is sent, and kept.
- * When it could not be made, the next message tries again.
+ * chooses. The choice is made when the first message is sent, and kept
+ * until the user chooses another provider or model. When it could not be
+ * made, the next message tries again.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param getChoice Returns the provider and model the user chose, if any.
  * @return The connection.
  */
-export function createAutoPlatform( getPostId: () => number ): AiPlatform {
+export function createAutoPlatform(
+	getPostId: () => number,
+	getChoice: () => ModelChoice | null = () => null
+): AiPlatform {
 	let platform: Promise< AiPlatform > | undefined;
+	let platformChoice: string | undefined;
 	return {
 		// The sidebar only loads when the site can answer.
 		hasApiKey: async () => true,
 		async chat( request ) {
-			platform ??= selectPlatform( getPostId ).catch( ( error ) => {
+			const choice = getChoice();
+			const key = JSON.stringify( choice );
+			if ( key !== platformChoice ) {
+				platform = undefined;
+				platformChoice = key;
+			}
+			platform ??= selectPlatform( getPostId, choice ).catch( ( error ) => {
 				platform = undefined;
 				throw error;
 			} );

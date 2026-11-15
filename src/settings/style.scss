@@ -1,0 +1,11 @@
+.ai-content-editing-assistant-settings {
+	padding: var(--wpds-dimension-padding-lg);
+}
+
+.ai-content-editing-assistant-settings__note {
+	color: var(--wpds-color-foreground-content-neutral-weak);
+}
+
+.ai-content-editing-assistant-sidebar.is-settings-open .ai-content-editing-assistant-chat {
+	display: none;
+}
