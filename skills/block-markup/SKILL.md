@@ -66,7 +66,37 @@ The editor rebuilds each block from its attributes and compares the result with 
 
 - Prefer the theme's presets over fixed values: `textColor`, `backgroundColor`, and `fontSize` with a slug, and `var:preset|spacing|<slug>` for spacing.
 - Use only slugs that are in the site information or already in the document. Do not guess slugs.
-- Use a fixed value, such as `#1e73be` or `28px`, only when no preset fits what the user asked for, and only for settings the block supports.
+- Use a fixed value, such as `#1e73be` or `28px`, only when no preset fits what the user asked for, only for settings the block supports, and only when the site information allows custom values of that kind.
+
+## Site information
+
+`<site-info>` describes the site:
+
+- **Core blocks**: the core blocks users can insert, without the `core/` prefix.
+- **Blocks from plugins**: each block's `name`, `title`, `parent`, `ancestor`, `allowedBlocks`, `attributes`, and `supports`, as in its `block.json`. Attributes that supports add, such as `className`, `style`, `textColor`, and `align`, may be listed too.
+- **Block styles**: the block styles of each block, for `className` as `is-style-<name>`.
+- **theme.json settings**: the `settings` of `theme.json`, merged from WordPress, the theme, and the user.
+
+Read the settings the way `theme.json` defines them:
+
+- Presets are grouped by origin: `default` from WordPress, `theme`, and `custom` from the user. The `default` ones are offered only while `color.defaultPalette`, `color.defaultGradients`, `typography.defaultFontSizes`, `spacing.defaultSpacingSizes`, `shadow.defaultPresets`, or `dimensions.defaultAspectRatios` is not `false`.
+- Use each preset by its slug:
+
+| Setting | In the block |
+| --- | --- |
+| `color.palette` | `textColor`, `backgroundColor`, `borderColor`, or `var:preset\|color\|<slug>` in `style` |
+| `color.gradients` | `gradient` |
+| `typography.fontSizes` | `fontSize` |
+| `typography.fontFamilies` | `fontFamily` |
+| `spacing.spacingSizes` | `var:preset\|spacing\|<slug>` in `style.spacing` |
+| `shadow.presets` | `var:preset\|shadow\|<slug>` in `style.shadow` |
+
+- A setting set to `false` turns off what it allows. `color.custom`, `color.customGradient`, `typography.customFontSize`, and `spacing.customSpacingSize` allow fixed values instead of presets. Others allow a style at all, such as `color.text`, `color.background`, `color.link`, `typography.lineHeight`, `typography.fontWeight`, `typography.letterSpacing`, `spacing.margin`, `spacing.padding`, `border.color`, `border.radius`, `border.style`, `border.width`, and `dimensions.minHeight`.
+- `appearanceTools: true` turns these on together, unless a setting turns one off: `background.backgroundImage`, `background.backgroundSize`, and `background.gradient`; `border.color`, `border.radius`, `border.style`, and `border.width`; `color.link`, `color.heading`, `color.button`, and `color.caption`; `dimensions.aspectRatio`, `dimensions.height`, `dimensions.minHeight`, `dimensions.minWidth`, and `dimensions.width`; `position.sticky`; `spacing.blockGap`, `spacing.margin`, and `spacing.padding`; `typography.lineHeight` and `typography.textColumns`.
+- `spacing.units` lists the units allowed for fixed spacing values.
+- `blocks.<block name>` has settings for that block only. They replace the global ones for it.
+- `layout.contentSize` is the width of the content, and `layout.wideSize` the width of `alignwide` blocks.
+- A style is available only when both the block's `supports` and these settings allow it.
 
 ## Nesting
 

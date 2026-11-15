@@ -19,6 +19,7 @@ import { readDocument as answerRead } from './document-outline';
 import type { EditTarget } from './edit-target';
 import { buildSystemPrompt } from './prompt';
 import { highlightChanges, takeBlockSnapshot } from '../editor/highlight';
+import { getSiteInfo } from '../editor/site-info';
 import type { AiEditResult, AiPlatform, AiRead } from '../platform';
 
 type UseAiChatArgs = {
@@ -104,7 +105,7 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 			const isCurrent = () => controllerRef.current === controller && ! controller.signal.aborted;
 
 			ai.chat( {
-				system: buildSystemPrompt( context?.document ?? null ),
+				system: buildSystemPrompt( context?.document ?? null, context ? getSiteInfo() : null ),
 				messages,
 				signal: controller.signal,
 				// The model reads the document as it is now, with its edits.

@@ -12,7 +12,7 @@ import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { readSse } from './sse';
 
 /**
- * The model that answers. It becomes selectable with the model list.
+ * The model that answers when no other model is chosen.
  */
 export const ANTHROPIC_MODEL = 'claude-opus-5-5';
 
@@ -85,16 +85,18 @@ const APPLIED = 'The edit was applied.';
 
 /**
  * Tells the model its edit was applied, and the reference IDs of the blocks
- * it added, so it can edit them again.
+ * it added, so it can edit them again, and what was fixed in its markup, so
+ * it does not write it the same way again.
  *
- * @param refs The reference IDs of the added blocks.
+ * @param refs    The reference IDs of the added blocks.
+ * @param autoFix What the automatic fix changed.
  * @return The result.
  */
-export function describeApplied( refs: string[] | undefined ): string {
-	if ( ! refs?.length ) {
-		return APPLIED;
-	}
-	return `${ APPLIED } The reference IDs of the new blocks are ${ refs.join( ', ' ) }.`;
+export function describeApplied( refs: string[] | undefined, autoFix?: string ): string {
+	const applied = refs?.length
+		? `${ APPLIED } The reference IDs of the new blocks are ${ refs.join( ', ' ) }.`
+		: APPLIED;
+	return autoFix ? `${ applied }\n\n${ autoFix }` : applied;
 }
 
 /**
@@ -158,11 +160,16 @@ const CACHE_CONTROL = { type: 'ephemeral' } as const;
  *
  * @param system   The system prompt.
  * @param messages The messages.
+ * @param model    The model that answers.
  * @return The request body.
  */
-export function buildAnthropicBody( system: string, messages: AnthropicMessage[] ) {
+export function buildAnthropicBody(
+	system: string,
+	messages: AnthropicMessage[],
+	model = ANTHROPIC_MODEL
+) {
 	return {
-		model: ANTHROPIC_MODEL,
+		model,
 		max_tokens: MAX_TOKENS,
 		cache_control: CACHE_CONTROL,
 		system: [ { type: 'text', text: system, cache_control: CACHE_CONTROL } ],
@@ -399,7 +406,7 @@ function runTools(
 				tool_use_id: id,
 				content:
 					result.status === 'applied'
-						? describeApplied( result.refs )
+						? describeApplied( result.refs, result.autoFix )
 						: 'The selected blocks no longer exist, so the edit was not applied.',
 			};
 		} );
@@ -411,9 +418,13 @@ function runTools(
  * adds the site's API key on the server.
  *
  * @param getPostId Returns the ID of the post being edited.
+ * @param model     The model that answers.
  * @return The connection.
  */
-export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
+export function createAnthropicPlatform(
+	getPostId: () => number,
+	model = ANTHROPIC_MODEL
+): AiPlatform {
 	return {
 		// The sidebar only loads when the site has a key.
 		hasApiKey: async () => true,
@@ -430,7 +441,7 @@ export function createAnthropicPlatform( getPostId: () => number ): AiPlatform {
 							provider: 'anthropic',
 							post_id: getPostId(),
 							stream: true,
-							body: buildAnthropicBody( system, conversation ),
+							body: buildAnthropicBody( system, conversation, model ),
 						},
 						parse: false,
 						signal,
