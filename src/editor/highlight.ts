@@ -26,6 +26,12 @@ export const HIGHLIGHT_CLASS_NAME = 'ai-content-editing-assistant-is-changed';
  */
 export const TEXT_HIGHLIGHT_NAME = 'ai-content-editing-assistant-changed-text';
 
+/**
+ * The custom property that fades out the changed text's color. The
+ * CSS Custom Highlight API cannot animate, so it is set on each frame.
+ */
+export const TEXT_OPACITY_PROPERTY = '--ai-content-editing-assistant-changed-text-opacity';
+
 type BlockState = {
 	// The block editor replaces a block's attributes object only when they
 	// change, so comparing them tells which blocks an edit changed.
@@ -57,6 +63,8 @@ const previousTexts = new Map< string, string >();
 // highlight registry holds some of it.
 const textRanges = new Map< string, Range >();
 let paintedViews = new Set< Window >();
+// The fade of the changed text's color in each window, by frame request.
+const fades = new Map< Window, number >();
 
 function setHighlighted( next: ReadonlyMap< string, number > ) {
 	highlighted = next;
@@ -261,7 +269,47 @@ function highlightText( clientId: string ): boolean {
 	}
 	textRanges.set( clientId, range );
 	paintTextHighlight();
+	fadeTextHighlight( view );
 	return true;
+}
+
+/**
+ * The opacity of the changed text's color, the same as the block
+ * highlight's animation: it holds, then fades out.
+ *
+ * @param progress How far the highlight is, from 0 to 1.
+ * @return The opacity, from 1 to 0.
+ */
+export function getTextOpacity( progress: number ): number {
+	return progress <= 0.6 ? 1 : Math.max( 0, 1 - ( progress - 0.6 ) / 0.4 );
+}
+
+/**
+ * Fades out the changed text's color in the window, from the start. With
+ * reduced motion, the color stays the same until the highlight ends.
+ *
+ * @param view The window that shows the text.
+ */
+function fadeTextHighlight( view: Window ) {
+	const { style } = view.document.documentElement;
+	view.cancelAnimationFrame( fades.get( view ) ?? 0 );
+	fades.delete( view );
+	style.removeProperty( TEXT_OPACITY_PROPERTY );
+	if ( view.matchMedia?.( '(prefers-reduced-motion: reduce)' ).matches ) {
+		return;
+	}
+	const start = view.performance.now();
+	const step = ( now: number ) => {
+		const progress = ( now - start ) / HIGHLIGHT_DURATION;
+		if ( progress >= 1 ) {
+			fades.delete( view );
+			style.removeProperty( TEXT_OPACITY_PROPERTY );
+			return;
+		}
+		style.setProperty( TEXT_OPACITY_PROPERTY, String( getTextOpacity( progress ) ) );
+		fades.set( view, view.requestAnimationFrame( step ) );
+	};
+	fades.set( view, view.requestAnimationFrame( step ) );
 }
 
 function clearTextHighlight( clientId: string ) {

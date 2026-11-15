@@ -21,8 +21,10 @@ import {
 	HIGHLIGHT_CLASS_NAME,
 	HIGHLIGHT_DURATION,
 	TEXT_HIGHLIGHT_NAME,
+	TEXT_OPACITY_PROPERTY,
 	createTextRange,
 	diffText,
+	getTextOpacity,
 	findChangedBlocks,
 	highlightBlocks,
 	highlightChanges,
@@ -147,6 +149,15 @@ describe( 'diffText', () => {
 	} );
 } );
 
+describe( 'getTextOpacity', () => {
+	it( 'holds the color, then fades it out', () => {
+		expect( getTextOpacity( 0 ) ).toBe( 1 );
+		expect( getTextOpacity( 0.6 ) ).toBe( 1 );
+		expect( getTextOpacity( 0.8 ) ).toBeCloseTo( 0.5 );
+		expect( getTextOpacity( 1 ) ).toBe( 0 );
+	} );
+} );
+
 describe( 'createTextRange', () => {
 	it( 'covers the text between the offsets, across elements', () => {
 		const element = document.createElement( 'p' );
@@ -173,7 +184,13 @@ describe( 'highlightChanges', () => {
 
 	beforeEach( () => {
 		vi.useFakeTimers( {
-			toFake: [ 'setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame' ],
+			toFake: [
+				'setTimeout',
+				'clearTimeout',
+				'requestAnimationFrame',
+				'cancelAnimationFrame',
+				'performance',
+			],
 		} );
 		highlights = new Map();
 		vi.stubGlobal( 'CSS', { highlights } );
@@ -213,6 +230,11 @@ describe( 'highlightChanges', () => {
 
 		expect( container.querySelector( 'p' )?.className ).not.toContain( HIGHLIGHT_CLASS_NAME );
 		expect( highlights.get( TEXT_HIGHLIGHT_NAME )?.ranges[ 0 ].toString() ).toBe( ' more' );
+
+		vi.advanceTimersByTime( HIGHLIGHT_DURATION * 0.8 );
+		const opacity = document.documentElement.style.getPropertyValue( TEXT_OPACITY_PROPERTY );
+		expect( Number( opacity ) ).toBeGreaterThan( 0 );
+		expect( Number( opacity ) ).toBeLessThan( 1 );
 
 		flushSync( () => vi.advanceTimersByTime( HIGHLIGHT_DURATION ) );
 		expect( highlights.has( TEXT_HIGHLIGHT_NAME ) ).toBe( false );
