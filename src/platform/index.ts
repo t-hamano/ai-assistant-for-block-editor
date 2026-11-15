@@ -40,10 +40,13 @@ export type AiEdit =
 	  };
 
 /**
- * What became of an edit: `applied` when it changed the document,
- * `dropped` when the selection it was for no longer exists, and `failed`
- * when the model can fix it and try again, for example when its `find`
- * text is not in the document. `reason` tells the model what went wrong.
+ * What became of an edit:
+ *
+ * - `applied`: it changed the document.
+ * - `dropped`: the selection it was for no longer exists.
+ * - `failed`: the model can fix it and try again, for example when its
+ *   `find` text is not in the document. `reason` tells the model what went
+ *   wrong.
  */
 export type AiEditResult =
 	{ status: 'applied' } | { status: 'dropped' } | { status: 'failed'; reason: string };
