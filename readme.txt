@@ -32,12 +32,6 @@ The plugin uses the API keys registered on the Connectors screen in WordPress. I
 
 Only users with administrator privileges can use this plugin, and only super admins on a multisite network, because requests are sent with the site's API keys.
 
-**Source Code**
-
-The JavaScript in the `build` folder is compiled from the `src` folder. The full source code, with the build configuration, is on GitHub: https://github.com/t-hamano/ai-content-editing-assistant
-
-To build it, clone the repository and run `npm ci && npm run build`.
-
 == Installation ==
 1. Upload the `ai-content-editing-assistant` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
