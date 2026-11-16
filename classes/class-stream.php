@@ -150,7 +150,10 @@ class Stream {
 	 */
 	public function write( $handle, string $data ): int {
 		if ( ! $this->started ) {
-			list( $this->status, $this->content_type ) = $this->read_info( $handle );
+			// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- The handle comes from `http_api_curl`.
+			$this->status       = (int) curl_getinfo( $handle, CURLINFO_RESPONSE_CODE );
+			$this->content_type = (string) curl_getinfo( $handle, CURLINFO_CONTENT_TYPE );
+			// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
 		}
 
 		$this->pass_on( $data );
@@ -182,21 +185,6 @@ class Stream {
 		// The empty lines end an event the provider may have left unfinished.
 		echo "\n\nevent: " . self::ERROR_EVENT . "\ndata: " . wp_json_encode( array( 'message' => $message ) ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		flush();
-	}
-
-	/**
-	 * Reads the provider's status and content type from cURL
-	 *
-	 * @param mixed $handle The cURL handle.
-	 * @return array The status and the content type.
-	 */
-	protected function read_info( $handle ): array {
-		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- The handle comes from `http_api_curl`.
-		return array(
-			(int) curl_getinfo( $handle, CURLINFO_RESPONSE_CODE ),
-			(string) curl_getinfo( $handle, CURLINFO_CONTENT_TYPE ),
-		);
-		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
 	}
 
 	/**

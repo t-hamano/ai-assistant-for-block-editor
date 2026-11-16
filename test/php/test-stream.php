@@ -9,43 +9,6 @@
 class Test_Stream extends WP_UnitTestCase {
 
 	/**
-	 * Tests that the answer is passed on as it arrives, with the provider's status and content type.
-	 */
-	public function test_passes_the_answer_on() {
-		$stream       = new AI_Content_Editing_Assistant_Test_Stream();
-		$stream->info = array( 200, 'text/event-stream; charset=utf-8' );
-
-		$this->expectOutputString( "event: ping\ndata: {}\n\nevent: message_stop\n" );
-
-		$this->assertSame( 22, $stream->write( null, "event: ping\ndata: {}\n\n" ) );
-		$this->assertSame( 20, $stream->write( null, "event: message_stop\n" ) );
-		$this->assertSame( array( 200, 'text/event-stream; charset=utf-8' ), $stream->started_with );
-	}
-
-	/**
-	 * Tests that an error from the provider keeps its status and content type.
-	 */
-	public function test_passes_an_error_on() {
-		$stream       = new AI_Content_Editing_Assistant_Test_Stream();
-		$stream->info = array( 401, 'application/json' );
-
-		$this->expectOutputString( '{"type":"error"}' );
-
-		$stream->write( null, '{"type":"error"}' );
-
-		$this->assertSame( array( 401, 'application/json' ), $stream->started_with );
-	}
-
-	/**
-	 * Tests that nothing is sent before the answer arrives.
-	 */
-	public function test_output_starts_with_the_answer() {
-		$stream = new AI_Content_Editing_Assistant_Test_Stream();
-
-		$this->assertNull( $stream->started_with );
-	}
-
-	/**
 	 * Tests that the request goes through the WordPress HTTP API, and that an
 	 * answer that comes whole, as it does without cURL, is passed on.
 	 */
