@@ -8,27 +8,12 @@
  */
 
 /**
- * Reads the result of a case.
+ * Builds what a check returns. promptfoo needs a score with the result.
  *
- * @param {string} output The output of `run.mjs`.
- * @return {import('./runner').CaseResult} The result.
+ * @param {boolean} pass   Whether the check passed.
+ * @param {string}  reason Why.
  */
-export function readResult( output ) {
-	return typeof output === 'string' ? JSON.parse( output ) : output;
-}
-
 const grade = ( pass, reason ) => ( { pass, score: pass ? 1 : 0, reason } );
-
-/**
- * The first error of the conversation, if a request failed or the model
- * gave up on its edits.
- *
- * @param {import('./runner').CaseResult} result The result.
- * @return {string|undefined} The error.
- */
-function findError( result ) {
-	return result.turns.find( ( turn ) => turn.error )?.error;
-}
 
 /**
  * Passes when the model edited the document in every turn, and no request
@@ -37,8 +22,8 @@ function findError( result ) {
  * @param {string} output The output.
  */
 export function edited( output ) {
-	const result = readResult( output );
-	const error = findError( result );
+	const result = JSON.parse( output );
+	const error = result.turns.find( ( turn ) => turn.error )?.error;
 	if ( error ) {
 		return grade( false, `The answer failed: ${ error }` );
 	}
@@ -60,8 +45,8 @@ export function edited( output ) {
  * @param {string} output The output.
  */
 export function notEdited( output ) {
-	const result = readResult( output );
-	const error = findError( result );
+	const result = JSON.parse( output );
+	const error = result.turns.find( ( turn ) => turn.error )?.error;
 	if ( error ) {
 		return grade( false, `The answer failed: ${ error }` );
 	}
@@ -79,7 +64,7 @@ export function notEdited( output ) {
  * @param {string} output The output.
  */
 export function validMarkup( output ) {
-	const { problems } = readResult( output );
+	const { problems } = JSON.parse( output );
 	return problems.length
 		? grade( false, problems.join( '\n' ) )
 		: grade( true, 'The markup is valid.' );
@@ -92,8 +77,8 @@ export function validMarkup( output ) {
  * @param {string} output The output.
  */
 export function firstTry( output ) {
-	const result = readResult( output );
-	const error = findError( result );
+	const result = JSON.parse( output );
+	const error = result.turns.find( ( turn ) => turn.error )?.error;
 	if ( error ) {
 		return grade( false, `The answer failed: ${ error }` );
 	}
@@ -108,25 +93,6 @@ export function firstTry( output ) {
 }
 
 /**
- * Whether each text appears after the one before it.
- *
- * @param {string}   markup The markup, in lowercase.
- * @param {string[]} items  The texts.
- * @return {boolean} Whether they appear in order.
- */
-function isInOrder( markup, items ) {
-	let from = 0;
-	for ( const item of items ) {
-		const index = markup.indexOf( item.toLowerCase(), from );
-		if ( index < 0 ) {
-			return false;
-		}
-		from = index + item.length;
-	}
-	return true;
-}
-
-/**
  * Passes when the document afterwards has what the case expects, from the
  * assertion's `config`: `blocks` it has, `text` its markup has, and
  * `absent` text it no longer has, and `order` text that appears in this
@@ -136,9 +102,16 @@ function isInOrder( markup, items ) {
  * @param {Object} context promptfoo's context.
  */
 export function expected( output, context ) {
-	const { blockNames, document } = readResult( output );
+	const { blockNames, document } = JSON.parse( output );
 	const { blocks = [], text = [], absent = [], order = [] } = context?.config ?? {};
 	const markup = document.toLowerCase();
+	// Each text of `order` is looked for after the one before it.
+	let from = 0;
+	const inOrder = order.every( ( item ) => {
+		const index = markup.indexOf( item.toLowerCase(), from );
+		from = index + item.length;
+		return index >= 0;
+	} );
 	const unmet = [
 		...blocks
 			.filter( ( name ) => ! blockNames.includes( name ) )
@@ -149,7 +122,7 @@ export function expected( output, context ) {
 		...absent
 			.filter( ( item ) => markup.includes( item.toLowerCase() ) )
 			.map( ( item ) => `still has "${ item }"` ),
-		...( isInOrder( markup, order )
+		...( inOrder
 			? []
 			: [ `does not have ${ order.map( ( item ) => `"${ item }"` ).join( ', then ' ) }` ] ),
 	];
@@ -165,7 +138,7 @@ export function expected( output, context ) {
  * @param {string} output The output.
  */
 export function sentOutline( output ) {
-	const [ first ] = readResult( output ).turns;
+	const [ first ] = JSON.parse( output ).turns;
 	return grade( Boolean( first?.outline ), first?.outline ? 'Sent as an outline.' : 'Sent whole.' );
 }
 
@@ -176,7 +149,7 @@ export function sentOutline( output ) {
  * @param {string} output The output.
  */
 export function usage( output ) {
-	const result = readResult( output );
+	const result = JSON.parse( output );
 	const { inputTokens, cacheReadTokens, cacheWriteTokens, outputTokens, requests } = result.usage;
 	return {
 		pass: true,
