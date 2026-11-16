@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-import type { ReactNode } from 'react';
-
-/**
  * WordPress dependencies
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
@@ -168,13 +163,9 @@ type Props = {
 	chat: AiChat;
 	/**
 	 * Whether the user can send messages. The assistant edits blocks, so it
-	 * is not available in the code editor, and it needs an API key.
+	 * is not available in the code editor.
 	 */
 	isAvailable: boolean;
-	/**
-	 * Tells the user why they cannot send messages, while they cannot.
-	 */
-	unavailableNotice?: ReactNode;
 	/**
 	 * The message the user is writing. It is kept by the parent, so it
 	 * survives while the chat is not shown.
@@ -183,13 +174,7 @@ type Props = {
 	onDraftChange: ( draft: string ) => void;
 };
 
-export function Chat( {
-	chat,
-	isAvailable,
-	unavailableNotice,
-	draft,
-	onDraftChange: setDraft,
-}: Props ) {
+export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
 	const { conversation, isResponding, send, stop } = chat;
 	const messagesRef = useRef< HTMLDivElement >( null );
 	const selection = useSelectionStatus();
@@ -241,7 +226,16 @@ export function Chat( {
 				gap="lg"
 				ref={ messagesRef }
 			>
-				{ ! isAvailable && unavailableNotice }
+				{ ! isAvailable && (
+					<Notice.Root intent="info">
+						<Notice.Description>
+							{ __(
+								'Switch to the visual editor to use the AI Assistant.',
+								'ai-content-editing-assistant'
+							) }
+						</Notice.Description>
+					</Notice.Root>
+				) }
 				{ isAvailable && conversation.messages.length === 0 && (
 					<Text variant="body-sm" className="ai-content-editing-assistant-chat__note">
 						{ __(

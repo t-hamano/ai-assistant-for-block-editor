@@ -32,27 +32,24 @@ const ai = createAutoPlatform(
 
 const { hasApiKey, connectorsUrl } = window.aiContentEditingAssistant;
 
-// Tells the user why the assistant cannot be used. Without an API key it
-// links to the Connectors screen, where one is set up.
-function UnavailableNotice() {
+// Without an API key the assistant cannot be used, so the sidebar links to
+// the Connectors screen, where one is set up.
+function NoConnectorNotice() {
 	return (
-		<Notice.Root intent="info">
-			<Notice.Description>
-				{ hasApiKey
-					? __(
-							'Switch to the visual editor to use the AI Assistant.',
+		<div className="ai-content-editing-assistant-sidebar__notice">
+			<Notice.Root intent="info">
+				<Notice.Description>
+					{ createInterpolateElement(
+						__(
+							'No connector is set up. Set up at least one connector on the <a>Connectors screen</a>.',
 							'ai-content-editing-assistant'
-						)
-					: createInterpolateElement(
-							__(
-								'No connector is set up. Set up at least one connector on the <a>Connectors screen</a>.',
-								'ai-content-editing-assistant'
-							),
-							// eslint-disable-next-line jsx-a11y/anchor-has-content -- The link text is filled in from the translation.
-							{ a: <a href={ connectorsUrl } /> }
-						) }
-			</Notice.Description>
-		</Notice.Root>
+						),
+						// eslint-disable-next-line jsx-a11y/anchor-has-content -- The link text is filled in from the translation.
+						{ a: <a href={ connectorsUrl } /> }
+					) }
+				</Notice.Description>
+			</Notice.Root>
+		</div>
 	);
 }
 
@@ -111,13 +108,12 @@ export default function Sidebar() {
 					</>
 				}
 			>
-				{ isSettingsOpen ? (
-					<ModelSettings onClose={ () => setIsSettingsOpen( false ) } />
-				) : (
+				{ isSettingsOpen && <ModelSettings onClose={ () => setIsSettingsOpen( false ) } /> }
+				{ ! isSettingsOpen && ! hasApiKey && <NoConnectorNotice /> }
+				{ ! isSettingsOpen && hasApiKey && (
 					<Chat
 						chat={ chat }
-						isAvailable={ hasApiKey && isVisualEditor }
-						unavailableNotice={ <UnavailableNotice /> }
+						isAvailable={ isVisualEditor }
 						draft={ draft }
 						onDraftChange={ setDraft }
 					/>
