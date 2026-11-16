@@ -83,6 +83,7 @@
 		"test:php": "wp-env --config .wp-env.test.json run cli --env-cwd=wp-content/plugins/ai-content-editing-assistant vendor/bin/phpunit",
 		"eval": "npx --yes promptfoo@0.125.1 eval -c scripts/eval/promptfooconfig.yaml",
 		"eval:view": "npx --yes promptfoo@0.125.1 view",
+		"eval:record": "node scripts/eval/record.mjs",
 		"prepare": "husky"
 	},
 	"lint-staged": {

@@ -30,6 +30,30 @@ Each result shows the model's answers and the document afterwards. Open a result
 
 promptfoo keeps every run on your computer, so the viewer can show this run next to the one before a change.
 
+## History
+
+[history.jsonl](history.jsonl) keeps the results of earlier runs in the repository, one line for each run, so they can be compared after promptfoo's own runs are gone.
+
+1. Commit the change you want to evaluate, then run the cases and save the results to a file. `results.json` at the root of the repository is ignored by Git.
+
+    ```sh
+    npm run eval -- -o results.json
+    ```
+
+2. Add the run to the history. To read another file, add its path: `npm run eval:record -- path/to/results.json`.
+
+    ```sh
+    npm run eval:record
+    ```
+
+    It prints how the run compares with the last run recorded for the same evaluation set and model, on the cases both runs have.
+
+3. Commit `history.jsonl` in the pull request of the change, so the Git history of the file is the history of the results.
+
+Each line has the time of the run, the commit, `dirty` when the code had changes that were not committed, the version of the evaluation set (`evalSet`), the model, the cases that passed, and the totals. Each case under `cases` has whether it passed, each check under `checks`, and its usage: the input tokens read at full price, from the cache, and written to it, `totalInputTokens` for all three together, the output tokens, the requests, and the retries. A case that ended in an error has the `error` instead.
+
+Compare runs by `totalInputTokens`, `outputTokens`, and `requests`. How the input tokens split between the full price and the cache depends on whether the cache was still warm from an earlier run, but their total does not. Compare only runs of the same `evalSet` and model.
+
 ## What is checked
 
 Only code decides whether a case passed. No model grades the answers.
