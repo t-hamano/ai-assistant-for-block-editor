@@ -2,11 +2,11 @@
  * WordPress dependencies
  */
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useState } from '@wordpress/element';
-import { __, isRTL } from '@wordpress/i18n';
+import { createInterpolateElement, Fragment, useEffect, useState } from '@wordpress/element';
+import { __, isRTL, sprintf } from '@wordpress/i18n';
 import { chevronLeft, chevronRight } from '@wordpress/icons';
 import { store as preferencesStore } from '@wordpress/preferences';
-import { IconButton, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
+import { IconButton, Link, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -75,6 +75,17 @@ export function ModelSettings( { onClose }: Props ) {
 			: ( provider?.models ?? [] );
 	const modelItems: Item[] = modelIds.map( ( id ) => ( { label: id, value: id } ) );
 
+	/* translators: Used between list items, there is a space after the comma. */
+	const separator = __( ', ', 'ai-content-editing-assistant' ); // eslint-disable-line @wordpress/i18n-no-flanking-whitespace
+	const usageLinks = ( provider ? [ provider ] : ( providers ?? [] ) ).map( ( option, index ) => (
+		<Fragment key={ option.id }>
+			{ index > 0 && separator }
+			<Link href={ option.usageUrl } openInNewTab>
+				{ option.name }
+			</Link>
+		</Fragment>
+	) );
+
 	let content;
 	if ( hasError ) {
 		content = (
@@ -125,6 +136,19 @@ export function ModelSettings( { onClose }: Props ) {
 						} }
 					/>
 				) }
+				<Text variant="body-sm" className="ai-content-editing-assistant-settings__note">
+					{ createInterpolateElement(
+						sprintf(
+							/* translators: %s: Links to the usage pages of the providers. */
+							__(
+								"The provider bills for usage. Check the exact usage on the provider's dashboard: %s",
+								'ai-content-editing-assistant'
+							),
+							'<links />'
+						),
+						{ links: <>{ usageLinks }</> }
+					) }
+				</Text>
 			</>
 		);
 	}
