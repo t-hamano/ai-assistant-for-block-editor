@@ -2,8 +2,8 @@
  * WordPress dependencies
  */
 import { useDispatch, useSelect } from '@wordpress/data';
-import { Fragment, useEffect, useState } from '@wordpress/element';
-import { __, isRTL } from '@wordpress/i18n';
+import { createInterpolateElement, Fragment, useEffect, useState } from '@wordpress/element';
+import { __, isRTL, sprintf } from '@wordpress/i18n';
 import { chevronLeft, chevronRight } from '@wordpress/icons';
 import { store as preferencesStore } from '@wordpress/preferences';
 import { IconButton, Link, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
@@ -75,6 +75,18 @@ export function ModelSettings( { onClose }: Props ) {
 			: ( provider?.models ?? [] );
 	const modelItems: Item[] = modelIds.map( ( id ) => ( { label: id, value: id } ) );
 
+	// The separator and where the links go in the sentence differ by language.
+	/* translators: Used between list items, there is a space after the comma. */
+	const separator = __( ', ', 'ai-content-editing-assistant' ); // eslint-disable-line @wordpress/i18n-no-flanking-whitespace
+	const usageLinks = ( provider ? [ provider ] : ( providers ?? [] ) ).map( ( option, index ) => (
+		<Fragment key={ option.id }>
+			{ index > 0 && separator }
+			<Link href={ option.usageUrl } openInNewTab>
+				{ option.name }
+			</Link>
+		</Fragment>
+	) );
+
 	let content;
 	if ( hasError ) {
 		content = (
@@ -126,18 +138,17 @@ export function ModelSettings( { onClose }: Props ) {
 					/>
 				) }
 				<Text variant="body-sm" className="ai-content-editing-assistant-settings__note">
-					{ __(
-						"The provider bills for usage. Check the exact usage on the provider's dashboard:",
-						'ai-content-editing-assistant'
-					) }{ ' ' }
-					{ ( provider ? [ provider ] : providers ).map( ( option, index ) => (
-						<Fragment key={ option.id }>
-							{ index > 0 && ', ' }
-							<Link href={ option.usageUrl } openInNewTab>
-								{ option.name }
-							</Link>
-						</Fragment>
-					) ) }
+					{ createInterpolateElement(
+						sprintf(
+							/* translators: %s: Links to the usage pages of the providers. */
+							__(
+								"The provider bills for usage. Check the exact usage on the provider's dashboard: %s",
+								'ai-content-editing-assistant'
+							),
+							'<links />'
+						),
+						{ links: <>{ usageLinks }</> }
+					) }
 				</Text>
 			</>
 		);
