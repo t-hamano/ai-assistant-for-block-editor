@@ -81,6 +81,7 @@ export type Conversation = {
 export type ConversationAction =
 	| { type: 'START'; text: string; context?: string; document?: string }
 	| { type: 'APPEND_TEXT'; text: string }
+	| { type: 'DISCARD_TEXT'; text: string }
 	| { type: 'ACTIVITY'; activity: AiActivity }
 	| { type: 'EDIT'; edit: AiEdit; applied: boolean; refs?: string[] }
 	| { type: 'USAGE'; usage: AiUsage }
@@ -149,6 +150,17 @@ export function conversationReducer(
 				text: message.text + action.text,
 				activity: undefined,
 			} ) );
+		case 'DISCARD_TEXT':
+			// The text taken back is at the end of the answer.
+			return updateAnswer( conversation, ( message ) =>
+				message.text.endsWith( action.text )
+					? {
+							...message,
+							text: message.text.slice( 0, message.text.length - action.text.length ),
+							activity: message.activity ?? 'waiting',
+						}
+					: message
+			);
 		case 'ACTIVITY':
 			return updateAnswer( conversation, ( message ) => ( {
 				...message,

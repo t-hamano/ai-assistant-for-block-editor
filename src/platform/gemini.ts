@@ -8,6 +8,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
+import { endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
@@ -302,7 +303,8 @@ export async function readGeminiStream(
  * @param answer  The answer.
  * @param onEvent Applies each edit.
  * @param read    Reads the document.
- * @return The responses, and how many calls failed.
+ * @return The responses, how many calls failed, and whether a response
+ *         must go back to the model.
  */
 function runTools(
 	answer: GeminiAnswer,
@@ -310,10 +312,12 @@ function runTools(
 	read: AiChatRequest[ 'read' ]
 ) {
 	let failures = 0;
+	let replied = false;
 	const results = answer.calls.map( ( { functionCall } ): GeminiPart => {
 		const { id, name = '', args } = functionCall ?? {};
 		const found = runRead( name, args, read );
 		if ( found ) {
+			replied = true;
 			if ( found.status === 'failed' ) {
 				failures++;
 			}
@@ -328,6 +332,7 @@ function runTools(
 					status: 'failed',
 					reason: `Call ${ EDIT_TOOL.name } with arguments that match its parameters.`,
 				};
+		replied ||= needsReply( result );
 		let response: Record< string, unknown >;
 		if ( result.status === 'failed' ) {
 			failures++;
@@ -339,7 +344,7 @@ function runTools(
 		}
 		return { functionResponse: { ...( id ? { id } : {} ), name, response } };
 	} );
-	return { results, failures };
+	return { results, failures, replied };
 }
 
 /**
@@ -356,6 +361,7 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 		hasApiKey: async () => true,
 		async chat( { system, messages, onEvent, read, signal } ) {
 			const contents = toGeminiContents( messages );
+			const answerText = trackRequestText( onEvent );
 			let failures = 0;
 			for (;;) {
 				const answer = await readGeminiStream(
@@ -368,12 +374,16 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 						// The whole answer has the shape of one piece of a streamed one.
 						toEvents: ( whole ) => [ { event: 'message', data: whole } ],
 					} ),
-					onEvent
+					answerText.onEvent
 				);
+				const text = answerText.take();
 				if ( ! answer.calls.length ) {
 					return;
 				}
 				const tools = runTools( answer, onEvent, read );
+				if ( endToolRequest( text, tools.replied, onEvent ) ) {
+					return;
+				}
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

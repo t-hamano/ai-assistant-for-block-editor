@@ -206,6 +206,48 @@ describe( 'createFallbackPlatform', () => {
 		expect( onEvent ).toHaveBeenCalledWith( { type: 'text', text: 'Done.' } );
 	} );
 
+	it( 'ends the answer when the edit after the text was applied as it is', async () => {
+		const requests = respond(
+			answer(
+				[
+					{ channel: 'content', text: 'I shortened it.' },
+					{ channel: 'content', functionCall: { id: 'call_1', name: EDIT_TOOL.name, args: EDIT } },
+				],
+				'tool_calls'
+			)
+		);
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'applied' as const } : undefined
+		);
+
+		await chat( onEvent );
+
+		expect( requests ).toHaveLength( 1 );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'text', text: 'I shortened it.' } );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'edit', edit: EDIT } );
+	} );
+
+	it( 'takes back the text when the edit after it failed', async () => {
+		const requests = respond(
+			answer(
+				[
+					{ channel: 'content', text: 'I shortened it.' },
+					{ channel: 'content', functionCall: { id: 'call_1', name: EDIT_TOOL.name, args: EDIT } },
+				],
+				'tool_calls'
+			),
+			text
+		);
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'failed' as const, reason: 'Invalid markup.' } : undefined
+		);
+
+		await chat( onEvent );
+
+		expect( requests ).toHaveLength( 2 );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'discard_text', text: 'I shortened it.' } );
+	} );
+
 	it( 'applies the edit, and sends the result back for the model to go on', async () => {
 		const call = toolCall( EDIT );
 		const requests = respond( call, text );

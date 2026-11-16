@@ -8,6 +8,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, readErrorMessage, toEdit } from './anthropic';
+import { endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
@@ -249,7 +250,8 @@ export function toOpenAiEvents( answer: any ): AnswerEvent[] {
  * @param answer  The answer.
  * @param onEvent Applies each edit.
  * @param read    Reads the document.
- * @return The outputs, and how many calls failed.
+ * @return The outputs, how many calls failed, and whether an output must
+ *         go back to the model.
  */
 function runTools(
 	answer: OpenAiAnswer,
@@ -257,6 +259,7 @@ function runTools(
 	read: AiChatRequest[ 'read' ]
 ) {
 	let failures = 0;
+	let replied = false;
 	const results = answer.calls.map( ( call ) => {
 		let input: unknown;
 		let invalid = false;
@@ -267,6 +270,7 @@ function runTools(
 		}
 		const found = invalid ? null : runRead( call.name, input, read );
 		if ( found ) {
+			replied = true;
 			if ( found.status === 'failed' ) {
 				failures++;
 			}
@@ -288,6 +292,7 @@ function runTools(
 		} else {
 			result = onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' };
 		}
+		replied ||= needsReply( result );
 		let text: string;
 		if ( result.status === 'failed' ) {
 			failures++;
@@ -299,7 +304,7 @@ function runTools(
 		}
 		return { type: 'function_call_output', call_id: call.call_id, output: text };
 	} );
-	return { results, failures };
+	return { results, failures, replied };
 }
 
 /**
@@ -316,6 +321,7 @@ export function createOpenAiPlatform( getPostId: () => number, model = OPENAI_MO
 		hasApiKey: async () => true,
 		async chat( { system, messages, onEvent, read, signal } ) {
 			const input = toOpenAiInput( messages );
+			const answerText = trackRequestText( onEvent );
 			let failures = 0;
 			for (;;) {
 				const answer = await readOpenAiStream(
@@ -327,12 +333,16 @@ export function createOpenAiPlatform( getPostId: () => number, model = OPENAI_MO
 						readError: readErrorMessage,
 						toEvents: toOpenAiEvents,
 					} ),
-					onEvent
+					answerText.onEvent
 				);
+				const text = answerText.take();
 				if ( ! answer.calls.length ) {
 					return;
 				}
 				const tools = runTools( answer, onEvent, read );
+				if ( endToolRequest( text, tools.replied, onEvent ) ) {
+					return;
+				}
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

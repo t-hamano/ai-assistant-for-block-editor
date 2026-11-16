@@ -361,6 +361,59 @@ describe( 'createAnthropicPlatform', () => {
 		] );
 	} );
 
+	const textAndToolCall = ( said: string, input: string ) => [
+		sse( 'content_block_start', { index: 0, content_block: { type: 'text', text: '' } } ),
+		sse( 'content_block_delta', { index: 0, delta: { type: 'text_delta', text: said } } ),
+		sse( 'content_block_stop', { index: 0 } ),
+		...toolCall( input ).map( ( piece ) => piece.replace( '"index":0', '"index":1' ) ),
+	];
+
+	it( 'ends the answer when every edit after the text was applied as it is', async () => {
+		const bodies = respond( textAndToolCall( 'I shortened it.', JSON.stringify( EDIT ) ) );
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'applied' as const } : undefined
+		);
+
+		await createAnthropicPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite this' } ],
+			onEvent,
+			signal: new AbortController().signal,
+		} );
+
+		expect( bodies ).toHaveLength( 1 );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'text', text: 'I shortened it.' } );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'edit', edit: EDIT } );
+		expect( onEvent ).not.toHaveBeenCalledWith(
+			expect.objectContaining( { type: 'discard_text' } )
+		);
+	} );
+
+	it.each( [
+		[ 'failed', { status: 'failed' as const, reason: 'Invalid markup.' } ],
+		[ 'fixed', { status: 'applied' as const, autoFix: 'The class was fixed.' } ],
+		[ 'dropped', { status: 'dropped' as const } ],
+	] )(
+		'takes back the text, and sends the result back, when an edit was %s',
+		async ( _, result ) => {
+			const bodies = respond( textAndToolCall( 'I shortened it.', JSON.stringify( EDIT ) ), text );
+			const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+				event.type === 'edit' ? result : undefined
+			);
+
+			await createAnthropicPlatform( () => 1 ).chat( {
+				system: 'System',
+				messages: [ { role: 'user', text: 'Rewrite this' } ],
+				onEvent,
+				signal: new AbortController().signal,
+			} );
+
+			expect( bodies ).toHaveLength( 2 );
+			expect( onEvent ).toHaveBeenCalledWith( { type: 'discard_text', text: 'I shortened it.' } );
+			expect( onEvent ).toHaveBeenLastCalledWith( { type: 'text', text: 'Done.' } );
+		}
+	);
+
 	it( 'reads the document for the model, and sends what it found back', async () => {
 		const bodies = respond( toolCall( '{"refs":["b2"]}', 'read_blocks' ), text );
 		const onEvent = vi.fn();

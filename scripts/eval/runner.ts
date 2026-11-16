@@ -328,6 +328,11 @@ async function sendMessage(
 					current = conversationReducer( current, { type: 'APPEND_TEXT', text: event.text } );
 					return;
 				}
+				if ( event.type === 'discard_text' ) {
+					turn.text = turn.text.slice( 0, turn.text.length - event.text.length );
+					current = conversationReducer( current, { type: 'DISCARD_TEXT', text: event.text } );
+					return;
+				}
 				if ( event.type !== 'edit' ) {
 					return;
 				}

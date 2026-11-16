@@ -29,6 +29,9 @@ defaultTest:
       value: file://assertions.mjs:firstTry
       metric: firstTry
     - type: javascript
+      value: file://assertions.mjs:answered
+      metric: answered
+    - type: javascript
       value: file://assertions.mjs:usage
       weight: 0
 

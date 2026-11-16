@@ -26,6 +26,17 @@ function run( ...actions: ConversationAction[] ): Conversation {
 }
 
 describe( 'conversationReducer', () => {
+	it( 'takes back the text at the end of the answer', () => {
+		const { messages } = run(
+			{ type: 'START', text: 'Rewrite this' },
+			{ type: 'APPEND_TEXT', text: 'Sure. ' },
+			{ type: 'APPEND_TEXT', text: 'I shortened it.' },
+			{ type: 'DISCARD_TEXT', text: 'I shortened it.' },
+			{ type: 'DISCARD_TEXT', text: 'Other text.' }
+		);
+		expect( messages[ 1 ] ).toMatchObject( { text: 'Sure. ', activity: 'waiting' } );
+	} );
+
 	it( 'adds the question and streams the answer into it', () => {
 		const { messages } = run(
 			{ type: 'START', text: 'Rewrite this' },

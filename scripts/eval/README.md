@@ -60,6 +60,7 @@ Only code decides whether a case passed. No model grades the answers.
 
 - `validMarkup`: the editor reads every block of the document afterwards as valid.
 - `firstTry`: no tool call failed and had to be tried again, and the model did not give up.
+- `answered`: the model said something in every turn, after its text written before tool calls whose results went back to it was taken back.
 - `edited`: the model edited the document in every turn.
 - `expected`: the document has the blocks and text the case asks for, and no longer has the text it should not.
 
