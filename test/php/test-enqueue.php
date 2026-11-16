@@ -52,17 +52,29 @@ class Test_Enqueue extends WP_UnitTestCase {
 
 		$this->assertTrue( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
 		$this->assertTrue( wp_style_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertStringContainsString(
+			'"hasApiKey":true',
+			implode( '', wp_scripts()->get_data( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, 'before' ) )
+		);
 	}
 
 	/**
-	 * Tests that the script and style are not enqueued when no provider has an API key.
+	 * Tests that the script and style are enqueued without an API key, so the
+	 * sidebar can link to the Connectors screen.
 	 */
-	public function test_script_is_not_enqueued_without_api_key() {
+	public function test_script_is_enqueued_without_api_key() {
+		if ( ! file_exists( AI_CONTENT_EDITING_ASSISTANT_PATH . '/build/index.asset.php' ) ) {
+			$this->markTestSkipped( 'The script is only enqueued when the plugin is built.' );
+		}
+
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
 		( new Enqueue() )->enqueue_editor_scripts();
 
-		$this->assertFalse( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
-		$this->assertFalse( wp_style_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertTrue( wp_script_is( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE ) );
+		$this->assertStringContainsString(
+			'"hasApiKey":false',
+			implode( '', wp_scripts()->get_data( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, 'before' ) )
+		);
 	}
 }
