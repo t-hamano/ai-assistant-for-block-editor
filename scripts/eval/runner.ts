@@ -86,6 +86,13 @@ export type TurnResult = {
 	failures: string[];
 	dropped: number;
 	text: string;
+	/**
+	 * What each request of the answer did, in order: `text` when the
+	 * model wrote text, the tools it called, what became of its edits
+	 * (`applied`, `fixed`, `failed`, or `dropped`), and `discarded` when
+	 * its text was taken back.
+	 */
+	requests: string[][];
 	error?: string;
 };
 
@@ -307,6 +314,15 @@ async function sendMessage(
 		failures: [],
 		dropped: 0,
 		text: '',
+		requests: [],
+	};
+	// The usage ends each request. The edits and the text taken back come
+	// after it, so they belong to the request that ended last.
+	let steps: string[] = [];
+	const note = ( step: string ) => {
+		if ( steps.at( -1 ) !== step ) {
+			steps.push( step );
+		}
 	};
 	let current = conversationReducer( conversation, {
 		type: 'START',
@@ -323,12 +339,25 @@ async function sendMessage(
 			signal: new AbortController().signal,
 			read: ( read ) => readDocument( target.getDocument(), read ),
 			onEvent( event ) {
+				if ( event.type === 'usage' ) {
+					turn.requests.push( steps );
+					steps = [];
+					return;
+				}
+				if ( event.type === 'activity' ) {
+					if ( event.activity !== 'thinking' ) {
+						note( event.activity );
+					}
+					return;
+				}
 				if ( event.type === 'text' ) {
+					note( 'text' );
 					turn.text += event.text;
 					current = conversationReducer( current, { type: 'APPEND_TEXT', text: event.text } );
 					return;
 				}
 				if ( event.type === 'discard_text' ) {
+					turn.requests.at( -1 )?.push( 'discarded' );
 					turn.text = turn.text.slice( 0, turn.text.length - event.text.length );
 					current = conversationReducer( current, { type: 'DISCARD_TEXT', text: event.text } );
 					return;
@@ -338,6 +367,9 @@ async function sendMessage(
 				}
 				setUpInnerBlocks();
 				const result: AiEditResult = target.apply( event.edit );
+				turn.requests
+					.at( -1 )
+					?.push( result.status === 'applied' && result.autoFix ? 'fixed' : result.status );
 				if ( result.status === 'failed' ) {
 					// Which edit failed, with its markup, to tell why the model sent it.
 					const { action, markup } = event.edit;

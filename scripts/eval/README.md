@@ -26,7 +26,7 @@ The editor, the prompt, the document context, and the Anthropic adapter are the 
     npm run eval:view
     ```
 
-Each result shows the model's answers and the document afterwards. Open a result's details to see why each check passed or failed.
+Each result shows the model's answers and the document afterwards. Each turn of a result also lists what each request did under `requests`: `text` when the model wrote text, `reading` or `editing` for its tool calls, what became of its edits (`applied`, `fixed`, `failed`, or `dropped`), and `discarded` when its text was taken back. Open a result's details to see why each check passed or failed.
 
 promptfoo keeps every run on your computer, so the viewer can show this run next to the one before a change.
 
