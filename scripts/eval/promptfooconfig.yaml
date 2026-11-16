@@ -19,6 +19,9 @@ providers:
 evaluateOptions:
   # One case at a time, so the prompt cache is used the same way in every run.
   maxConcurrency: 1
+  # The model does not answer the same way every time, so each case runs
+  # three times, and `npm run eval:record` records the average.
+  repeat: 3
 
 defaultTest:
   assert:
