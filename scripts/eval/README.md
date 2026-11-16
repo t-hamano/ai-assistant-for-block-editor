@@ -50,3 +50,10 @@ The cases are the `tests` in [promptfooconfig.yaml](promptfooconfig.yaml), and t
 - The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, and `order` text that must appear in that order, to check where an edit went.
 
 Keep the cases fixed, so that results can be compared. Add a case for a kind of request that is not covered, rather than changing one. The documents must be valid block markup, which `npm run test:unit` checks, together with the checks themselves.
+
+## Versions
+
+The `description` in `promptfooconfig.yaml` names the version of the evaluation set, such as `eval set v1`, so `npm run eval:view` shows which runs can be compared.
+
+- Raise the version when an existing case changes: its document, request, selection, or expected values, or `site.json`, which every case uses. Make such a change in a pull request of its own that does not change the plugin, and run the evaluation there to start the new version's results.
+- Adding a case does not need a new version, since the other cases stay the same. Compare the cases one by one, though: the totals of a run include the new case.

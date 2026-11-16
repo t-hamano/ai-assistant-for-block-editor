@@ -2,7 +2,9 @@
 #
 # Evaluates the AI assistant with a real model. See README.md in this folder.
 
-description: AI assistant evaluation
+# The version of the evaluation set, shown in `npm run eval:view`. Raise it
+# when an existing case changes. See README.md.
+description: AI assistant evaluation, eval set v1
 
 # The case is in the variables. The prompt is only the label promptfoo shows.
 prompts:
