@@ -76,6 +76,25 @@ describe( 'buildGeminiBody', () => {
 } );
 
 describe( 'toGeminiContents', () => {
+	it( 'tells the model again the reference IDs of the blocks its edits added', () => {
+		const sent = JSON.stringify(
+			toGeminiContents( [
+				{ role: 'user', text: 'Add two blocks' },
+				{
+					role: 'assistant',
+					text: 'Added.',
+					edits: [ EDIT, EDIT ],
+					editRefs: [ [ 'b7', 'b8' ], [] ],
+				},
+				{ role: 'user', text: 'Thanks' },
+			] )
+		);
+		expect( sent ).toContain(
+			'The edit was applied. The reference IDs of the new blocks are b7, b8.'
+		);
+		expect( sent.match( /The edit was applied\./g ) ).toHaveLength( 2 );
+	} );
+
 	it( 'sends the text, and the edits as function calls that were applied', () => {
 		expect(
 			toGeminiContents( [

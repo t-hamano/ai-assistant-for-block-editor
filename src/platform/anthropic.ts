@@ -101,8 +101,9 @@ export function describeApplied( refs: string[] | undefined, autoFix?: string ):
 /**
  * Converts the conversation into Anthropic's messages.
  *
- * Earlier answers are sent as their text and edits. The model's thinking is
- * not kept, and the API accepts a history without it.
+ * Earlier answers are sent as their text and edits, with the reference IDs
+ * of the blocks the edits added. The model's thinking is not kept, and the
+ * API accepts a history without it.
  *
  * @param messages The conversation.
  * @return The messages.
@@ -136,7 +137,11 @@ export function toAnthropicMessages( messages: AiMessage[] ): AnthropicMessage[]
 		if ( ids.length ) {
 			push(
 				'user',
-				ids.map( ( id ) => ( { type: 'tool_result', tool_use_id: id, content: APPLIED } ) )
+				ids.map( ( id, number ) => ( {
+					type: 'tool_result',
+					tool_use_id: id,
+					content: describeApplied( message.editRefs?.[ number ] ),
+				} ) )
 			);
 		}
 	} );

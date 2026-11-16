@@ -15,6 +15,12 @@ export type AiMessage =
 			 * the conversation.
 			 */
 			edits?: AiEdit[];
+			/**
+			 * For each edit, the reference IDs of the blocks it added, as
+			 * the model was told them. The host tells the model again, so
+			 * it can still point at those blocks.
+			 */
+			editRefs?: string[][];
 	  };
 
 /**

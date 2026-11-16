@@ -56,13 +56,11 @@ export const OPENAI_READ_TOOLS = READ_TOOLS.map( ( tool ) => ( {
  */
 type OpenAiItem = { type?: string; [ key: string ]: unknown };
 
-const APPLIED = 'The edit was applied.';
-
 /**
  * Converts the conversation into the input of OpenAI's Responses API.
  *
- * Earlier answers are sent as their text and edits. The model's reasoning
- * is not kept, and the API accepts a history without it.
+ * Earlier answers are sent as their text and edits, with the reference IDs
+ * of the blocks the edits added. The model's reasoning is not kept, and the API accepts a history without it.
  *
  * @param messages The conversation.
  * @return The input items.
@@ -82,7 +80,11 @@ export function toOpenAiInput( messages: AiMessage[] ): OpenAiItem[] {
 				name: EDIT_TOOL.name,
 				arguments: JSON.stringify( edit ),
 			} ) ),
-			...ids.map( ( id ) => ( { type: 'function_call_output', call_id: id, output: APPLIED } ) ),
+			...ids.map( ( id, number ) => ( {
+				type: 'function_call_output',
+				call_id: id,
+				output: describeApplied( message.editRefs?.[ number ] ),
+			} ) ),
 		];
 	} );
 }

@@ -16,7 +16,7 @@ const group = ( ref: string, inner: string ) =>
 
 const doc = ( ...blocks: string[] ) => blocks.join( '\n\n' );
 
-const seen = ( known: string, shown = known ) => ( { known, shown } );
+const seen = ( known: string, shown = known, added: string[] = [] ) => ( { known, shown, added } );
 
 // A long paragraph, so that sending the changes is shorter than the whole document.
 const long = 'Lorem ipsum dolor sit amet. '.repeat( 10 );
@@ -116,6 +116,39 @@ describe( 'formatChanges', () => {
 				'<changes>',
 				'<blocks after="b1">',
 				paragraph( 'b2', 'Added.' ),
+				'</blocks>',
+				'</changes>',
+			].join( '\n' )
+		);
+	} );
+
+	it( 'does not send the blocks the model added when it was told their reference IDs', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Added.' ) );
+		expect( formatChanges( known, seen( known, shown, [ 'b2' ] ) ) ).toBe( '' );
+		expect(
+			buildMessageContext( { document: known, selection: '' }, seen( known, shown, [ 'b2' ] ) )
+		).toBe( '<selection></selection>' );
+	} );
+
+	it( 'sends a block the model added when it was not told the reference IDs of its nested blocks', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ) );
+		const added = group( 'b2', paragraph( 'b3', 'Inside.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ), added );
+		expect( formatChanges( known, seen( known, shown, [ 'b2' ] ) ) ).toBe(
+			[ '<changes>', '<blocks after="b1">', added, '</blocks>', '</changes>' ].join( '\n' )
+		);
+	} );
+
+	it( 'sends a block the model added when the user changed it after the answer', () => {
+		const shown = doc( paragraph( 'b1', 'One.' ) );
+		const known = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Added.' ) );
+		const document = doc( paragraph( 'b1', 'One.' ), paragraph( 'b2', 'Changed.' ) );
+		expect( formatChanges( document, seen( known, shown, [ 'b2' ] ) ) ).toBe(
+			[
+				'<changes>',
+				'<blocks after="b1">',
+				paragraph( 'b2', 'Changed.' ),
 				'</blocks>',
 				'</changes>',
 			].join( '\n' )

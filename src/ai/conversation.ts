@@ -43,6 +43,12 @@ export type AssistantChatMessage = {
 	 */
 	edits?: AiEdit[];
 	/**
+	 * For each edit, the reference IDs of the blocks it added, as the
+	 * model was told them. Empty when the model was not told, such as when
+	 * the editor fixed the markup, so the next message sends those blocks.
+	 */
+	editRefs?: string[][];
+	/**
 	 * `applied` when an edit changed the document, and `dropped` when the
 	 * selection the edits were for no longer exists, for example after
 	 * switching editor modes.
@@ -76,7 +82,7 @@ export type ConversationAction =
 	| { type: 'START'; text: string; context?: string; document?: string }
 	| { type: 'APPEND_TEXT'; text: string }
 	| { type: 'ACTIVITY'; activity: AiActivity }
-	| { type: 'EDIT'; edit: AiEdit; applied: boolean }
+	| { type: 'EDIT'; edit: AiEdit; applied: boolean; refs?: string[] }
 	| { type: 'USAGE'; usage: AiUsage }
 	| {
 			type: 'FINISH';
@@ -152,7 +158,11 @@ export function conversationReducer(
 			return updateAnswer( conversation, ( message ) => ( {
 				...message,
 				...( action.applied
-					? { edits: [ ...( message.edits ?? [] ), action.edit ], editStatus: 'applied' }
+					? {
+							edits: [ ...( message.edits ?? [] ), action.edit ],
+							editRefs: [ ...( message.editRefs ?? [] ), action.refs ?? [] ],
+							editStatus: 'applied',
+						}
 					: { editStatus: message.editStatus ?? 'dropped' } ),
 				activity: 'waiting',
 			} ) );
@@ -214,6 +224,11 @@ export type SeenDocument = {
 	 * earlier answers.
 	 */
 	shown: string;
+	/**
+	 * The reference IDs of the blocks the answer's edits added, which the
+	 * model was told.
+	 */
+	added: string[];
 };
 
 /**
@@ -239,7 +254,8 @@ export function getLastSeenDocument( messages: ChatMessage[] ): SeenDocument | n
 		if ( known === undefined || message.document === undefined ) {
 			return null;
 		}
-		return { known, shown: message.document };
+		const added = answer?.role === 'assistant' ? ( answer.editRefs ?? [] ).flat() : [];
+		return { known, shown: message.document, added };
 	}
 	return null;
 }
@@ -265,7 +281,7 @@ export function toAiMessages( messages: ChatMessage[] ): AiMessage[] {
 				text: toUserText( message.text, message.context ),
 			} );
 		} else if ( message.status !== 'error' ) {
-			const { edits } = message;
+			const { edits, editRefs } = message;
 			// An answer stopped before it said anything has nothing to send.
 			if ( ! message.text && ! edits ) {
 				return;
@@ -274,6 +290,7 @@ export function toAiMessages( messages: ChatMessage[] ): AiMessage[] {
 				role: 'assistant',
 				text: message.text,
 				...( edits ? { edits } : {} ),
+				...( editRefs?.some( ( refs ) => refs.length ) ? { editRefs } : {} ),
 			} );
 		}
 	} );

@@ -98,6 +98,19 @@ function collectRefs( markup: string ): Set< string > {
 }
 
 /**
+ * Lists the reference IDs the model has seen: those in the document it was
+ * shown, and those of the blocks its edits added, which it was told.
+ *
+ * @param seen What the model knows about the document.
+ * @return The reference IDs.
+ */
+function knownRefs( seen: SeenDocument ): Set< string > {
+	const refs = collectRefs( seen.shown );
+	seen.added.forEach( ( ref ) => refs.add( ref.toLowerCase() ) );
+	return refs;
+}
+
+/**
  * Finds the blocks of the document now that the model knows as they are,
  * in the same order: the longest run they have in common with the blocks
  * the model knows.
@@ -140,8 +153,8 @@ function findUnchanged( previous: TopLevelBlock[], current: TopLevelBlock[] ): b
  * Describes how the document differs from what the model knows, by
  * reference ID: the blocks that were removed, and the blocks that are new
  * or changed, or moved, with the block they come after. Blocks the model's
- * own edits added are sent too, because the model has not seen their
- * reference IDs.
+ * own edits added are sent too when the model was not told all their
+ * reference IDs, such as those of their nested blocks.
  *
  * @param document The document now.
  * @param seen     What the model knows about the document.
@@ -154,7 +167,7 @@ export function formatChanges( document: string, seen: SeenDocument ): string | 
 	if ( ! before || ! after || before.length * after.length > MAX_COMPARED * MAX_COMPARED ) {
 		return null;
 	}
-	const shownRefs = collectRefs( seen.shown );
+	const shownRefs = knownRefs( seen );
 	const matched = findUnchanged( before, after );
 	const unchanged = after.map(
 		( block, index ) =>
@@ -229,12 +242,12 @@ function formatSelection( context: EditContext ): string {
  * Builds what goes before the user's message to tell the model about the
  * document. The first message has the whole document. A later one has only
  * the blocks that differ from what the model knows, by the user's changes
- * after the last answer, and the blocks the model's edits added, so the
- * model learns their reference IDs. The whole document is sent again when
- * that is shorter, or when the changes cannot be told by reference ID. A
- * long document is sent as an outline instead of the whole of it, and the
- * model reads the blocks it needs with its read tools. The selection comes
- * last.
+ * after the last answer, and the blocks the model's edits added whose
+ * reference IDs it was not told, so it learns them. The whole document is
+ * sent again when that is shorter, or when the changes cannot be told by
+ * reference ID. A long document is sent as an outline instead of the whole
+ * of it, and the model reads the blocks it needs with its read tools. The
+ * selection comes last.
  *
  * @param context The selection and the document now.
  * @param seen    What the model knows about the document, or `null` when
@@ -247,6 +260,7 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 	const changes = seen === null ? null : formatChanges( document, seen );
 	const whole = formatDocument( context );
 	const isOutline = isLongDocument( document );
+	const known = seen === null ? new Set< string >() : knownRefs( seen );
 	if ( seen === null ) {
 		parts.push( whole );
 	} else if ( changes !== null && changes.length < whole.length ) {
@@ -259,7 +273,7 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 	} else if (
 		changes !== null ||
 		seen.known !== document ||
-		[ ...collectRefs( document ) ].some( ( ref ) => ! collectRefs( seen.shown ).has( ref ) )
+		[ ...collectRefs( document ) ].some( ( ref ) => ! known.has( ref ) )
 	) {
 		parts.push(
 			isOutline
