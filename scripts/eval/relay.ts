@@ -6,7 +6,7 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import { addUsage, countRetries, readStreamUsage, type Usage } from './usage';
+import { addUsage, countRetries, readAnswerUsage, readStreamUsage, type Usage } from './usage';
 
 /**
  * Where the plugin's relay sends Anthropic's requests, as in
@@ -93,9 +93,13 @@ export function setUpRelay( apiKey: string ): RelayRecord {
 			return response;
 		}
 		const [ forPlatform, forUsage ] = response.body.tee();
+		// The platform asks for the whole answer at once when streaming does not work.
+		const read = data.stream
+			? readStreamUsage
+			: ( text: string ) => readAnswerUsage( JSON.parse( text ) );
 		pending.push(
 			new Response( forUsage ).text().then(
-				( text ) => addUsage( record.usage, readStreamUsage( text ) ),
+				( text ) => addUsage( record.usage, read( text ) ),
 				() => addUsage( record.usage, readStreamUsage( '' ) )
 			)
 		);

@@ -64,6 +64,24 @@ export function readStreamUsage( stream: string ): Usage {
 }
 
 /**
+ * Reads the usage of one answer of Anthropic's Messages API that was not
+ * streamed, as the platform asks for when streaming does not work.
+ *
+ * @param answer The answer, a message.
+ * @return The usage, with `requests` set to 1.
+ */
+export function readAnswerUsage( answer: any ): Usage {
+	const usage = answer?.usage ?? {};
+	return {
+		inputTokens: usage.input_tokens ?? 0,
+		cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+		cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+		outputTokens: usage.output_tokens ?? 0,
+		requests: 1,
+	};
+}
+
+/**
  * Adds one usage to another.
  *
  * @param total The usage to add to, which is changed.

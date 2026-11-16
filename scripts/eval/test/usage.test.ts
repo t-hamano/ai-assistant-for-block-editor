@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import { addUsage, countRetries, createUsage, readStreamUsage } from '../usage';
+import { addUsage, countRetries, createUsage, readAnswerUsage, readStreamUsage } from '../usage';
 
 const event = ( type: string, data: object ) =>
 	`event: ${ type }\ndata: ${ JSON.stringify( { type, ...data } ) }\n\n`;
@@ -86,5 +86,26 @@ describe( 'countRetries', () => {
 		expect( countRetries( body ) ).toBe( 1 );
 		expect( countRetries( { messages: body.messages.slice( 0, 1 ) } ) ).toBe( 0 );
 		expect( countRetries( {} ) ).toBe( 0 );
+	} );
+} );
+
+describe( 'readAnswerUsage', () => {
+	it( 'reads the usage of an answer that was not streamed', () => {
+		expect(
+			readAnswerUsage( {
+				usage: {
+					input_tokens: 5,
+					cache_read_input_tokens: 600,
+					cache_creation_input_tokens: 70,
+					output_tokens: 80,
+				},
+			} )
+		).toEqual( {
+			inputTokens: 5,
+			cacheReadTokens: 600,
+			cacheWriteTokens: 70,
+			outputTokens: 80,
+			requests: 1,
+		} );
 	} );
 } );

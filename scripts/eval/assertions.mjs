@@ -108,16 +108,36 @@ export function firstTry( output ) {
 }
 
 /**
+ * Whether each text appears after the one before it.
+ *
+ * @param {string}   markup The markup, in lowercase.
+ * @param {string[]} items  The texts.
+ * @return {boolean} Whether they appear in order.
+ */
+function isInOrder( markup, items ) {
+	let from = 0;
+	for ( const item of items ) {
+		const index = markup.indexOf( item.toLowerCase(), from );
+		if ( index < 0 ) {
+			return false;
+		}
+		from = index + item.length;
+	}
+	return true;
+}
+
+/**
  * Passes when the document afterwards has what the case expects, from the
  * assertion's `config`: `blocks` it has, `text` its markup has, and
- * `absent` text it no longer has. Text is compared ignoring case.
+ * `absent` text it no longer has, and `order` text that appears in this
+ * order, to check where an edit went. Text is compared ignoring case.
  *
  * @param {string} output  The output.
  * @param {Object} context promptfoo's context.
  */
 export function expected( output, context ) {
 	const { blockNames, document } = readResult( output );
-	const { blocks = [], text = [], absent = [] } = context?.config ?? {};
+	const { blocks = [], text = [], absent = [], order = [] } = context?.config ?? {};
 	const markup = document.toLowerCase();
 	const unmet = [
 		...blocks
@@ -129,6 +149,9 @@ export function expected( output, context ) {
 		...absent
 			.filter( ( item ) => markup.includes( item.toLowerCase() ) )
 			.map( ( item ) => `still has "${ item }"` ),
+		...( isInOrder( markup, order )
+			? []
+			: [ `does not have ${ order.map( ( item ) => `"${ item }"` ).join( ', then ' ) }` ] ),
 	];
 	return unmet.length
 		? grade( false, `The document ${ unmet.join( ', ' ) }.` )

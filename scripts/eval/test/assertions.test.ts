@@ -112,6 +112,20 @@ describe( 'expected', () => {
 	} );
 } );
 
+describe( 'expected order', () => {
+	it( 'checks that the texts appear in order', () => {
+		const document = '<p>Water tomatoes deeply.</p><p>Mulch them.</p><h3>Harvesting tomatoes</h3>';
+		const order = [ 'Water tomatoes deeply', 'mulch', 'Harvesting tomatoes' ];
+		expect( expected( output( { document } ), { config: { order } } ).pass ).toBe( true );
+		const appended = '<p>Water tomatoes deeply.</p><h3>Harvesting tomatoes</h3><p>Mulch them.</p>';
+		expect( expected( output( { document: appended } ), { config: { order } } ) ).toMatchObject( {
+			pass: false,
+			reason:
+				'The document does not have "Water tomatoes deeply", then "mulch", then "Harvesting tomatoes".',
+		} );
+	} );
+} );
+
 describe( 'sentOutline', () => {
 	it( 'passes when the first message sent an outline', () => {
 		expect( sentOutline( output( { turns: [ { ...turn, outline: true } ] } ) ).pass ).toBe( true );

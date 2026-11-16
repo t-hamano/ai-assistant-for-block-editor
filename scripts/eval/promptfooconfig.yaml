@@ -115,7 +115,8 @@ tests:
         value: file://assertions.mjs:expected
         metric: expected
         config:
-          text: [mulch]
+          # The new paragraph goes after the watering paragraph of the tomatoes section.
+          order: [Water tomatoes deeply, mulch, Harvesting tomatoes]
 
   - description: Follow up in a second turn
     vars:
