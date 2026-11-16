@@ -85,6 +85,14 @@ describe( 'chooseModel', () => {
 		);
 	} );
 
+	it( 'prefers a balanced model to the most expensive one when the recommended ones were retired', () => {
+		expect( chooseModel( anthropic, list( 'claude-opus-6', 'claude-sonnet-6' ) ) ).toBe(
+			'claude-sonnet-6'
+		);
+		expect( chooseModel( openai, list( 'gpt-7-astra', 'gpt-7-sol' ) ) ).toBe( 'gpt-7-sol' );
+		expect( chooseModel( anthropic, list( 'claude-opus-6' ) ) ).toBe( 'claude-opus-6' );
+	} );
+
 	it( 'chooses the first recommended model without a list', () => {
 		expect( chooseModel( google, null ) ).toBe( google.recommended[ 0 ] );
 		expect( chooseModel( google, list( 'gemini-embedding-001' ) ) ).toBe( google.recommended[ 0 ] );

@@ -14,7 +14,7 @@ import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 /**
  * The model that answers when no other model is chosen.
  */
-export const ANTHROPIC_MODEL = 'claude-opus-5-5';
+export const ANTHROPIC_MODEL = 'claude-sonnet-5-5';
 
 /**
  * The most tokens one answer may use, including the model's thinking.
