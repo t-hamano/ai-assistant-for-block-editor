@@ -274,6 +274,11 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 				'The document changed after your last answer, or has blocks you added. These are the changes.',
 				changes
 			);
+			// Blocks that need more rules may be new in the changes.
+			const notes = getSkillNotes( changes );
+			if ( notes ) {
+				parts.push( notes );
+			}
 		}
 	} else if (
 		changes !== null ||

@@ -10,8 +10,10 @@ import specialBlocks from '../../skills/block-markup/references/special-blocks.m
 const NOTES: { heading: string; test: RegExp }[] = [
 	{
 		heading: '## Dynamic blocks',
-		// A self-closing block delimiter, or a query loop.
-		test: /<!--\s+wp:(?:[a-z][a-z0-9_-]*\/)?[a-z][a-z0-9_-]*\s+(?:\{[\s\S]*?\}\s+)?\/-->|<!--\s+wp:query[\s/]/i,
+		// A self-closing block delimiter, or a query loop. The attributes are
+		// read only up to the end of their own comment, so a long document
+		// is read once.
+		test: /<!--\s+wp:[a-z0-9_/-]+\s(?:(?!-->)[\s\S])*\/-->|<!--\s+wp:query[\s/]/i,
 	},
 	{
 		heading: '## Custom HTML (`core/html`)',

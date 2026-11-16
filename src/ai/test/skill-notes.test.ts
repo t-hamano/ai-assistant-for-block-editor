@@ -24,6 +24,14 @@ describe( 'getSkillNotes', () => {
 		).toContain( '## Dynamic blocks' );
 	} );
 
+	it( 'reads a long document without a self-closing block quickly', () => {
+		const block =
+			'<!-- wp:paragraph {"fontSize":"large"} -->\n<p class="has-large-font-size">Hi</p>\n<!-- /wp:paragraph -->\n\n';
+		const started = performance.now();
+		expect( getSkillNotes( block.repeat( 8000 ) ) ).toBe( '' );
+		expect( performance.now() - started ).toBeLessThan( 500 );
+	} );
+
 	it( 'gives the rules for custom HTML', () => {
 		const notes = getSkillNotes( '<!-- wp:html -->\n<div>Hi</div>\n<!-- /wp:html -->' );
 		expect( notes ).toContain( '## Custom HTML (`core/html`)' );
