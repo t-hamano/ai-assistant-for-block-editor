@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Internal dependencies
  */
-import { findBreaks, listCases, renderChart } from '../chart.mjs';
+import { findBreaks, formatDate, listCases, renderChart } from '../chart.mjs';
 
 const item = ( name: string, totalInputTokens: number, pass = true ) => ( {
 	case: name,
@@ -33,6 +33,13 @@ const runs = [
 	run( 'bbbbbbbbbbbb', 'v1', [ item( 'Rewrite', 900 ), item( '<Columns>', 500, false ) ] ),
 	run( 'cccccccccccc', 'v2', [ item( 'Rewrite', 950 ), item( '<Columns>', 520 ) ] ),
 ];
+
+describe( 'formatDate', () => {
+	it( 'shows the time in Japan Standard Time', () => {
+		expect( formatDate( '2026-11-16T12:00:00.000Z' ) ).toBe( '2026-11-16 21:00' );
+		expect( formatDate( '2026-11-16T15:05:00.000Z' ) ).toBe( '2026-11-17 00:05' );
+	} );
+} );
 
 describe( 'listCases', () => {
 	it( 'lists the cases in the order they first appear', () => {

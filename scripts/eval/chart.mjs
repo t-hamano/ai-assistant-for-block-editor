@@ -56,6 +56,30 @@ export function escape( value ) {
 const format = ( value ) => value.toLocaleString( 'en-US' );
 
 /**
+ * Formats the time of a run in Japan Standard Time, such as
+ * `2026-11-16 21:00`.
+ *
+ * @param {string} date The time, in ISO 8601.
+ * @return {string} The text.
+ */
+export function formatDate( date ) {
+	const parts = Object.fromEntries(
+		new Intl.DateTimeFormat( 'en-US', {
+			timeZone: 'Asia/Tokyo',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			hourCycle: 'h23',
+		} )
+			.formatToParts( new Date( date ) )
+			.map( ( { type, value } ) => [ type, value ] )
+	);
+	return `${ parts.year }-${ parts.month }-${ parts.day } ${ parts.hour }:${ parts.minute }`;
+}
+
+/**
  * Lists the cases in the order they first appear in the history.
  *
  * @param {Object[]} runs The runs.
@@ -160,7 +184,7 @@ function drawMetric( runs, name, metric, label, breaks ) {
 				: '';
 			const tip = [
 				`${ run.commit }${ run.dirty ? ' (not committed)' : '' }`,
-				run.date.slice( 0, 16 ).replace( 'T', ' ' ),
+				formatDate( run.date ),
 				`${ label }: ${ format( item[ metric ] ) }${ change }`,
 				item.pass ? 'Passed' : 'Failed',
 			].join( '\n' );
@@ -175,7 +199,7 @@ function drawMetric( runs, name, metric, label, breaks ) {
 		.map( ( { run, index, item } ) => {
 			const tip = [
 				`${ run.commit }${ run.dirty ? ' (not committed)' : '' }`,
-				run.date.slice( 0, 16 ).replace( 'T', ' ' ),
+				formatDate( run.date ),
 				`Error: ${ item.error ?? 'No result.' }`,
 			].join( '\n' );
 			const [ left, right, top, bottom ] = [
@@ -224,7 +248,7 @@ export function renderChart( runs ) {
 	const rows = runs
 		.map(
 			( run ) =>
-				`<tr><td>${ escape( run.date.slice( 0, 16 ).replace( 'T', ' ' ) ) }</td><td><code>${ escape(
+				`<tr><td>${ escape( formatDate( run.date ) ) }</td><td><code>${ escape(
 					run.commit
 				) }</code>${ run.dirty ? ' (not committed)' : '' }</td><td>${ escape( run.evalSet ) }</td><td>${ escape(
 					run.model
@@ -294,7 +318,7 @@ ${ cases }
 <h2>Runs</h2>
 <p>Oldest first, like the charts. The totals add up every case of the run, so they compare only between runs with the same cases.</p>
 <div class="table"><table>
-<thead><tr><th>Date (UTC)</th><th>Commit</th><th>Set</th><th>Model</th><th>Passed</th><th>Total input</th><th>Output</th><th>Requests</th></tr></thead>
+<thead><tr><th>Date (JST)</th><th>Commit</th><th>Set</th><th>Model</th><th>Passed</th><th>Total input</th><th>Output</th><th>Requests</th></tr></thead>
 <tbody>${ rows }</tbody>
 </table></div>
 </main>

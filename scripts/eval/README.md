@@ -60,7 +60,7 @@ To see the history as charts, run the following. It opens the charts in the brow
 npm run eval:chart
 ```
 
-Each case has a chart of its total input tokens, output tokens, and requests across the runs, and a table lists the runs. A hollow red point is a run where the case failed, a red cross on the bottom edge a run where it ended in an error, and a dashed line marks a change of the evaluation set or the model.
+Each case has a chart of its total input tokens, output tokens, and requests across the runs, and a table lists the runs. A hollow red point is a run where the case failed, a red cross on the bottom edge a run where it ended in an error, and a dashed line marks a change of the evaluation set or the model. Times are shown in Japan Standard Time (JST), while `history.jsonl` keeps them in UTC.
 
 ## What is checked
 
