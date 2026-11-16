@@ -48,7 +48,7 @@ The cases are the `tests` in [promptfooconfig.yaml](promptfooconfig.yaml), and t
 - `select`, optional: `block` is the path of a block (`[ 2 ]` for the third top-level block, `[ 0, 1 ]` for the second inner block of the first), `to` ends a range of blocks, and `text` selects that text inside the block's content.
 - The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, and `order` text that must appear in that order, to check where an edit went.
 
-Every case runs with the theme settings of [site.json](site.json), written as the `settings` of a theme's `theme.json`. They are taken from Twenty Twenty-Five and Ipsum, the latest default themes of WordPress, with their presets of colors, gradients, duotone, shadows, spacing, font sizes, and font families.
+Every case runs with the theme of [theme.json](theme.json), taken from Twenty Twenty-Five and Ipsum, the latest default themes of WordPress. Its `settings` have presets of colors, gradients, duotone, shadows, spacing, font sizes, and font families. Its `styles` define block style variations, such as `text-display` for headings and paragraphs, which are registered as block styles the way WordPress registers them.
 
 Keep the cases fixed, so that results can be compared. Add a case for a kind of request that is not covered, rather than changing one. The documents must be valid block markup, which `npm run test:unit` checks, together with the checks themselves.
 
@@ -56,5 +56,5 @@ Keep the cases fixed, so that results can be compared. Add a case for a kind of 
 
 The `description` in `promptfooconfig.yaml` names the version of the evaluation set, such as `eval set v1`, so `npm run eval:view` shows which runs can be compared.
 
-- Raise the version when an existing case changes: its document, request, selection, or expected values, or `site.json`, which every case uses. Make such a change in a pull request of its own that does not change the plugin, and run the evaluation there to start the new version's results.
+- Raise the version when an existing case changes: its document, request, selection, or expected values, or `theme.json`, which every case uses. Make such a change in a pull request of its own that does not change the plugin, and run the evaluation there to start the new version's results.
 - Adding a case does not need a new version, since the other cases stay the same. When you compare totals with runs from before the case was added, add up only the cases both runs have.

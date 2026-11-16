@@ -3,7 +3,14 @@
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { registerCoreBlocks } from '@wordpress/block-library';
-import { getBlockTypes, parse, serialize, type Block } from '@wordpress/blocks';
+import {
+	getBlockTypes,
+	parse,
+	registerBlockStyle,
+	serialize,
+	store as blocksStore,
+	type Block,
+} from '@wordpress/blocks';
 import { dispatch, select } from '@wordpress/data';
 import { create } from '@wordpress/rich-text';
 
@@ -28,7 +35,7 @@ import { createSelectionTarget } from '../../src/editor/text-target';
 import type { AiEditResult } from '../../src/platform';
 import { setUpRelay } from './relay';
 import type { Usage } from './usage';
-import site from './site.json';
+import theme from './theme.json';
 
 /**
  * The model every case runs with, so results can be compared.
@@ -130,8 +137,7 @@ const PRESETS = [
 ];
 
 /**
- * Turns the settings of `site.json`, written as in a theme's `theme.json`,
- * into the settings the editor has.
+ * Turns the settings of `theme.json` into the settings the editor has.
  *
  * @param settings The settings.
  * @return The editor's settings.
@@ -147,7 +153,8 @@ function toEditorSettings( settings: Record< string, any > ): Record< string, an
 }
 
 /**
- * Registers the core blocks and the theme settings, once.
+ * Registers the core blocks, the theme settings, and the block style
+ * variations of the theme's styles, as WordPress registers them, once.
  */
 function setUpSite() {
 	if ( siteReady || getBlockTypes().length ) {
@@ -165,8 +172,22 @@ function setUpSite() {
 	console.error = error;
 	/* eslint-enable no-console */
 	dispatch( blockEditorStore ).updateSettings( {
-		__experimentalFeatures: toEditorSettings( site.settings ),
+		__experimentalFeatures: toEditorSettings( theme.settings ),
 	} );
+	const blocks: Record< string, { variations?: object } > = theme.styles.blocks;
+	for ( const [ name, { variations = {} } ] of Object.entries( blocks ) ) {
+		const registered = ( select( blocksStore ).getBlockStyles( name ) ?? [] ).map(
+			( style: { name: string } ) => style.name
+		);
+		for ( const variation of Object.keys( variations ) ) {
+			if ( ! registered.includes( variation ) ) {
+				registerBlockStyle( name, {
+					name: variation,
+					label: variation.replace( /-/g, ' ' ).replace( /^\w/, ( c ) => c.toUpperCase() ),
+				} );
+			}
+		}
+	}
 	siteReady = true;
 }
 
