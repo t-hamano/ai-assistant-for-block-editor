@@ -147,5 +147,10 @@ tests:
         value: file://assertions.mjs:expected
         metric: expected
         config:
-          # The edited paragraph is one of those added after the last paragraph.
-          order: [review it again next year, 'Start small:']
+          # The edited paragraph is the first of the three added after the last
+          # paragraph: two more paragraphs follow it.
+          order:
+            [review it again next year, 'Start small:', '<!-- wp:paragraph', '<!-- wp:paragraph']
+          # The four paragraphs and the three added, so the follow-up edited one
+          # of them rather than adding another.
+          count: { '<!-- wp:paragraph': 7, 'Start small:': 1 }
