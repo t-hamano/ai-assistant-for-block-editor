@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Draws the runs of `history.jsonl` as charts in one HTML file, which
- * opens in a browser without anything else: for each case, its total
- * input tokens, output tokens, and requests across the runs.
+ * Shows the runs of `history.jsonl` as charts on a page served on
+ * localhost, and opens it in the browser: for each case, its total input
+ * tokens, output tokens, and requests across the runs. The page is drawn
+ * again on each load, so reloading it shows runs recorded since.
  *
  * Usage: npm run eval:chart
  */
@@ -11,15 +12,16 @@
 /**
  * External dependencies
  */
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'node:path';
+import http from 'node:http';
 
 /**
  * Internal dependencies
  */
 import { HISTORY, readHistory } from './record.mjs';
 
-export const CHART = path.join( import.meta.dirname, 'history.html' );
+const PORT = 15600;
 
 const METRICS = [
 	[ 'totalInputTokens', 'Total input tokens' ],
@@ -93,16 +95,19 @@ export function findBreaks( runs ) {
  * @return {string} The SVG.
  */
 function drawMetric( runs, name, metric, label, breaks ) {
-	const points = runs
+	const found = runs
 		.map( ( run, index ) => ( { run, index, item: run.cases.find( ( c ) => c.case === name ) } ) )
-		.filter( ( { item } ) => item && typeof item[ metric ] === 'number' );
+		.filter( ( { item } ) => item );
+	const points = found.filter( ( { item } ) => typeof item[ metric ] === 'number' );
+	// A case that ended in an error has no usage, so it is marked on the baseline instead.
+	const errors = found.filter( ( { item } ) => typeof item[ metric ] !== 'number' );
 	const plotWidth = WIDTH - PAD.left - PAD.right;
 	const plotHeight = HEIGHT - PAD.top - PAD.bottom;
 	const x = ( index ) =>
 		PAD.left + ( runs.length > 1 ? ( index / ( runs.length - 1 ) ) * plotWidth : plotWidth / 2 );
 	const values = points.map( ( { item } ) => item[ metric ] );
-	let min = Math.min( ...values );
-	let max = Math.max( ...values );
+	let min = values.length ? Math.min( ...values ) : 0;
+	let max = values.length ? Math.max( ...values ) : 0;
 	// The scale fits the values rather than starting at zero, so that small changes show,
 	// but spans at least a tenth of them, so that noise does not look large.
 	const margin = Math.max( ( max - min ) * 0.15, max * 0.05, 1 );
@@ -110,7 +115,7 @@ function drawMetric( runs, name, metric, label, breaks ) {
 	max = max + margin;
 	const y = ( value ) => PAD.top + ( 1 - ( value - min ) / ( max - min ) ) * plotHeight;
 
-	const grid = [ min, ( min + max ) / 2, max ]
+	const grid = ( values.length ? [ min, ( min + max ) / 2, max ] : [] )
 		.map(
 			( value ) =>
 				`<line class="grid" x1="${ PAD.left }" x2="${ WIDTH - PAD.right }" y1="${ y( value ) }" y2="${ y( value ) }"/>` +
@@ -165,6 +170,26 @@ function drawMetric( runs, name, metric, label, breaks ) {
 			);
 		} )
 		.join( '' );
+	const baseline = HEIGHT - PAD.bottom;
+	const failures = errors
+		.map( ( { run, index, item } ) => {
+			const tip = [
+				`${ run.commit }${ run.dirty ? ' (not committed)' : '' }`,
+				run.date.slice( 0, 16 ).replace( 'T', ' ' ),
+				`Error: ${ item.error ?? 'No result.' }`,
+			].join( '\n' );
+			const [ left, right, top, bottom ] = [
+				x( index ) - 4,
+				x( index ) + 4,
+				baseline - 4,
+				baseline + 4,
+			];
+			return (
+				`<path class="error" d="M${ left } ${ top }L${ right } ${ bottom }M${ right } ${ top }L${ left } ${ bottom }"/>` +
+				`<circle class="hit" cx="${ x( index ) }" cy="${ baseline }" r="12" data-tip="${ escape( tip ) }"/>`
+			);
+		} )
+		.join( '' );
 	const axis = runs
 		.map( ( run, index ) =>
 			runs.length <= 8 || index === 0 || index === runs.length - 1
@@ -177,7 +202,7 @@ function drawMetric( runs, name, metric, label, breaks ) {
 
 	return `<figure><figcaption>${ escape( label ) }</figcaption><svg viewBox="0 0 ${ WIDTH } ${ HEIGHT }" role="img" aria-label="${ escape(
 		`${ label } of ${ name }`
-	) }">${ grid }${ divisions }${ lines }${ marks }${ axis }</svg></figure>`;
+	) }">${ grid }${ divisions }${ lines }${ marks }${ failures }${ axis }</svg></figure>`;
 }
 
 /**
@@ -252,6 +277,7 @@ svg { width: 100%; height: auto; overflow: visible; }
 .line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; }
 .point { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
 .point.failed { fill: var(--surface); stroke: var(--failed); stroke-width: 2; }
+.error { stroke: var(--failed); stroke-width: 2; stroke-linecap: round; }
 .hit { fill: transparent; cursor: default; }
 .table { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
@@ -263,7 +289,8 @@ th { color: var(--text-secondary); font-weight: 600; }
 <body>
 <main>
 <h1>Evaluation history</h1>
-<p>Each point is a run recorded in <code>history.jsonl</code>, oldest on the left. A hollow red point is a run where the case failed. A dashed line marks a change of the evaluation set or the model: runs on either side do not compare.</p>
+${ runs.length ? '' : '<p>No runs are recorded yet. Record one with <code>npm run eval:record</code>.</p>' }
+<p>Each point is a run recorded in <code>history.jsonl</code>, oldest on the left. A hollow red point is a run where the case failed, and a red cross on the bottom edge a run where it ended in an error, without usage. A dashed line marks a change of the evaluation set or the model: runs on either side do not compare.</p>
 ${ cases }
 <h2>Runs</h2>
 <p>Newest first. The totals add up every case of the run, so they compare only between runs with the same cases.</p>
@@ -293,11 +320,29 @@ document.addEventListener( 'pointerover', ( event ) => {
 
 /* eslint-disable no-console -- A command line script reports through the console. */
 if ( import.meta.main ) {
-	const runs = fs.existsSync( HISTORY ) ? readHistory( fs.readFileSync( HISTORY, 'utf8' ) ) : [];
-	if ( ! runs.length ) {
-		console.error( 'history.jsonl has no runs yet. Record one with `npm run eval:record`.' );
-		process.exit( 1 );
-	}
-	fs.writeFileSync( CHART, renderChart( runs ) );
-	console.log( `Open ${ CHART } in a browser.` );
+	const server = http.createServer( ( request, response ) => {
+		const runs = fs.existsSync( HISTORY ) ? readHistory( fs.readFileSync( HISTORY, 'utf8' ) ) : [];
+		response.writeHead( 200, { 'Content-Type': 'text/html; charset=utf-8' } );
+		response.end( renderChart( runs ) );
+	} );
+	// Another port is taken when this one is in use, such as by a second run.
+	server.on( 'error', ( error ) => {
+		if ( error.code === 'EADDRINUSE' ) {
+			server.listen( 0, '127.0.0.1' );
+		} else {
+			throw error;
+		}
+	} );
+	server.on( 'listening', () => {
+		const url = `http://localhost:${ server.address().port }/`;
+		console.log( `The evaluation history is at ${ url }. Press Ctrl+C to stop.` );
+		const [ command, args ] = {
+			darwin: [ 'open', [ url ] ],
+			win32: [ 'cmd', [ '/c', 'start', '', url ] ],
+		}[ process.platform ] ?? [ 'xdg-open', [ url ] ];
+		execFile( command, args, () => {
+			// When no browser opens, the address printed above still works.
+		} );
+	} );
+	server.listen( PORT, '127.0.0.1' );
 }

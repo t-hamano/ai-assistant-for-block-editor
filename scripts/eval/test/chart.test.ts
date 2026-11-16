@@ -68,6 +68,16 @@ describe( 'renderChart', () => {
 		expect( html.match( /<polyline/g ) ).toHaveLength( 3 );
 	} );
 
+	it( 'marks a case that ended in an error, which has no usage', () => {
+		const page = renderChart( [
+			run( 'aaaaaaaaaaaa', 'v1', [ { case: 'Outline', pass: false, error: 'Request timed out' } ] ),
+		] );
+		expect( page.match( /class="error"/g ) ).toHaveLength( 3 );
+		expect( page ).toContain( 'Error: Request timed out' );
+		expect( page ).not.toContain( 'NaN' );
+		expect( html ).not.toContain( 'Infinity' );
+	} );
+
 	it( 'shows the change from the run before in the tooltip', () => {
 		expect( html ).toContain( 'Total input tokens: 900 (-100)' );
 		// The first run of v2 does not compare with the run before.

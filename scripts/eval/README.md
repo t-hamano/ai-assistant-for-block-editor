@@ -54,13 +54,13 @@ Each line has the time of the run, the commit, `dirty` when the code had changes
 
 Compare runs by `totalInputTokens`, `outputTokens`, and `requests`. How the input tokens split between the full price and the cache depends on whether the cache was still warm from an earlier run, but their total does not. Compare only runs of the same `evalSet` and model.
 
-To see the history as charts, run the following and open `scripts/eval/history.html` in a browser. The file is ignored by Git.
+To see the history as charts, run the following. It opens the charts in the browser, at `http://localhost:15600/`, until you stop it with Ctrl+C. Reload the page to see runs recorded since.
 
 ```sh
 npm run eval:chart
 ```
 
-Each case has a chart of its total input tokens, output tokens, and requests across the runs, and a table lists the runs. A hollow red point is a run where the case failed, and a dashed line marks a change of the evaluation set or the model.
+Each case has a chart of its total input tokens, output tokens, and requests across the runs, and a table lists the runs. A hollow red point is a run where the case failed, a red cross on the bottom edge a run where it ended in an error, and a dashed line marks a change of the evaluation set or the model.
 
 ## What is checked
 
