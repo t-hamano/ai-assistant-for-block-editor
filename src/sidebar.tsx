@@ -3,11 +3,11 @@
  */
 import { select as selectStore, useSelect } from '@wordpress/data';
 import { PluginSidebar, PluginSidebarMoreMenuItem, store as editorStore } from '@wordpress/editor';
-import { useEffect, useState } from '@wordpress/element';
+import { createInterpolateElement, useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { cog, plus } from '@wordpress/icons';
 import { store as preferencesStore } from '@wordpress/preferences';
-import { IconButton } from '@wordpress/ui';
+import { IconButton, Notice } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -29,6 +29,29 @@ const ai = createAutoPlatform(
 			'model'
 		) as ModelChoice | null ) ?? null
 );
+
+const { hasApiKey, connectorsUrl } = window.aiContentEditingAssistant;
+
+// Without an API key the assistant cannot be used, so the sidebar links to
+// the Connectors screen, where one is set up.
+function NoConnectorNotice() {
+	return (
+		<div className="ai-content-editing-assistant-sidebar__notice">
+			<Notice.Root intent="info">
+				<Notice.Description>
+					{ createInterpolateElement(
+						__(
+							'No connector is set up. Set up at least one connector on the <a>Connectors screen</a>.',
+							'ai-content-editing-assistant'
+						),
+						// eslint-disable-next-line jsx-a11y/anchor-has-content -- The link text is filled in from the translation.
+						{ a: <a href={ connectorsUrl } /> }
+					) }
+				</Notice.Description>
+			</Notice.Root>
+		</div>
+	);
+}
 
 export default function Sidebar() {
 	const title = __( 'AI Assistant', 'ai-content-editing-assistant' );
@@ -85,9 +108,9 @@ export default function Sidebar() {
 					</>
 				}
 			>
-				{ isSettingsOpen ? (
-					<ModelSettings onClose={ () => setIsSettingsOpen( false ) } />
-				) : (
+				{ isSettingsOpen && <ModelSettings onClose={ () => setIsSettingsOpen( false ) } /> }
+				{ ! isSettingsOpen && ! hasApiKey && <NoConnectorNotice /> }
+				{ ! isSettingsOpen && hasApiKey && (
 					<Chat
 						chat={ chat }
 						isAvailable={ isVisualEditor }
