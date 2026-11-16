@@ -12,7 +12,11 @@ import { Icon, IconButton, Notice, Spinner, Stack, Text, TextareaControl } from 
 /**
  * Internal dependencies
  */
-import type { AssistantChatMessage } from '../ai/conversation';
+import {
+	CONVERSATION_TOKEN_LIMIT,
+	getConversationTokens,
+	type AssistantChatMessage,
+} from '../ai/conversation';
 import type { AiChat } from '../ai/use-ai-chat';
 import { getTextSelection } from '../editor/text-target';
 import type { AiUsage } from '../platform';
@@ -175,7 +179,7 @@ type Props = {
 };
 
 export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Props ) {
-	const { conversation, isResponding, send, stop } = chat;
+	const { conversation, isResponding, send, stop, reset } = chat;
 	const messagesRef = useRef< HTMLDivElement >( null );
 	const selection = useSelectionStatus();
 
@@ -186,6 +190,9 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 			element.scrollTop = element.scrollHeight;
 		}
 	}, [ conversation ] );
+
+	const isLong =
+		! isResponding && getConversationTokens( conversation.messages ) > CONVERSATION_TOKEN_LIMIT;
 
 	const canSend = isAvailable && !! draft.trim() && ! isResponding;
 
@@ -256,6 +263,21 @@ export function Chat( { chat, isAvailable, draft, onDraftChange: setDraft }: Pro
 							{ message.text }
 						</Text>
 					)
+				) }
+				{ isLong && (
+					<Notice.Root intent="warning">
+						<Notice.Description>
+							{ __(
+								'This conversation has grown long, so each message costs more. Start a new conversation to keep the cost down.',
+								'ai-content-editing-assistant'
+							) }
+						</Notice.Description>
+						<Notice.Actions>
+							<Notice.ActionButton onClick={ reset }>
+								{ __( 'New conversation', 'ai-content-editing-assistant' ) }
+							</Notice.ActionButton>
+						</Notice.Actions>
+					</Notice.Root>
 				) }
 			</Stack>
 			<Stack

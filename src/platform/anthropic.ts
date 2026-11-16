@@ -7,7 +7,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
-import { endToolRequest, needsReply, trackRequestText } from './answer-text';
+import { checkRequestLimit, endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
@@ -492,6 +492,7 @@ export function createAnthropicPlatform(
 			const conversation = toAnthropicMessages( messages );
 			const answerText = trackRequestText( onEvent );
 			let failures = 0;
+			let requests = 0;
 			for (;;) {
 				const answer = await readAnthropicStream(
 					requestAnswer( {
@@ -516,6 +517,7 @@ export function createAnthropicPlatform(
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );
 				}
+				checkRequestLimit( ++requests );
 				// The answer goes back unchanged, with its thinking, so the model
 				// goes on from where it stopped.
 				conversation.push(

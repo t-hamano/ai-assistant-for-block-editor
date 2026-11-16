@@ -1,4 +1,9 @@
 /**
+ * WordPress dependencies
+ */
+import { __ } from '@wordpress/i18n';
+
+/**
  * Internal dependencies
  */
 import type { AiChatRequest, AiEditResult } from '.';
@@ -67,4 +72,29 @@ export function endToolRequest(
 		onEvent( { type: 'discard_text', text } );
 	}
 	return false;
+}
+
+/**
+ * The most requests one answer may send to the model. An answer usually
+ * takes one to three: the edits, a retry after a failed edit, and a read of
+ * the document. The limit stops a model that keeps calling tools from
+ * running up the cost.
+ */
+export const MAX_REQUESTS = 10;
+
+/**
+ * Stops the answer before another request when it has sent as many as it
+ * may. The edits made so far stay in the document.
+ *
+ * @param requests The requests the answer has sent.
+ */
+export function checkRequestLimit( requests: number ) {
+	if ( requests >= MAX_REQUESTS ) {
+		throw new Error(
+			__(
+				'The answer was stopped because the AI Assistant took too many steps. The edits made so far are kept.',
+				'ai-content-editing-assistant'
+			)
+		);
+	}
 }

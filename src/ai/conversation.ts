@@ -100,6 +100,29 @@ export type ConversationAction =
 	  }
 	| { type: 'RESET' };
 
+/**
+ * How many tokens a conversation may use before the user is asked to start
+ * a new one. Every message sends the whole conversation again, so each
+ * answer costs more than the one before.
+ */
+export const CONVERSATION_TOKEN_LIMIT = 300000;
+
+/**
+ * Adds up the tokens the answers of a conversation used, input and output.
+ *
+ * @param messages The messages of the conversation.
+ * @return The tokens used.
+ */
+export function getConversationTokens( messages: ChatMessage[] ): number {
+	return messages.reduce(
+		( total, message ) =>
+			message.role === 'assistant' && message.usage
+				? total + message.usage.inputTokens + message.usage.outputTokens
+				: total,
+		0
+	);
+}
+
 export function createConversation(): Conversation {
 	return { id: uuid(), messages: [] };
 }

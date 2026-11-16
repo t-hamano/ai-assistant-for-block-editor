@@ -8,7 +8,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
-import { endToolRequest, needsReply, trackRequestText } from './answer-text';
+import { checkRequestLimit, endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
@@ -363,6 +363,7 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 			const contents = toGeminiContents( messages );
 			const answerText = trackRequestText( onEvent );
 			let failures = 0;
+			let requests = 0;
 			for (;;) {
 				const answer = await readGeminiStream(
 					requestAnswer( {
@@ -388,6 +389,7 @@ export function createGeminiPlatform( getPostId: () => number, model = GEMINI_MO
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );
 				}
+				checkRequestLimit( ++requests );
 				// The answer goes back unchanged, with its thought signatures, so
 				// the model goes on from where it stopped.
 				contents.push(

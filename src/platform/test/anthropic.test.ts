@@ -455,6 +455,23 @@ describe( 'createAnthropicPlatform', () => {
 		expect( onEvent ).not.toHaveBeenCalledWith( expect.objectContaining( { type: 'edit' } ) );
 	} );
 
+	it( 'stops after ten requests when the model keeps calling tools', async () => {
+		const readCall = toolCall( '{"refs":["b2"]}', 'read_blocks' );
+		const bodies = respond( ...Array.from( { length: 11 }, () => readCall ), text );
+
+		await expect(
+			createAnthropicPlatform( () => 1 ).chat( {
+				system: 'System',
+				messages: [ { role: 'user', text: 'Rewrite b2' } ],
+				onEvent: vi.fn(),
+				read: () => ( { status: 'done' as const, content: '<p>Two</p>' } ),
+				signal: new AbortController().signal,
+			} )
+		).rejects.toThrow( 'took too many steps' );
+
+		expect( bodies ).toHaveLength( 10 );
+	} );
+
 	it( 'reads the edits by reference ID, and tells the model the IDs of new blocks', async () => {
 		const edit = { action: 'replace_block', ref: 'b2', markup: EDIT.markup };
 		const bodies = respond(
