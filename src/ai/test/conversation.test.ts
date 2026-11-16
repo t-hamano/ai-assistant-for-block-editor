@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	conversationReducer,
 	createConversation,
+	getConversationTokens,
 	getLastSeenDocument,
 	toAiMessages,
 	type AssistantChatMessage,
@@ -286,5 +287,31 @@ describe( 'document context', () => {
 				run( { type: 'START', text: 'One' }, { type: 'FINISH', status: 'done' } ).messages
 			)
 		).toBeNull();
+	} );
+} );
+
+describe( 'getConversationTokens', () => {
+	it( 'adds up the input and output tokens of every answer', () => {
+		expect(
+			getConversationTokens( [
+				{ id: '1', role: 'user', text: 'Hi' },
+				{
+					id: '2',
+					role: 'assistant',
+					text: 'Hello',
+					status: 'done',
+					usage: { inputTokens: 1000, cachedInputTokens: 800, outputTokens: 50 },
+				},
+				{ id: '3', role: 'user', text: 'Again' },
+				{ id: '4', role: 'assistant', text: '', status: 'error' },
+				{
+					id: '5',
+					role: 'assistant',
+					text: 'Done',
+					status: 'done',
+					usage: { inputTokens: 2000, outputTokens: 100 },
+				},
+			] )
+		).toBe( 3150 );
 	} );
 } );

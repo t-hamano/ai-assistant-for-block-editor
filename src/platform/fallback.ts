@@ -9,7 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
-import { endToolRequest, needsReply, trackRequestText } from './answer-text';
+import { checkRequestLimit, endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, runRead } from './read-tools';
 
 /**
@@ -240,6 +240,7 @@ export function createFallbackPlatform(
 			const conversation = toFallbackMessages( messages );
 			const answerText = trackRequestText( onEvent );
 			let failures = 0;
+			let requests = 0;
 			for (;;) {
 				let answer: FallbackAnswer;
 				try {
@@ -281,6 +282,7 @@ export function createFallbackPlatform(
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );
 				}
+				checkRequestLimit( ++requests );
 				// The model's message goes back unchanged, with its reasoning, so
 				// the model goes on from where it stopped.
 				conversation.push( answer.message, { role: 'user', parts: tools.results } );
