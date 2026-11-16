@@ -37,6 +37,39 @@ Only users with administrator privileges can use this plugin, and only super adm
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. Install an AI provider plugin and set its API key on the Connectors screen.
 
+== Frequently Asked Questions ==
+
+= Does it cost anything to use? =
+The plugin is free, but the AI provider charges for each request, based on the amount of text sent and received. The provider bills you directly, under the account that owns the API key. Nothing is paid to the plugin author.
+
+= How can I avoid unexpected charges? =
+We recommend setting a monthly spend limit in your provider's console before you start. When the limit is reached, the provider stops answering until the next month, so you are never charged more than you planned.
+
+* Anthropic: https://platform.claude.com/docs/en/api/rate-limits#setting-your-own-spend-limit
+* OpenAI: https://developers.openai.com/api/docs/guides/spend-limits
+* Google: https://ai.google.dev/gemini-api/docs/billing
+
+Long posts and long conversations use more text per request. Start a new conversation when you move on to a different task.
+
+= Where can I check how much I have used? =
+Each answer in the chat shows how many tokens it used. For the exact usage and cost, check the usage page of your provider. The Assistant settings in the chat also link to these pages.
+
+* Anthropic: https://platform.claude.com/usage
+* OpenAI: https://platform.openai.com/usage
+* Google: https://aistudio.google.com/usage
+
+= Which AI providers and models can I use? =
+Anthropic, OpenAI, and Google are fully supported. Other providers work too, if their provider plugin supports the AI Client in WordPress. To choose the provider and model, open the Assistant settings in the chat. By default, the first connected provider among Anthropic, OpenAI, and Google is used.
+
+= Where is my API key stored? =
+The plugin does not store API keys. It uses the key set on the Connectors screen in WordPress. The key is used only on the server and is never sent to the browser.
+
+= What data is sent to the AI provider? =
+Your message, the selected blocks or text, and parts of the post needed for the edit. See the "External services" section for details.
+
+= Are my conversations saved? =
+No. Conversations are kept only while the editor is open, and are cleared when you reload the page. Only your choice of provider and model is saved.
+
 == Screenshots ==
 1. Select text or blocks, ask the AI, and see the changes in the editor
 
