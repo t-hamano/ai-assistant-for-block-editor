@@ -26,6 +26,8 @@ The editor, the prompt, the document context, and the Anthropic adapter are the 
     npm run eval:view
     ```
 
+Each result shows the model's answers and the document afterwards. Open a result's details to see why each check passed or failed.
+
 promptfoo keeps every run on your computer, so the viewer can show this run next to the one before a change.
 
 ## What is checked

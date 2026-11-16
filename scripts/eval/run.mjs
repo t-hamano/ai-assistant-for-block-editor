@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Runs one evaluation case for promptfoo's `exec` provider, which calls it
- * with the prompt, the provider options, and the test context as JSON. The
- * case is in the context's variables. The result is printed as JSON for
- * the assertions in `assertions.mjs`.
+ * Runs one evaluation case for `provider.mjs`, which calls it with the
+ * prompt, the provider options, and the test context as JSON. The case is
+ * in the context's variables. The result is printed as JSON.
  *
  * The editor and the plugin's prompt, context, and Anthropic adapter run
  * in Node, with the block library loaded in a browser-like window. Vite

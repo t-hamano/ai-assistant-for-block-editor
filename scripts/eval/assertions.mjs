@@ -1,10 +1,11 @@
 /**
- * The checks promptfoo runs on each case's result, as printed by
- * `run.mjs`. Only code decides whether a case passed; no model grades
- * another.
+ * The checks promptfoo runs on each case's result. Only code decides
+ * whether a case passed; no model grades another.
  *
- * Each check is called with the output and promptfoo's context, whose
- * `config` holds the assertion's `config` from `promptfooconfig.yaml`.
+ * Each check is called with the output, which is only for reading, and
+ * promptfoo's context. The context's `metadata.result` is the result
+ * printed by `run.mjs`, and its `config` holds the assertion's `config`
+ * from `promptfooconfig.yaml`.
  */
 
 /**
@@ -19,10 +20,11 @@ const grade = ( pass, reason ) => ( { pass, score: pass ? 1 : 0, reason } );
  * Passes when the model edited the document in every turn, and no request
  * failed.
  *
- * @param {string} output The output.
+ * @param {string} output  The output.
+ * @param {Object} context promptfoo's context.
  */
-export function edited( output ) {
-	const result = JSON.parse( output );
+export function edited( output, context ) {
+	const { result } = context.metadata;
 	const error = result.turns.find( ( turn ) => turn.error )?.error;
 	if ( error ) {
 		return grade( false, `The answer failed: ${ error }` );
@@ -43,10 +45,11 @@ export function edited( output ) {
  * Passes when the editor reads every block of the document afterwards as
  * valid.
  *
- * @param {string} output The output.
+ * @param {string} output  The output.
+ * @param {Object} context promptfoo's context.
  */
-export function validMarkup( output ) {
-	const { problems } = JSON.parse( output );
+export function validMarkup( output, context ) {
+	const { problems } = context.metadata.result;
 	return problems.length
 		? grade( false, problems.join( '\n' ) )
 		: grade( true, 'The markup is valid.' );
@@ -56,10 +59,11 @@ export function validMarkup( output ) {
  * Passes when no tool call failed and had to be tried again, and the
  * model did not give up.
  *
- * @param {string} output The output.
+ * @param {string} output  The output.
+ * @param {Object} context promptfoo's context.
  */
-export function firstTry( output ) {
-	const result = JSON.parse( output );
+export function firstTry( output, context ) {
+	const { result } = context.metadata;
 	const error = result.turns.find( ( turn ) => turn.error )?.error;
 	if ( error ) {
 		return grade( false, `The answer failed: ${ error }` );
@@ -84,7 +88,7 @@ export function firstTry( output ) {
  * @param {Object} context promptfoo's context.
  */
 export function expected( output, context ) {
-	const { blockNames, document } = JSON.parse( output );
+	const { blockNames, document } = context.metadata.result;
 	const { blocks = [], text = [], absent = [], order = [] } = context?.config ?? {};
 	const markup = document.toLowerCase();
 	// Each text of `order` is looked for after the one before it.
@@ -117,10 +121,11 @@ export function expected( output, context ) {
  * Records the case's tokens and requests as named metrics, for comparing
  * runs in `promptfoo view`. It never fails a case: give it `weight: 0`.
  *
- * @param {string} output The output.
+ * @param {string} output  The output.
+ * @param {Object} context promptfoo's context.
  */
-export function usage( output ) {
-	const result = JSON.parse( output );
+export function usage( output, context ) {
+	const { result } = context.metadata;
 	const { inputTokens, cacheReadTokens, cacheWriteTokens, outputTokens, requests } = result.usage;
 	return {
 		pass: true,

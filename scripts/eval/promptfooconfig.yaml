@@ -11,7 +11,7 @@ prompts:
   - '{{request}}'
 
 providers:
-  - id: exec:node run.mjs
+  - id: file://provider.mjs
     label: claude-sonnet-5-5
     config:
       model: claude-sonnet-5-5
@@ -19,8 +19,6 @@ providers:
 evaluateOptions:
   # One case at a time, so the prompt cache is used the same way in every run.
   maxConcurrency: 1
-  # The exec provider's cache only looks at the prompt, so it would mix up cases.
-  cache: false
 
 defaultTest:
   assert:
