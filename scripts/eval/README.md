@@ -72,7 +72,7 @@ The cases are the `tests` in [promptfooconfig.yaml](promptfooconfig.yaml), and t
 - `request`, what the user writes, and `followUp`, optional, what they write after the first answer.
 - `document`, the post as block markup.
 - `select`, optional: `block` is the path of a block (`[ 2 ]` for the third top-level block, `[ 0, 1 ]` for the second inner block of the first), `to` ends a range of blocks, and `text` selects that text inside the block's content.
-- The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, and `order` text that must appear in that order, to check where an edit went.
+- The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, `order` text that must appear in that order, to check where an edit went, and `count` how many times its markup must have each text.
 
 Every case runs with the theme of [theme.json](theme.json), taken from Twenty Twenty-Five and Ipsum, the latest default themes of WordPress. Its `settings` have presets of colors, gradients, duotone, shadows, spacing, font sizes, and font families. Its `styles` define block style variations, such as `text-display` for headings and paragraphs, which are registered as block styles the way WordPress registers them.
 
