@@ -125,6 +125,12 @@ export function ModelSettings( { onClose }: Props ) {
 						} }
 					/>
 				) }
+				<Text variant="body-sm" className="ai-content-editing-assistant-settings__note">
+					{ __(
+						"The provider bills for usage. Check the exact usage on the provider's dashboard.",
+						'ai-content-editing-assistant'
+					) }
+				</Text>
 			</>
 		);
 	}
