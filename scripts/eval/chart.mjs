@@ -232,7 +232,6 @@ export function renderChart( runs ) {
 					run.totals.totalInputTokens
 				) }</td><td>${ format( run.totals.outputTokens ) }</td><td>${ format( run.totals.requests ) }</td></tr>`
 		)
-		.reverse()
 		.join( '' );
 
 	return `<!doctype html>
@@ -293,7 +292,7 @@ ${ runs.length ? '' : '<p>No runs are recorded yet. Record one with <code>npm ru
 <p>Each point is a run recorded in <code>history.jsonl</code>, oldest on the left. A hollow red point is a run where the case failed, and a red cross on the bottom edge a run where it ended in an error, without usage. A dashed line marks a change of the evaluation set or the model: runs on either side do not compare.</p>
 ${ cases }
 <h2>Runs</h2>
-<p>Newest first. The totals add up every case of the run, so they compare only between runs with the same cases.</p>
+<p>Oldest first, like the charts. The totals add up every case of the run, so they compare only between runs with the same cases.</p>
 <div class="table"><table>
 <thead><tr><th>Date (UTC)</th><th>Commit</th><th>Set</th><th>Model</th><th>Passed</th><th>Total input</th><th>Output</th><th>Requests</th></tr></thead>
 <tbody>${ rows }</tbody>
