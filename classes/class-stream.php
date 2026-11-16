@@ -13,8 +13,11 @@ use WP_Error;
  * Sends a request to the provider and passes its streamed answer (Server-Sent
  * Events) on to the browser as each piece arrives.
  *
- * cURL is used directly, because `wp_remote_post()` waits for the whole
- * answer before returning it.
+ * The request is sent with `wp_remote_post()`, so it follows the site's proxy
+ * and its rules for outgoing requests. `wp_remote_post()` waits for the whole
+ * answer, so when it uses cURL, the `http_api_curl` hook makes cURL pass each
+ * piece on as it arrives instead. Without cURL, the answer is passed on whole
+ * when it has all arrived.
  */
 class Stream {
 
@@ -45,6 +48,20 @@ class Stream {
 	private $started = false;
 
 	/**
+	 * The provider's address
+	 *
+	 * @var string
+	 */
+	private $url = '';
+
+	/**
+	 * The cURL handle of the request, when it is sent with cURL
+	 *
+	 * @var \CurlHandle|null
+	 */
+	private $handle = null;
+
+	/**
 	 * Sends the request and passes the answer on
 	 *
 	 * @param string $url     The provider's address.
@@ -59,61 +76,69 @@ class Stream {
 		// Only this request runs longer, as long as the provider may take.
 		set_time_limit( Relay::TIMEOUT + 10 ); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
 
-		$handle = curl_init( $url ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_init
+		$this->url = $url;
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt_array
-		curl_setopt_array(
-			$handle,
+		add_action( 'http_api_curl', array( $this, 'stream_with' ), 10, 3 );
+
+		$response = wp_remote_post(
+			$url,
 			array(
-				CURLOPT_POST           => true,
-				CURLOPT_POSTFIELDS     => $body,
-				CURLOPT_HTTPHEADER     => array_map(
-					static fn( $name, $value ) => "$name: $value",
-					array_keys( $headers ),
-					$headers
-				),
-				CURLOPT_HEADERFUNCTION => array( $this, 'read_header' ),
-				CURLOPT_WRITEFUNCTION  => array( $this, 'write' ),
-				CURLOPT_CONNECTTIMEOUT => 10,
-				CURLOPT_TIMEOUT        => Relay::TIMEOUT,
-				CURLOPT_CAINFO         => ABSPATH . WPINC . '/certificates/ca-bundle.crt',
+				'headers'     => $headers,
+				'body'        => $body,
+				'timeout'     => Relay::TIMEOUT,
+				'redirection' => 0,
 			)
 		);
 
-		curl_exec( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_exec
-		$error = curl_error( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_error
+		remove_action( 'http_api_curl', array( $this, 'stream_with' ), 10 );
 
 		if ( $this->started ) {
-			if ( $error && ! connection_aborted() ) {
-				$this->send_error( CURLE_OPERATION_TIMEDOUT === curl_errno( $handle ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno
+			if ( is_wp_error( $response ) && ! connection_aborted() ) {
+				$this->send_error( $this->timed_out() );
 			}
 			return null;
 		}
 
-		return new WP_Error(
-			'ai_content_editing_assistant_provider_unreachable',
-			$error ? $error : __( 'The provider did not answer.', 'ai-content-editing-assistant' ),
-			array( 'status' => 502 )
-		);
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error(
+				'ai_content_editing_assistant_provider_unreachable',
+				$response->get_error_message(),
+				array( 'status' => 502 )
+			);
+		}
+
+		// The whole answer came at once, such as on a server without cURL.
+		$this->status       = (int) wp_remote_retrieve_response_code( $response );
+		$this->content_type = (string) wp_remote_retrieve_header( $response, 'content-type' );
+		$this->pass_on( wp_remote_retrieve_body( $response ) );
+
+		return null;
 	}
 
 	/**
-	 * Reads a header line of the provider's answer
+	 * Makes cURL pass the answer on as it arrives
 	 *
-	 * @param mixed  $handle The cURL handle.
-	 * @param string $line   The header line.
-	 * @return int The length of the line, so that cURL goes on.
+	 * Only the handling of the body is replaced. WordPress still reads the
+	 * headers itself.
+	 *
+	 * @param \CurlHandle $handle The cURL handle.
+	 * @param array       $args   The request arguments.
+	 * @param string      $url    The request address.
 	 */
-	public function read_header( $handle, string $line ): int {
-		if ( preg_match( '#^HTTP/\S+\s+(\d{3})#', $line, $matches ) ) {
-			// A new status line, such as after `100 Continue`, starts the headers again.
-			$this->status       = (int) $matches[1];
-			$this->content_type = '';
-		} elseif ( preg_match( '#^content-type:\s*(.+)$#i', trim( $line ), $matches ) ) {
-			$this->content_type = $matches[1];
+	public function stream_with( $handle, array $args, string $url ) {
+		if ( $url !== $this->url ) {
+			return;
 		}
 
-		return strlen( $line );
+		$this->handle = $handle;
+
+		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_setopt -- `http_api_curl` hands over the handle to change how the answer is read.
+		curl_setopt( $handle, CURLOPT_WRITEFUNCTION, array( $this, 'write' ) );
+		// Stopping from the write function would make WordPress send the
+		// request again, so the progress function stops it instead.
+		curl_setopt( $handle, CURLOPT_NOPROGRESS, false );
+		curl_setopt( $handle, CURLOPT_XFERINFOFUNCTION, array( $this, 'keep_going' ) );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_setopt
 	}
 
 	/**
@@ -121,23 +146,26 @@ class Stream {
 	 *
 	 * @param mixed  $handle The cURL handle.
 	 * @param string $data   The piece.
-	 * @return int The length of the piece, or 0 to stop when the browser has gone.
+	 * @return int The length of the piece, so that cURL goes on.
 	 */
 	public function write( $handle, string $data ): int {
 		if ( ! $this->started ) {
-			$this->started = true;
-			$this->start_output();
+			list( $this->status, $this->content_type ) = $this->read_info( $handle );
 		}
 
-		echo $data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		flush();
-
-		// The user stopped the answer, so stop the provider's answer too.
-		if ( connection_aborted() ) {
-			return 0;
-		}
+		$this->pass_on( $data );
 
 		return strlen( $data );
+	}
+
+	/**
+	 * Whether cURL should go on, called by cURL while the answer arrives
+	 *
+	 * @return int 1 to stop when the browser has gone, or 0 to go on.
+	 */
+	public function keep_going(): int {
+		// The user stopped the answer, so stop the provider's answer too.
+		return connection_aborted() ? 1 : 0;
 	}
 
 	/**
@@ -154,6 +182,47 @@ class Stream {
 		// The empty lines end an event the provider may have left unfinished.
 		echo "\n\nevent: " . self::ERROR_EVENT . "\ndata: " . wp_json_encode( array( 'message' => $message ) ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		flush();
+	}
+
+	/**
+	 * Reads the provider's status and content type from cURL
+	 *
+	 * @param mixed $handle The cURL handle.
+	 * @return array The status and the content type.
+	 */
+	protected function read_info( $handle ): array {
+		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- The handle comes from `http_api_curl`.
+		return array(
+			(int) curl_getinfo( $handle, CURLINFO_RESPONSE_CODE ),
+			(string) curl_getinfo( $handle, CURLINFO_CONTENT_TYPE ),
+		);
+		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+	}
+
+	/**
+	 * Sends a piece of the answer to the browser, after the headers when it
+	 * is the first
+	 *
+	 * @param string $data The piece.
+	 */
+	private function pass_on( string $data ) {
+		if ( ! $this->started ) {
+			$this->started = true;
+			$this->start_output();
+		}
+
+		echo $data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		flush();
+	}
+
+	/**
+	 * Whether the provider took too long
+	 *
+	 * @return bool
+	 */
+	private function timed_out(): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno -- The handle comes from `http_api_curl`.
+		return $this->handle && CURLE_OPERATION_TIMEDOUT === curl_errno( $this->handle );
 	}
 
 	/**

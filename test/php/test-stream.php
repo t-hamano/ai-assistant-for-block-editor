@@ -12,12 +12,8 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that the answer is passed on as it arrives, with the provider's status and content type.
 	 */
 	public function test_passes_the_answer_on() {
-		$stream = new AI_Content_Editing_Assistant_Test_Stream();
-
-		$stream->read_header( null, "HTTP/1.1 100 Continue\r\n" );
-		$stream->read_header( null, "HTTP/2 200\r\n" );
-		$stream->read_header( null, "content-type: text/event-stream; charset=utf-8\r\n" );
-		$stream->read_header( null, "\r\n" );
+		$stream       = new AI_Content_Editing_Assistant_Test_Stream();
+		$stream->info = array( 200, 'text/event-stream; charset=utf-8' );
 
 		$this->expectOutputString( "event: ping\ndata: {}\n\nevent: message_stop\n" );
 
@@ -30,10 +26,8 @@ class Test_Stream extends WP_UnitTestCase {
 	 * Tests that an error from the provider keeps its status and content type.
 	 */
 	public function test_passes_an_error_on() {
-		$stream = new AI_Content_Editing_Assistant_Test_Stream();
-
-		$stream->read_header( null, "HTTP/2 401\r\n" );
-		$stream->read_header( null, "Content-Type: application/json\r\n" );
+		$stream       = new AI_Content_Editing_Assistant_Test_Stream();
+		$stream->info = array( 401, 'application/json' );
 
 		$this->expectOutputString( '{"type":"error"}' );
 
@@ -48,9 +42,55 @@ class Test_Stream extends WP_UnitTestCase {
 	public function test_output_starts_with_the_answer() {
 		$stream = new AI_Content_Editing_Assistant_Test_Stream();
 
-		$stream->read_header( null, "HTTP/2 200\r\n" );
-
 		$this->assertNull( $stream->started_with );
+	}
+
+	/**
+	 * Tests that the request goes through the WordPress HTTP API, and that an
+	 * answer that comes whole, as it does without cURL, is passed on.
+	 */
+	public function test_passes_a_whole_answer_on() {
+		$sent = null;
+		add_filter(
+			'pre_http_request',
+			static function ( $response, $args, $url ) use ( &$sent ) {
+				$sent = array( $url, $args['body'] );
+				return array(
+					'headers'  => array( 'content-type' => 'text/event-stream' ),
+					'body'     => "data: {}\n\n",
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			},
+			10,
+			3
+		);
+		$stream = new AI_Content_Editing_Assistant_Test_Stream();
+
+		$this->expectOutputString( "data: {}\n\n" );
+
+		$this->assertNull( $stream->send( 'https://api.example.com/', array(), '{"a":1}' ) );
+		$this->assertSame( array( 'https://api.example.com/', '{"a":1}' ), $sent );
+		$this->assertSame( array( 200, 'text/event-stream' ), $stream->started_with );
+	}
+
+	/**
+	 * Tests that a request the site does not allow is an error.
+	 */
+	public function test_blocked_request_is_an_error() {
+		add_filter(
+			'pre_http_request',
+			static fn() => new WP_Error( 'http_request_not_executed', 'User has blocked requests through HTTP.' )
+		);
+
+		$error = ( new AI_Content_Editing_Assistant_Test_Stream() )->send( 'https://api.example.com/', array(), '{}' );
+
+		$this->assertWPError( $error );
+		$this->assertSame( 502, $error->get_error_data()['status'] );
 	}
 
 	/**
