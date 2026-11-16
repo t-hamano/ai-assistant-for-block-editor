@@ -38,7 +38,7 @@ tests:
   - description: Rewrite a short paragraph
     vars:
       request: Rewrite this paragraph to be shorter and friendlier.
-      document: file://documents/four-day-week.html
+      document: file://documents/short-article.html
       select:
         block: [1]
     assert:
@@ -55,7 +55,7 @@ tests:
   - description: Edit selected text
     vars:
       request: Change this to "twelve weeks".
-      document: file://documents/four-day-week.html
+      document: file://documents/short-article.html
       select:
         block: [1]
         text: three months
@@ -73,7 +73,7 @@ tests:
   - description: Put selected blocks in columns
     vars:
       request: Put these two paragraphs side by side in two columns.
-      document: file://documents/plans.html
+      document: file://documents/plans-table.html
       select:
         block: [1]
         to: [2]
@@ -91,7 +91,7 @@ tests:
   - description: Add blocks without a selection
     vars:
       request: Add a "Summary" heading and a two-sentence summary at the end.
-      document: file://documents/four-day-week.html
+      document: file://documents/short-article.html
     assert:
       - type: javascript
         value: file://assertions.mjs:edited
@@ -105,7 +105,7 @@ tests:
   - description: Edit a long document sent as an outline
     vars:
       request: In the section about tomatoes, add a short paragraph with tips on mulching after the paragraph about watering.
-      document: file://documents/kitchen-garden.html
+      document: file://documents/long-guide.html
     assert:
       - type: javascript
         value: file://assertions.mjs:edited
@@ -121,7 +121,7 @@ tests:
     vars:
       request: Turn this into a bulleted list.
       followUp: Add one more item to the list, a headlamp.
-      document: file://documents/packing-list.html
+      document: file://documents/list.html
       select:
         block: [1]
     assert:

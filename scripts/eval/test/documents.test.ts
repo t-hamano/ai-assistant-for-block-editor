@@ -36,7 +36,7 @@ describe( 'evaluation documents', () => {
 	} );
 
 	it( 'has a document long enough to be sent as an outline', () => {
-		const document = fs.readFileSync( path.join( DIRECTORY, 'kitchen-garden.html' ), 'utf8' );
+		const document = fs.readFileSync( path.join( DIRECTORY, 'long-guide.html' ), 'utf8' );
 		expect( document.length ).toBeGreaterThan( LONG_DOCUMENT );
 	} );
 } );
