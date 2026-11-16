@@ -133,3 +133,19 @@ tests:
         config:
           blocks: [core/list, core/list-item]
           text: [headlamp, rain jacket]
+
+  - description: Edit blocks the model added in the turn before
+    vars:
+      request: Add three short paragraphs at the end, each with one tip for teams trying a four-day week.
+      followUp: Make the first of the paragraphs you just added start with "Start small:".
+      document: file://documents/short-article.html
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          # The edited paragraph is one of those added after the last paragraph.
+          order: [review it again next year, 'Start small:']
