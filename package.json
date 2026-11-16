@@ -81,6 +81,8 @@
 		"generate:block-reference": "node scripts/generate-block-reference.cjs",
 		"test:unit": "wp-scripts test-unit-js",
 		"test:php": "wp-env --config .wp-env.test.json run cli --env-cwd=wp-content/plugins/ai-content-editing-assistant vendor/bin/phpunit",
+		"eval": "npx --yes promptfoo@0.125.1 eval -c scripts/eval/promptfooconfig.yaml",
+		"eval:view": "npx --yes promptfoo@0.125.1 view",
 		"prepare": "husky"
 	},
 	"lint-staged": {
