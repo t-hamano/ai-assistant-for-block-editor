@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Runs one evaluation case for `provider.mjs`, which calls it with the
- * prompt, the provider options, and the test context as JSON. The case is
- * in the context's variables. The result is printed as JSON.
+ * Runs one evaluation case for `provider.mjs`, which sends it the
+ * provider's `config` and the case's variables as JSON on the standard
+ * input. The result is printed as JSON.
  *
  * The editor and the plugin's prompt, context, and Anthropic adapter run
  * in Node, with the block library loaded in a browser-like window. Vite
@@ -26,10 +26,9 @@ const ROOT = path.resolve( import.meta.dirname, '../..' );
 // promptfoo reads the result from the standard output, so everything else goes to the standard error.
 console.log = console.info = console.debug = ( ...args ) => console.error( ...args );
 
-const [ , , , optionsJson = '{}', contextJson = '{}' ] = process.argv;
-const options = JSON.parse( optionsJson );
-const context = JSON.parse( contextJson );
-const vars = context.vars ?? {};
+// The case comes on the standard input, since a long document does not fit in the arguments on Windows.
+const input = process.stdin.isTTY ? '{}' : await new Response( process.stdin ).text();
+const { config = {}, vars = {} } = JSON.parse( input || '{}' );
 
 if ( ! vars.request || ! vars.document ) {
 	console.error( 'Run the evaluation with `npm run eval`. This script runs one of its cases.' );
@@ -81,7 +80,7 @@ try {
 			document: vars.document,
 			select: vars.select,
 		},
-		{ apiKey, model: options.config?.model }
+		{ apiKey, model: config.model }
 	);
 	if ( result.requestErrors.length ) {
 		// The request failed before the model answered, so the case is an error, not a failure.

@@ -40,16 +40,10 @@ export default class EvalProvider {
 	}
 
 	callApi( prompt, context ) {
-		const args = [
-			'run.mjs',
-			prompt,
-			JSON.stringify( { config: this.config } ),
-			JSON.stringify( { vars: context?.vars ?? {} } ),
-		];
 		return new Promise( ( resolve ) => {
-			execFile(
+			const child = execFile(
 				process.execPath,
-				args,
+				[ 'run.mjs' ],
 				{ cwd: import.meta.dirname, maxBuffer: 64 * 1024 * 1024 },
 				( error, stdout, stderr ) => {
 					if ( error ) {
@@ -73,6 +67,9 @@ export default class EvalProvider {
 					} );
 				}
 			);
+			// The case goes on the standard input, since a long document does not
+			// fit in the arguments on Windows.
+			child.stdin.end( JSON.stringify( { config: this.config, vars: context?.vars ?? {} } ) );
 		} );
 	}
 }
