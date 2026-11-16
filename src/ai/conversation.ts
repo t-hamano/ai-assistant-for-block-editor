@@ -105,7 +105,7 @@ export type ConversationAction =
  * a new one. Every message sends the whole conversation again, so each
  * answer costs more than the one before.
  */
-export const CONVERSATION_TOKEN_LIMIT = 200000;
+export const CONVERSATION_TOKEN_LIMIT = 300000;
 
 /**
  * Adds up the tokens the answers of a conversation used, input and output.
