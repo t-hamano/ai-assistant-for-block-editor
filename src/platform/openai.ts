@@ -15,7 +15,7 @@ import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 /**
  * The model that answers when no other model is chosen.
  */
-export const OPENAI_MODEL = 'gpt-6-astra';
+export const OPENAI_MODEL = 'gpt-6.1-sol';
 
 /**
  * The most tokens one answer may use, including the model's reasoning.

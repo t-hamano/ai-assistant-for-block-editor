@@ -29,9 +29,17 @@ type Provider = {
 	 */
 	usageUrl: string;
 	/**
-	 * The models to use, best first.
+	 * The models to use, best first. They balance quality and price, so
+	 * that the assistant does not use the provider's most expensive model
+	 * unless the user chooses it.
 	 */
 	recommended: string[];
+	/**
+	 * Whether a model is preferred when none of the recommended models is
+	 * in the provider's list, to keep away from the most expensive models.
+	 * Without it, any model that can chat is preferred.
+	 */
+	affordable?: ( model: string ) => boolean;
 	/**
 	 * Whether a model from the provider's list can chat, for when none of
 	 * the recommended models is in it. Older models are left out, because
@@ -49,19 +57,21 @@ export const PROVIDERS: Provider[] = [
 		id: 'anthropic',
 		name: 'Anthropic',
 		usageUrl: 'https://platform.claude.com/usage',
-		recommended: [ ANTHROPIC_MODEL, 'claude-opus-5', 'claude-sonnet-5-5' ],
+		recommended: [ ANTHROPIC_MODEL, 'claude-sonnet-5' ],
 		canChat: ( model ) => /^claude-(?:opus|sonnet)-(?:[4-9]|\d{2,})/.test( model ),
+		affordable: ( model ) => model.startsWith( 'claude-sonnet-' ),
 		create: createAnthropicPlatform,
 	},
 	{
 		id: 'openai',
 		name: 'OpenAI',
 		usageUrl: 'https://platform.openai.com/usage',
-		recommended: [ OPENAI_MODEL, 'gpt-5' ],
+		recommended: [ OPENAI_MODEL, 'gpt-6-sol', 'gpt-5' ],
 		// OpenAI also lists models for images, audio, and search.
 		canChat: ( model ) =>
 			/^gpt-(?:[5-9]|\d{2,})/.test( model ) &&
 			! /image|audio|realtime|tts|transcribe|search/.test( model ),
+		affordable: ( model ) => /-sol\b/.test( model ),
 		create: createOpenAiPlatform,
 	},
 	{
@@ -84,7 +94,7 @@ export type Model = { id: string; name: string };
 /**
  * Chooses the model of a provider: the first recommended model in its
  * list, or when they were all retired, the first other model in the list
- * that can chat.
+ * that can chat, preferring the affordable ones.
  *
  * @param provider The provider.
  * @param models   The provider's models, or `null` when the list could not
@@ -98,6 +108,9 @@ export function chooseModel( provider: Provider, models: Model[] | null ): strin
 	const ids = models.map( ( model ) => model.id );
 	return (
 		provider.recommended.find( ( model ) => ids.includes( model ) ) ??
+		ids.find(
+			( model ) => provider.canChat( model ) && ( provider.affordable?.( model ) ?? true )
+		) ??
 		ids.find( provider.canChat ) ??
 		provider.recommended[ 0 ]
 	);
