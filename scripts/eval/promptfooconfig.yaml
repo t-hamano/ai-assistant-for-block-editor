@@ -98,7 +98,8 @@ tests:
         value: file://assertions.mjs:expected
         metric: expected
         config:
-          text: ['>Summary</h']
+          # The summary is a paragraph after the heading.
+          order: ['>Summary</h', '<!-- wp:paragraph']
 
   - description: Edit a long document sent as an outline
     vars:
