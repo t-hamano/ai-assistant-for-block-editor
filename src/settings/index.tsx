@@ -75,7 +75,6 @@ export function ModelSettings( { onClose }: Props ) {
 			: ( provider?.models ?? [] );
 	const modelItems: Item[] = modelIds.map( ( id ) => ( { label: id, value: id } ) );
 
-	// The separator and where the links go in the sentence differ by language.
 	/* translators: Used between list items, there is a space after the comma. */
 	const separator = __( ', ', 'ai-content-editing-assistant' ); // eslint-disable-line @wordpress/i18n-no-flanking-whitespace
 	const usageLinks = ( provider ? [ provider ] : ( providers ?? [] ) ).map( ( option, index ) => (
