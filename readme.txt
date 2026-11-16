@@ -43,11 +43,11 @@ Only users with administrator privileges can use this plugin, and only super adm
 The plugin is free, but the AI provider charges for each request, based on the amount of text sent and received. The provider bills you directly, under the account that owns the API key. Nothing is paid to the plugin author.
 
 = How can I avoid unexpected charges? =
-We recommend setting a monthly spend limit in your provider's console before you start. When the limit is reached, the provider stops answering until the next month, so you are never charged more than you planned.
+We recommend setting a monthly spend limit in your provider's console before you start. When the limit is reached, the provider stops answering until the next month. For OpenAI, turn on "Enforce a hard limit", or the limit only sends alerts. The usage may go slightly over the limit, because providers take a few minutes to apply it.
 
 * Anthropic: https://platform.claude.com/docs/en/api/rate-limits#setting-your-own-spend-limit
 * OpenAI: https://developers.openai.com/api/docs/guides/spend-limits
-* Google: https://ai.google.dev/gemini-api/docs/billing
+* Google: https://aistudio.google.com/docs/billing
 
 Long posts and long conversations use more text per request. Start a new conversation when you move on to a different task.
 
