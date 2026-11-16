@@ -9,7 +9,8 @@ The plugin sends `skills/block-markup/` (skill 1) to the AI so that it writes va
 
 Skill 1 has two files:
 
-- `skills/block-markup/SKILL.md`: the common rules. Written by hand.
+- `skills/block-markup/SKILL.md`: the common rules, sent with every message. Written by hand.
+- `skills/block-markup/references/special-blocks.md`: rules for blocks that few documents have, such as dynamic blocks and `core/html`. They are sent only with a document that has such blocks. Written by hand.
 - `skills/block-markup/references/core-blocks.md`: one section per core block. The parts between `<!-- generated:start -->` and `<!-- generated:end -->` are written by `scripts/generate-block-reference.cjs`. Everything else, such as "Common mistakes", is written by hand and kept by the script.
 
 ## Rules
@@ -78,7 +79,7 @@ Then run `npm run test:unit`. A failure in `src/editor/test/skill-examples.test.
 
 ### 5. Fix the handwritten parts
 
-- Edit `SKILL.md` only when a change affects a common rule, such as how attributes map to classes and styles, nesting, dynamic blocks, or presets.
+- Edit `SKILL.md` only when a change affects a common rule, such as how attributes map to classes and styles, nesting, or presets, and `references/special-blocks.md` only for dynamic blocks and `core/html`. Keep `SKILL.md` short: it is sent with every message.
 - Add or fix "Common mistakes" under a block in `core-blocks.md` only for mistakes the new markup makes likely.
 - Remove rules and mistakes about blocks or attributes that no longer exist.
 - Do not add markup that is invalid on the minimum supported version.

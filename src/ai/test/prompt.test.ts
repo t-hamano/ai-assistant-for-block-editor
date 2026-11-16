@@ -51,7 +51,7 @@ describe( 'buildSystemPrompt', () => {
 
 	it( 'forbids new custom HTML blocks', () => {
 		const prompt = buildSystemPrompt( '# Title\n' );
-		expect( prompt ).toContain( 'Do not write new `core/html` blocks.' );
+		expect( prompt ).toContain( 'Do not write `core/html` blocks.' );
 		expect( prompt ).not.toContain( '<script>' );
 	} );
 
