@@ -37,6 +37,32 @@ describe( 'conversationReducer', () => {
 		expect( messages[ 1 ] ).toMatchObject( { text: 'Sure. ', activity: 'waiting' } );
 	} );
 
+	it( 'takes back the text about edits that were not applied when the answer stops', () => {
+		const stopped = ( ...actions: ConversationAction[] ) =>
+			run( { type: 'START', text: 'Rewrite this' }, ...actions, {
+				type: 'FINISH',
+				status: 'stopped',
+			} ).messages[ 1 ];
+		expect(
+			stopped(
+				{ type: 'APPEND_TEXT', text: 'I shortened it.' },
+				{ type: 'ACTIVITY', activity: 'editing' }
+			)
+		).toMatchObject( { text: '', status: 'stopped' } );
+		expect(
+			stopped(
+				{ type: 'APPEND_TEXT', text: 'I shortened it.' },
+				{ type: 'ACTIVITY', activity: 'editing' },
+				{ type: 'EDIT', edit: EDIT, applied: true },
+				{ type: 'APPEND_TEXT', text: ' I also added a list.' },
+				{ type: 'ACTIVITY', activity: 'editing' }
+			)
+		).toMatchObject( { text: 'I shortened it.' } );
+		expect( stopped( { type: 'APPEND_TEXT', text: 'Part of an answer' } ) ).toMatchObject( {
+			text: 'Part of an answer',
+		} );
+	} );
+
 	it( 'adds the question and streams the answer into it', () => {
 		const { messages } = run(
 			{ type: 'START', text: 'Rewrite this' },
