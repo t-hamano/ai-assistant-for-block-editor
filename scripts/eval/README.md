@@ -56,4 +56,4 @@ Keep the cases fixed, so that results can be compared. Add a case for a kind of 
 The `description` in `promptfooconfig.yaml` names the version of the evaluation set, such as `eval set v1`, so `npm run eval:view` shows which runs can be compared.
 
 - Raise the version when an existing case changes: its document, request, selection, or expected values, or `site.json`, which every case uses. Make such a change in a pull request of its own that does not change the plugin, and run the evaluation there to start the new version's results.
-- Adding a case does not need a new version, since the other cases stay the same. Compare the cases one by one, though: the totals of a run include the new case.
+- Adding a case does not need a new version, since the other cases stay the same. When you compare totals with runs from before the case was added, add up only the cases both runs have.
