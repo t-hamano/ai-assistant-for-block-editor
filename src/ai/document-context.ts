@@ -4,6 +4,7 @@
 import type { SeenDocument } from './conversation';
 import { formatOutline, isLongDocument } from './document-outline';
 import { SELECTION_END, SELECTION_START, type EditContext } from './edit-target';
+import { getSkillNotes } from './skill-notes';
 
 /**
  * Matches a reference ID comment before a block, such as `<!-- ref:b12 -->`,
@@ -258,7 +259,11 @@ export function buildMessageContext( context: EditContext, seen: SeenDocument | 
 	const parts: string[] = [];
 	const { document } = context;
 	const changes = seen === null ? null : formatChanges( document, seen );
-	const whole = formatDocument( context );
+	// The rules for the blocks that need more of them go with the whole
+	// document, so the model has them whenever it sees the document.
+	const whole = [ formatDocument( context ), getSkillNotes( document ) ]
+		.filter( Boolean )
+		.join( '\n\n' );
 	const isOutline = isLongDocument( document );
 	const known = seen === null ? new Set< string >() : knownRefs( seen );
 	if ( seen === null ) {

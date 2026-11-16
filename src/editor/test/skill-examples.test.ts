@@ -17,10 +17,12 @@ import { registerCoreBlocks } from '@wordpress/block-library';
 import { validateMarkup } from '../validate-markup';
 import skill from '../../../skills/block-markup/SKILL.md?raw';
 import coreBlocks from '../../../skills/block-markup/references/core-blocks.md?raw';
+import specialBlocks from '../../../skills/block-markup/references/special-blocks.md?raw';
 
 const FILES: [ string, string ][] = [
 	[ 'SKILL.md', skill ],
 	[ 'references/core-blocks.md', coreBlocks ],
+	[ 'references/special-blocks.md', specialBlocks ],
 ];
 
 /**

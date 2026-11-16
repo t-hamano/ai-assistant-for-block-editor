@@ -54,7 +54,7 @@ export function buildSystemPrompt(
 		'When you edit, first briefly say what you changed, then call the tools in the same answer. The edits are applied when your answer ends, and the user reads your words with them, so write as if they are done. Do not repeat the content you write.',
 		'Make all the edits of your answer together, since the answer ends with them. Only when you need the result of an edit, such as the reference IDs of blocks it adds, before your next edit, call it without writing anything before it, and you get the result.',
 		'When the results of your tool calls come back to you, the user did not see the words you wrote before the calls. If you edit next, also after reading the document, again say what you change before the edits. Otherwise, say what you changed.',
-		'Follow the rules in <skill name="block-markup"> whenever you write block markup.'
+		'Follow the rules in <skill name="block-markup"> whenever you write block markup. When the document has blocks that need more rules, <skill-notes> after it has them.'
 	);
 	if ( siteInfo ) {
 		lines.push(

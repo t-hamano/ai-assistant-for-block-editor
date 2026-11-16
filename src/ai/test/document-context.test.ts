@@ -188,6 +188,15 @@ describe( 'buildMessageContext', () => {
 		);
 	} );
 
+	it( 'sends the rules for the blocks that need more of them with the document', () => {
+		const result = buildMessageContext(
+			{ document: '<!-- wp:html -->\n<div>Hi</div>\n<!-- /wp:html -->\n', selection: '' },
+			null
+		);
+		expect( result ).toMatch( /<\/document>\n\n<skill-notes>\n## Custom HTML/ );
+		expect( result ).toMatch( /<\/skill-notes>\n\n<selection>/ );
+	} );
+
 	it( 'sends an outline instead of a long document', () => {
 		const blocks = Array.from( { length: 400 }, ( _, n ) => paragraph( `b${ n + 1 }`, long ) );
 		const result = buildMessageContext( { document: doc( ...blocks ), selection: '' }, null );
