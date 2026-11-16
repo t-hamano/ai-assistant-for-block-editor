@@ -9,3 +9,4 @@ vendor/
 .phpunit.result.cache
 .env
 /results.json
+/scripts/eval/history.html

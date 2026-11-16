@@ -84,6 +84,7 @@
 		"eval": "npx --yes promptfoo@0.125.1 eval -c scripts/eval/promptfooconfig.yaml",
 		"eval:view": "npx --yes promptfoo@0.125.1 view",
 		"eval:record": "node scripts/eval/record.mjs",
+		"eval:chart": "node scripts/eval/chart.mjs",
 		"prepare": "husky"
 	},
 	"lint-staged": {
