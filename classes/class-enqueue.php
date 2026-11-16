@@ -34,8 +34,7 @@ class Enqueue {
 	 * Enqueue block editor scripts
 	 */
 	public function enqueue_editor_scripts() {
-		// The assistant needs an API key, so it is not shown without one.
-		if ( ! self::can_use() || ! Api_Key::has_any() ) {
+		if ( ! self::can_use() ) {
 			return;
 		}
 
@@ -58,6 +57,20 @@ class Enqueue {
 			$asset_file['dependencies'],
 			$asset_file['version'],
 			array( 'in_footer' => true )
+		);
+
+		wp_add_inline_script(
+			AI_CONTENT_EDITING_ASSISTANT_NAMESPACE,
+			sprintf(
+				'window.aiContentEditingAssistant = %s;',
+				wp_json_encode(
+					array(
+						'hasApiKey'     => Api_Key::has_any(),
+						'connectorsUrl' => admin_url( 'options-connectors.php' ),
+					)
+				)
+			),
+			'before'
 		);
 
 		wp_set_script_translations( AI_CONTENT_EDITING_ASSISTANT_NAMESPACE, AI_CONTENT_EDITING_ASSISTANT_NAMESPACE );

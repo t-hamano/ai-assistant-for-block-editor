@@ -28,7 +28,7 @@ Long posts are sent as an outline, and the AI reads only the parts it needs.
 
 **Uses Your Own API Keys**
 
-The plugin uses the API keys registered on the Connectors screen in WordPress. Install an AI provider plugin, such as AI Provider for Anthropic, and set its API key. The AI assistant does not appear until a key is set.
+The plugin uses the API keys registered on the Connectors screen in WordPress. Install an AI provider plugin, such as AI Provider for Anthropic, and set its API key.
 
 Only users with administrator privileges can use this plugin, and only super admins on a multisite network, because requests are sent with the site's API keys.
 
