@@ -4,6 +4,7 @@
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import {
+	getBlockType,
 	getBlockTypes,
 	parse,
 	registerBlockStyle,
@@ -192,6 +193,25 @@ function setUpSite() {
 	siteReady = true;
 }
 
+/**
+ * Gives every block that holds other blocks the settings the editor gives
+ * it when it shows the block. Without them, the editor allows no block
+ * inside it, since nothing is shown here.
+ */
+function setUpInnerBlocks() {
+	const { getBlock, getBlockListSettings, getClientIdsWithDescendants } =
+		select( blockEditorStore );
+	const { updateBlockListSettings } = dispatch( blockEditorStore );
+	for ( const clientId of getClientIdsWithDescendants() ) {
+		const block = getBlock( clientId );
+		const holdsBlocks =
+			block?.innerBlocks.length || getBlockType( block?.name ?? '' )?.allowedBlocks;
+		if ( holdsBlocks && ! getBlockListSettings( clientId ) ) {
+			updateBlockListSettings( clientId, {} );
+		}
+	}
+}
+
 function findBlock( blocks: Block[], path: BlockPath ): Block {
 	const block = path.reduce< Block | undefined >(
 		( parent, index, depth ) => ( depth ? parent?.innerBlocks : blocks )?.[ index ],
@@ -311,6 +331,7 @@ async function sendMessage(
 				if ( event.type !== 'edit' ) {
 					return;
 				}
+				setUpInnerBlocks();
 				const result: AiEditResult = target.apply( event.edit );
 				if ( result.status === 'failed' ) {
 					// Which edit failed, with its markup, to tell why the model sent it.
