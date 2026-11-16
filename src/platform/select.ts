@@ -25,6 +25,10 @@ type Provider = {
 	 */
 	name: string;
 	/**
+	 * The provider's page that shows the usage it bills for.
+	 */
+	usageUrl: string;
+	/**
 	 * The models to use, best first.
 	 */
 	recommended: string[];
@@ -44,6 +48,7 @@ export const PROVIDERS: Provider[] = [
 	{
 		id: 'anthropic',
 		name: 'Anthropic',
+		usageUrl: 'https://platform.claude.com/usage',
 		recommended: [ ANTHROPIC_MODEL, 'claude-opus-5', 'claude-sonnet-5-5' ],
 		canChat: ( model ) => /^claude-(?:opus|sonnet)-(?:[4-9]|\d{2,})/.test( model ),
 		create: createAnthropicPlatform,
@@ -51,6 +56,7 @@ export const PROVIDERS: Provider[] = [
 	{
 		id: 'openai',
 		name: 'OpenAI',
+		usageUrl: 'https://platform.openai.com/usage',
 		recommended: [ OPENAI_MODEL, 'gpt-5' ],
 		// OpenAI also lists models for images, audio, and search.
 		canChat: ( model ) =>
@@ -61,6 +67,7 @@ export const PROVIDERS: Provider[] = [
 	{
 		id: 'google',
 		name: 'Google',
+		usageUrl: 'https://aistudio.google.com/usage',
 		recommended: [ GEMINI_MODEL, 'gemini-2.5-pro' ],
 		canChat: ( model ) =>
 			/^gemini-(?:2\.5|[3-9]|\d{2,})/.test( model ) &&
@@ -136,6 +143,7 @@ export type ModelChoice = { provider: string; model: string };
 export type ProviderOption = {
 	id: string;
 	name: string;
+	usageUrl: string;
 	/**
 	 * The models, recommended ones first. When the provider could not list
 	 * its models, only the recommended ones.
@@ -161,7 +169,12 @@ export async function listProviderOptions(): Promise< ProviderOption[] > {
 			const others = ids.filter(
 				( model ) => provider.canChat( model ) && ! recommended.includes( model )
 			);
-			return { id: provider.id, name: provider.name, models: [ ...recommended, ...others ] };
+			return {
+				id: provider.id,
+				name: provider.name,
+				usageUrl: provider.usageUrl,
+				models: [ ...recommended, ...others ],
+			};
 		} )
 	);
 	return options.filter( ( option ) => option !== null );
