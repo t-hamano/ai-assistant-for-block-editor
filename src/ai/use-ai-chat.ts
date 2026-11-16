@@ -118,6 +118,10 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 						dispatch( { type: 'APPEND_TEXT', text: event.text } );
 						return;
 					}
+					if ( event.type === 'discard_text' ) {
+						dispatch( { type: 'DISCARD_TEXT', text: event.text } );
+						return;
+					}
 					if ( event.type === 'usage' ) {
 						dispatch( { type: 'USAGE', usage: event.usage } );
 						return;

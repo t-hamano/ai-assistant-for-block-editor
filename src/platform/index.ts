@@ -145,6 +145,15 @@ export type AiStreamEvent =
 	  }
 	| {
 			/**
+			 * Takes back text at the end of the answer, which the model wrote
+			 * before tool calls whose results go back to it. It says what it
+			 * did again once it has seen the results.
+			 */
+			type: 'discard_text';
+			text: string;
+	  }
+	| {
+			/**
 			 * The model edited the document.
 			 */
 			type: 'edit';

@@ -301,6 +301,26 @@ describe( 'createOpenAiPlatform', () => {
 		return requests;
 	}
 
+	it( 'ends the answer when the edit after the text was applied as it is', async () => {
+		const requests = respond( [
+			sse( { type: 'response.output_text.delta', delta: 'I shortened it.' } ),
+			...toolCall( JSON.stringify( EDIT ) ),
+		] );
+		const onEvent = vi.fn( ( event: AiStreamEvent ) =>
+			event.type === 'edit' ? { status: 'applied' as const } : undefined
+		);
+
+		await createOpenAiPlatform( () => 1 ).chat( {
+			system: 'System',
+			messages: [ { role: 'user', text: 'Rewrite this' } ],
+			onEvent,
+			signal: new AbortController().signal,
+		} );
+
+		expect( requests ).toHaveLength( 1 );
+		expect( onEvent ).toHaveBeenCalledWith( { type: 'edit', edit: EDIT } );
+	} );
+
 	it( 'applies the edit, and sends the result back for the model to go on', async () => {
 		const requests = respond( toolCall( JSON.stringify( EDIT ) ), text );
 		const onEvent = vi.fn( ( event: AiStreamEvent ) =>

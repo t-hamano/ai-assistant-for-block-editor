@@ -42,6 +42,23 @@ export function edited( output, context ) {
 }
 
 /**
+ * Passes when the model said something in every turn, so the user reads
+ * what it did.
+ *
+ * @param {string} output  The output.
+ * @param {Object} context promptfoo's context.
+ */
+export function answered( output, context ) {
+	const silent = context.metadata.result.turns.filter( ( turn ) => ! turn.text.trim() );
+	return silent.length
+		? grade(
+				false,
+				`No text was shown for: ${ silent.map( ( turn ) => `"${ turn.request }"` ).join( ', ' ) }`
+			)
+		: grade( true, 'Every turn has text.' );
+}
+
+/**
  * Passes when the editor reads every block of the document afterwards as
  * valid.
  *

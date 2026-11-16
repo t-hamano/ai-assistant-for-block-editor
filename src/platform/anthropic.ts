@@ -7,6 +7,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import type { AiChatRequest, AiEdit, AiEditResult, AiMessage, AiPlatform, AiUsage } from '.';
+import { endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, getToolActivity, runRead } from './read-tools';
 import { connectionLost, requestAnswer, type AnswerEvent } from './transport';
 
@@ -419,7 +420,8 @@ export function toAnthropicEvents( answer: any ): AnswerEvent[] {
  * @param answer  The answer.
  * @param onEvent Applies each edit.
  * @param read    Reads the document.
- * @return The results, and how many calls failed.
+ * @return The results, how many calls failed, and whether a result must
+ *         go back to the model.
  */
 function runTools(
 	answer: AnthropicAnswer,
@@ -427,6 +429,7 @@ function runTools(
 	read: AiChatRequest[ 'read' ]
 ) {
 	let failures = 0;
+	let replied = false;
 	const results = answer.content
 		.filter( ( block ) => block.type === 'tool_use' )
 		.map( ( block ) => {
@@ -434,6 +437,7 @@ function runTools(
 			const invalid = answer.invalidInputs.get( id );
 			const found = invalid === undefined ? runRead( block.name, block.input, read ) : null;
 			if ( found ) {
+				replied = true;
 				if ( found.status === 'failed' ) {
 					failures++;
 					return { type: 'tool_result', tool_use_id: id, is_error: true, content: found.reason };
@@ -452,6 +456,7 @@ function runTools(
 			} else {
 				result = onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' };
 			}
+			replied ||= needsReply( result );
 			if ( result.status === 'failed' ) {
 				failures++;
 				return { type: 'tool_result', tool_use_id: id, is_error: true, content: result.reason };
@@ -465,7 +470,7 @@ function runTools(
 						: 'The selected blocks no longer exist, so the edit was not applied.',
 			};
 		} );
-	return { results, failures };
+	return { results, failures, replied };
 }
 
 /**
@@ -485,6 +490,7 @@ export function createAnthropicPlatform(
 		hasApiKey: async () => true,
 		async chat( { system, messages, onEvent, read, signal } ) {
 			const conversation = toAnthropicMessages( messages );
+			const answerText = trackRequestText( onEvent );
 			let failures = 0;
 			for (;;) {
 				const answer = await readAnthropicStream(
@@ -496,12 +502,16 @@ export function createAnthropicPlatform(
 						readError: readErrorMessage,
 						toEvents: toAnthropicEvents,
 					} ),
-					onEvent
+					answerText.onEvent
 				);
+				const text = answerText.take();
 				if ( answer.stopReason !== 'tool_use' ) {
 					return;
 				}
 				const tools = runTools( answer, onEvent, read );
+				if ( endToolRequest( text, tools.replied, onEvent ) ) {
+					return;
+				}
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

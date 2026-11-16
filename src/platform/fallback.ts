@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import type { AiChatRequest, AiEditResult, AiMessage, AiPlatform } from '.';
 import { EDIT_TOOL, describeApplied, toEdit } from './anthropic';
+import { endToolRequest, needsReply, trackRequestText } from './answer-text';
 import { READ_TOOLS, runRead } from './read-tools';
 
 /**
@@ -169,7 +170,8 @@ export function readFallbackAnswer(
  * @param calls   The function call parts.
  * @param onEvent Applies each edit.
  * @param read    Reads the document.
- * @return The responses, and how many calls failed.
+ * @return The responses, how many calls failed, and whether a response
+ *         must go back to the model.
  */
 function runTools(
 	calls: FallbackPart[],
@@ -177,10 +179,12 @@ function runTools(
 	read: AiChatRequest[ 'read' ]
 ) {
 	let failures = 0;
+	let replied = false;
 	const results = calls.map( ( part ): FallbackPart => {
 		const call = part.functionCall ?? {};
 		const found = runRead( call.name, call.args, read );
 		if ( found ) {
+			replied = true;
 			if ( found.status === 'failed' ) {
 				failures++;
 			}
@@ -197,6 +201,7 @@ function runTools(
 		} else {
 			result = onEvent( { type: 'edit', edit } ) ?? { status: 'dropped' };
 		}
+		replied ||= needsReply( result );
 		let text: string;
 		if ( result.status === 'failed' ) {
 			failures++;
@@ -208,7 +213,7 @@ function runTools(
 		}
 		return { functionResponse: { id: call.id, name: call.name, response: text } };
 	} );
-	return { results, failures };
+	return { results, failures, replied };
 }
 
 /**
@@ -233,6 +238,7 @@ export function createFallbackPlatform(
 		hasApiKey: async () => true,
 		async chat( { system, messages, onEvent, read, signal } ) {
 			const conversation = toFallbackMessages( messages );
+			const answerText = trackRequestText( onEvent );
 			let failures = 0;
 			for (;;) {
 				let answer: FallbackAnswer;
@@ -262,11 +268,15 @@ export function createFallbackPlatform(
 					);
 				}
 
-				const calls = readFallbackAnswer( answer, onEvent );
+				const calls = readFallbackAnswer( answer, answerText.onEvent );
+				const text = answerText.take();
 				if ( ! calls.length ) {
 					return;
 				}
 				const tools = runTools( calls, onEvent, read );
+				if ( endToolRequest( text, tools.replied, onEvent ) ) {
+					return;
+				}
 				failures += tools.failures;
 				if ( failures > MAX_FAILED_EDITS ) {
 					throw new Error( __( 'The edit could not be made.', 'ai-content-editing-assistant' ) );

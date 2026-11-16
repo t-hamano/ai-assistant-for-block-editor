@@ -39,6 +39,13 @@ export type AssistantChatMessage = {
 	 */
 	activity?: 'waiting' | AiActivity;
 	/**
+	 * The length of the text when the last edit was applied, or its text
+	 * taken back. The model writes what it changes before its edits, so
+	 * when the answer ends while it is writing them, the text after this
+	 * is about edits that were never applied.
+	 */
+	settledText?: number;
+	/**
 	 * The edits that changed the document, in order.
 	 */
 	edits?: AiEdit[];
@@ -81,6 +88,7 @@ export type Conversation = {
 export type ConversationAction =
 	| { type: 'START'; text: string; context?: string; document?: string }
 	| { type: 'APPEND_TEXT'; text: string }
+	| { type: 'DISCARD_TEXT'; text: string }
 	| { type: 'ACTIVITY'; activity: AiActivity }
 	| { type: 'EDIT'; edit: AiEdit; applied: boolean; refs?: string[] }
 	| { type: 'USAGE'; usage: AiUsage }
@@ -149,6 +157,18 @@ export function conversationReducer(
 				text: message.text + action.text,
 				activity: undefined,
 			} ) );
+		case 'DISCARD_TEXT':
+			// The text taken back is at the end of the answer.
+			return updateAnswer( conversation, ( message ) =>
+				message.text.endsWith( action.text )
+					? {
+							...message,
+							text: message.text.slice( 0, message.text.length - action.text.length ),
+							settledText: message.text.length - action.text.length,
+							activity: message.activity ?? 'waiting',
+						}
+					: message
+			);
 		case 'ACTIVITY':
 			return updateAnswer( conversation, ( message ) => ( {
 				...message,
@@ -164,6 +184,7 @@ export function conversationReducer(
 							editStatus: 'applied',
 						}
 					: { editStatus: message.editStatus ?? 'dropped' } ),
+				settledText: message.text.length,
 				activity: 'waiting',
 			} ) );
 		case 'USAGE':
@@ -185,6 +206,11 @@ export function conversationReducer(
 		case 'FINISH':
 			return updateAnswer( conversation, ( message ) => ( {
 				...message,
+				// Stopped or failed while the model wrote its edits: take back
+				// what it said about them.
+				...( action.status !== 'done' && message.activity === 'editing'
+					? { text: message.text.slice( 0, message.settledText ?? 0 ) }
+					: {} ),
 				status: action.status,
 				activity: undefined,
 				error: action.error,
