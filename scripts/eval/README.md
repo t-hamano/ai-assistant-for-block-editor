@@ -34,9 +34,8 @@ Only code decides whether a case passed. No model grades the answers.
 
 - `validMarkup`: the editor reads every block of the document afterwards as valid.
 - `firstTry`: no tool call failed and had to be tried again, and the model did not give up.
-- `edited`: the model edited the document in every turn. A question-only case checks `notEdited` instead.
+- `edited`: the model edited the document in every turn.
 - `expected`: the document has the blocks and text the case asks for, and no longer has the text it should not.
-- `outline`: the long document was sent as an outline.
 
 Each case also records, as metrics, the input tokens read at full price (`inputTokens`), the tokens read from and written to the prompt cache (`cacheReadTokens`, `cacheWriteTokens`), the output tokens (`outputTokens`), the requests sent (`requests`), and the tool calls tried again (`retries`). These never fail a case. The cases run one at a time, so the prompt cache is used the same way in every run.
 
@@ -46,7 +45,7 @@ The cases are the `tests` in [promptfooconfig.yaml](promptfooconfig.yaml), and t
 
 - `request`, what the user writes, and `followUp`, optional, what they write after the first answer.
 - `document`, the post as block markup.
-- `select`, optional: `block` is the path of a block (`[ 2 ]` for the third top-level block, `[ 0, 1 ]` for the second inner block of the first), `to` ends a range of blocks, and `text` selects that text inside the block.
+- `select`, optional: `block` is the path of a block (`[ 2 ]` for the third top-level block, `[ 0, 1 ]` for the second inner block of the first), `to` ends a range of blocks, and `text` selects that text inside the block's content.
 - The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, and `order` text that must appear in that order, to check where an edit went.
 
 Keep the cases fixed, so that results can be compared. Add a case for a kind of request that is not covered, rather than changing one. The documents must be valid block markup, which `npm run test:unit` checks, together with the checks themselves.

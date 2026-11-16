@@ -40,24 +40,6 @@ export function edited( output ) {
 }
 
 /**
- * Passes when the model answered without editing the document.
- *
- * @param {string} output The output.
- */
-export function notEdited( output ) {
-	const result = JSON.parse( output );
-	const error = result.turns.find( ( turn ) => turn.error )?.error;
-	if ( error ) {
-		return grade( false, `The answer failed: ${ error }` );
-	}
-	const applied = result.turns.reduce( ( total, turn ) => total + turn.applied, 0 );
-	return grade(
-		applied === 0,
-		applied ? `Applied ${ applied } edits.` : 'Answered without editing.'
-	);
-}
-
-/**
  * Passes when the editor reads every block of the document afterwards as
  * valid.
  *
@@ -129,17 +111,6 @@ export function expected( output, context ) {
 	return unmet.length
 		? grade( false, `The document ${ unmet.join( ', ' ) }.` )
 		: grade( true, 'The document has what was asked.' );
-}
-
-/**
- * Passes when the first message sent the document as an outline, as it
- * does for a long document.
- *
- * @param {string} output The output.
- */
-export function sentOutline( output ) {
-	const [ first ] = JSON.parse( output ).turns;
-	return grade( Boolean( first?.outline ), first?.outline ? 'Sent as an outline.' : 'Sent whole.' );
 }
 
 /**

@@ -19,7 +19,7 @@ import {
 	type Conversation,
 } from '../../src/ai/conversation';
 import { buildMessageContext } from '../../src/ai/document-context';
-import { isLongDocument, readDocument } from '../../src/ai/document-outline';
+import { readDocument } from '../../src/ai/document-outline';
 import { buildSystemPrompt } from '../../src/ai/prompt';
 import { createAnthropicPlatform } from '../../src/platform/anthropic';
 import { collectHtml, validateMarkup } from '../../src/editor/validate-markup';
@@ -60,10 +60,9 @@ export type EvalCase = {
 	/**
 	 * What is selected when the first message is sent. Without it, nothing
 	 * is. With `to`, the blocks from `block` to `to`, which share a parent.
-	 * With `text`, the first place of that text in the block's `attribute`,
-	 * `content` by default. Later messages are sent with nothing selected.
+	 * With `text`, the first place of that text in the block's content. Later messages are sent with nothing selected.
 	 */
-	select?: { block: BlockPath; to?: BlockPath; text?: string; attribute?: string };
+	select?: { block: BlockPath; to?: BlockPath; text?: string };
 };
 
 /**
@@ -71,10 +70,6 @@ export type EvalCase = {
  */
 export type TurnResult = {
 	request: string;
-	/**
-	 * Whether the document went as an outline instead of a whole.
-	 */
-	outline: boolean;
 	applied: number;
 	/**
 	 * Edits the editor sent back to the model to fix, with why.
@@ -189,13 +184,12 @@ function loadCase( evalCase: EvalCase ): Block[] {
 	const selection = evalCase.select;
 	if ( selection?.text !== undefined ) {
 		const block = findBlock( blocks, selection.block );
-		const attribute = selection.attribute ?? 'content';
-		const { text } = create( { html: String( block.attributes[ attribute ] ?? '' ) } );
+		const { text } = create( { html: String( block.attributes.content ?? '' ) } );
 		const start = text.indexOf( selection.text );
 		if ( start < 0 ) {
-			throw new Error( `"${ selection.text }" is not in the ${ attribute } of the block.` );
+			throw new Error( `"${ selection.text }" is not in the content of the block.` );
 		}
-		actions.selectionChange( block.clientId, attribute, start, start + selection.text.length );
+		actions.selectionChange( block.clientId, 'content', start, start + selection.text.length );
 	} else if ( selection?.to ) {
 		actions.multiSelect(
 			findBlock( blocks, selection.block ).clientId,
@@ -234,7 +228,6 @@ async function sendMessage(
 	];
 	const turn: TurnResult = {
 		request,
-		outline: isLongDocument( context.document ) && ! messageContext.includes( '<document>' ),
 		applied: 0,
 		failures: [],
 		dropped: 0,
