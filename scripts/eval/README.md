@@ -48,6 +48,8 @@ The cases are the `tests` in [promptfooconfig.yaml](promptfooconfig.yaml), and t
 - `select`, optional: `block` is the path of a block (`[ 2 ]` for the third top-level block, `[ 0, 1 ]` for the second inner block of the first), `to` ends a range of blocks, and `text` selects that text inside the block's content.
 - The `config` of its `expected` check: `blocks` the document must have, `text` its markup must have, and `absent` text it must no longer have, and `order` text that must appear in that order, to check where an edit went.
 
+Every case runs with the theme settings of [site.json](site.json), written as the `settings` of a theme's `theme.json`. They are taken from Twenty Twenty-Five and Ipsum, the latest default themes of WordPress, with their presets of colors, gradients, duotone, shadows, spacing, font sizes, and font families.
+
 Keep the cases fixed, so that results can be compared. Add a case for a kind of request that is not covered, rather than changing one. The documents must be valid block markup, which `npm run test:unit` checks, together with the checks themselves.
 
 ## Versions

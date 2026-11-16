@@ -116,6 +116,37 @@ export type CaseResult = {
 let siteReady = false;
 
 /**
+ * The places of presets in `theme.json` settings. The editor keeps each
+ * preset list by where it comes from, here the theme.
+ */
+const PRESETS = [
+	[ 'color', 'palette' ],
+	[ 'color', 'gradients' ],
+	[ 'color', 'duotone' ],
+	[ 'shadow', 'presets' ],
+	[ 'spacing', 'spacingSizes' ],
+	[ 'typography', 'fontSizes' ],
+	[ 'typography', 'fontFamilies' ],
+];
+
+/**
+ * Turns the settings of `site.json`, written as in a theme's `theme.json`,
+ * into the settings the editor has.
+ *
+ * @param settings The settings.
+ * @return The editor's settings.
+ */
+function toEditorSettings( settings: Record< string, any > ): Record< string, any > {
+	const result = structuredClone( settings );
+	for ( const [ section, preset ] of PRESETS ) {
+		if ( result[ section ]?.[ preset ] ) {
+			result[ section ][ preset ] = { theme: result[ section ][ preset ] };
+		}
+	}
+	return result;
+}
+
+/**
  * Registers the core blocks and the theme settings, once.
  */
 function setUpSite() {
@@ -133,7 +164,9 @@ function setUpSite() {
 	console.warn = warn;
 	console.error = error;
 	/* eslint-enable no-console */
-	dispatch( blockEditorStore ).updateSettings( { __experimentalFeatures: site } );
+	dispatch( blockEditorStore ).updateSettings( {
+		__experimentalFeatures: toEditorSettings( site.settings ),
+	} );
 	siteReady = true;
 }
 
