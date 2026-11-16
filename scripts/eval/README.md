@@ -18,7 +18,7 @@ The editor, the prompt, the document context, and the Anthropic adapter are the 
     npm run eval
     ```
 
-    To run only some cases, add promptfoo's options, such as `npm run eval -- --filter-pattern "outline"`.
+    The model does not answer the same way every time, so each case runs three times, one run after another. To run only some cases, or each case once, add promptfoo's options, such as `npm run eval -- --filter-pattern "outline"` or `npm run eval -- --repeat 1`.
 
 3. Look at the results, and compare them with earlier runs.
 
@@ -50,9 +50,11 @@ promptfoo keeps every run on your computer, so the viewer can show this run next
 
 3. Commit `history.jsonl` in the pull request of the change, so the Git history of the file is the history of the results.
 
-Each line has the time of the run, the commit, `dirty` when the code had changes that were not committed, the version of the evaluation set (`evalSet`), the model, the cases that passed, and the totals. Each case under `cases` has whether it passed, each check under `checks`, and its usage: the input tokens read at full price, from the cache, and written to it, `totalInputTokens` for all three together, the output tokens, the requests, and the retries. A case that ended in an error has the `error` instead.
+Each line has the time of the run, the commit, `dirty` when the code had changes that were not committed, the version of the evaluation set (`evalSet`), the model, how many times each case ran (`runs`), the cases that passed, and the totals. Each case under `cases` has whether it passed, each check under `checks`, and its usage: the input tokens read at full price, from the cache, and written to it, `totalInputTokens` for all three together, the output tokens, the requests, and the retries. A case that ended in an error has the `error` instead.
 
-Compare runs by `totalInputTokens`, `outputTokens`, and `requests`. How the input tokens split between the full price and the cache depends on whether the cache was still warm from an earlier run, but their total does not. Compare only runs of the same `evalSet` and model.
+When each case ran more than once, each case is still one entry under `cases`, with the average usage of its runs, rounded to one decimal place. It passed only when every run passed, and a check only when it passed in every run. The case also has `runs`, how many times it ran, `passes`, how many of the runs passed, and `errors`, how many ended in an error, when any did: the average leaves those out. The totals add up the averages. Runs recorded before the evaluation ran each case three times have no `runs`, and each of their cases ran once.
+
+Compare runs by `totalInputTokens`, `outputTokens`, and `requests`. An average of three runs varies less than one run, so a change shows more clearly against runs that also ran each case three times. How the input tokens split between the full price and the cache depends on whether the cache was still warm from an earlier run, but their total does not. Compare only runs of the same `evalSet` and model.
 
 To see the history as charts, run the following. It opens the charts in the browser, at `http://localhost:15600/`, until you stop it with Ctrl+C. Reload the page to see runs recorded since.
 

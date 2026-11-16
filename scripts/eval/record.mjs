@@ -6,6 +6,9 @@
  * the same evaluation set and model. Committing the line keeps the
  * history of the results in Git.
  *
+ * When the evaluation ran each case more than once, as it does by default,
+ * each case is recorded once, with the average usage of its runs.
+ *
  * Usage: npm run eval -- -o results.json && npm run eval:record [-- results.json]
  */
 
@@ -78,6 +81,51 @@ export function summarizeCase( item ) {
 }
 
 /**
+ * Rounds an average to one decimal place.
+ *
+ * @param {number} value The value.
+ * @return {number} The rounded value.
+ */
+const round = ( value ) => Math.round( value * 10 ) / 10;
+
+/**
+ * Combines the runs of one case into one line, with the average usage of
+ * the runs that ended without an error. The case passed only when every
+ * run passed, and a check only when it passed in every run.
+ *
+ * @param {Object[]} runs The case's runs, as `summarizeCase()` returns them.
+ * @return {Object} The case's line in the history.
+ */
+export function combineRuns( runs ) {
+	if ( runs.length === 1 ) {
+		return runs[ 0 ];
+	}
+	const finished = runs.filter( ( item ) => ! item.error );
+	const passes = runs.filter( ( item ) => item.pass ).length;
+	const line = {
+		case: runs[ 0 ].case,
+		pass: passes === runs.length,
+		runs: runs.length,
+		passes,
+	};
+	if ( ! finished.length ) {
+		return { ...line, error: runs[ 0 ].error };
+	}
+	const checks = {};
+	for ( const item of finished ) {
+		for ( const [ metric, pass ] of Object.entries( item.checks ) ) {
+			checks[ metric ] = ( checks[ metric ] ?? true ) && pass;
+		}
+	}
+	const sums = addUp( finished );
+	const averages = Object.fromEntries(
+		USAGE_KEYS.map( ( key ) => [ key, round( sums[ key ] / finished.length ) ] )
+	);
+	const errors = runs.length - finished.length;
+	return { ...line, ...( errors ? { errors } : {} ), checks, ...averages };
+}
+
+/**
  * Adds up the usage of cases.
  *
  * @param {Object[]} cases The cases, as `summarizeCase()` returns them.
@@ -89,6 +137,10 @@ export function addUp( cases ) {
 		for ( const key of USAGE_KEYS ) {
 			totals[ key ] += item[ key ] ?? 0;
 		}
+	}
+	// Averages have decimals, which must not leave rounding errors in the sums.
+	for ( const key of USAGE_KEYS ) {
+		totals[ key ] = round( totals[ key ] );
 	}
 	return totals;
 }
@@ -105,7 +157,14 @@ export function addUp( cases ) {
  */
 export function summarize( output, { commit, dirty }, now = new Date().toISOString() ) {
 	const items = output.results?.results ?? [];
-	const cases = items.map( summarizeCase );
+	// promptfoo lists each run of a case as a result of its own.
+	const runsByCase = new Map();
+	for ( const item of items ) {
+		const run = summarizeCase( item );
+		runsByCase.set( run.case, [ ...( runsByCase.get( run.case ) ?? [] ), run ] );
+	}
+	const cases = [ ...runsByCase.values() ].map( combineRuns );
+	const runs = Math.max( 1, ...[ ...runsByCase.values() ].map( ( list ) => list.length ) );
 	const model =
 		items.map( ( item ) => item.response?.metadata?.result?.model ).find( Boolean ) ??
 		items.map( ( item ) => item.provider?.label ).find( Boolean ) ??
@@ -118,6 +177,7 @@ export function summarize( output, { commit, dirty }, now = new Date().toISOStri
 		dirty,
 		evalSet: readEvalSet( output.config?.description ),
 		model,
+		runs,
 		passed: cases.filter( ( item ) => item.pass ).length,
 		total: cases.length,
 		totals: addUp( cases ),
@@ -159,8 +219,18 @@ export function compare( run, earlier ) {
 		return `${ then[ key ] } -> ${ now[ key ] }${ percent }`;
 	};
 	const passed = ( cases ) => cases.filter( ( item ) => item.pass ).length;
+	const times = ( count = 1 ) => ( count === 1 ? 'once' : `${ count } times` );
+	const runs =
+		( run.runs ?? 1 ) === ( earlier.runs ?? 1 )
+			? []
+			: [
+					`  The earlier run ran each case ${ times( earlier.runs ) }, and this run ${ times(
+						run.runs
+					) }, so one of them compares single runs with averages.`,
+				];
 	return [
 		`Compared with ${ earlier.commit } (${ earlier.date }), on the ${ shared.length } cases both runs have:`,
+		...runs,
 		`  passed:             ${ passed( shared.map( ( item ) => before.get( item.case ) ) ) } -> ${ passed( shared ) }`,
 		`  total input tokens: ${ change( 'totalInputTokens' ) }`,
 		`  output tokens:      ${ change( 'outputTokens' ) }`,
