@@ -60,13 +60,11 @@ type GeminiPart = {
 
 type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] };
 
-const APPLIED = 'The edit was applied.';
-
 /**
  * Converts the conversation into Gemini's contents.
  *
- * Earlier answers are sent as their text and edits. The model's thoughts
- * are not kept. Gemini only checks thought signatures in the current turn,
+ * Earlier answers are sent as their text and edits, with the reference IDs
+ * of the blocks the edits added. The model's thoughts are not kept. Gemini only checks thought signatures in the current turn,
  * which starts with the user's new message, so the history needs none.
  *
  * @param messages The conversation.
@@ -97,8 +95,11 @@ export function toGeminiContents( messages: AiMessage[] ): GeminiContent[] {
 		] );
 		push(
 			'user',
-			edits.map( () => ( {
-				functionResponse: { name: EDIT_TOOL.name, response: { output: APPLIED } },
+			edits.map( ( _, number ) => ( {
+				functionResponse: {
+					name: EDIT_TOOL.name,
+					response: { output: describeApplied( message.editRefs?.[ number ] ) },
+				},
 			} ) )
 		);
 	} );

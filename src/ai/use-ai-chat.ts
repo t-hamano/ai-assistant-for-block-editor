@@ -147,6 +147,12 @@ export function useAiChat( { ai, createTarget }: UseAiChatArgs ): AiChat {
 							type: 'EDIT',
 							edit: event.edit,
 							applied: result.status === 'applied',
+							// When the editor fixed the markup, the blocks
+							// differ from what the model wrote, so the next
+							// message sends them instead.
+							...( result.status === 'applied' && result.refs?.length && ! result.autoFix
+								? { refs: result.refs }
+								: {} ),
 						} );
 					}
 					return result;

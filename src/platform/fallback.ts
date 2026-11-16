@@ -61,12 +61,11 @@ export type FallbackAnswer = {
 	model?: string;
 };
 
-const APPLIED = 'The edit was applied.';
-
 /**
  * Converts the conversation into the AI Client's messages.
  *
- * Earlier answers are sent as their text and edits, and messages of the
+ * Earlier answers are sent as their text and edits, with the reference IDs
+ * of the blocks the edits added, and messages of the
  * same role in a row are joined, so the roles take turns.
  *
  * @param messages The conversation.
@@ -100,8 +99,12 @@ export function toFallbackMessages( messages: AiMessage[] ): FallbackMessage[] {
 		] );
 		push(
 			'user',
-			ids.map( ( id ) => ( {
-				functionResponse: { id, name: EDIT_TOOL.name, response: APPLIED },
+			ids.map( ( id, number ) => ( {
+				functionResponse: {
+					id,
+					name: EDIT_TOOL.name,
+					response: describeApplied( message.editRefs?.[ number ] ),
+				},
 			} ) )
 		);
 	} );

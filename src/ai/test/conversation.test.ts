@@ -200,7 +200,11 @@ describe( 'document context', () => {
 			{ type: 'START', text: 'Two', context: 'B', document: 'First.\n' },
 			{ type: 'FINISH', status: 'stopped', documentAfter: 'Second.\n' }
 		);
-		expect( getLastSeenDocument( messages ) ).toEqual( { known: 'Second.\n', shown: 'First.\n' } );
+		expect( getLastSeenDocument( messages ) ).toEqual( {
+			known: 'Second.\n',
+			shown: 'First.\n',
+			added: [],
+		} );
 	} );
 
 	it( 'skips an exchange whose answer failed', () => {
@@ -211,7 +215,31 @@ describe( 'document context', () => {
 			{ type: 'START', text: 'Two', context: 'B', document: 'First.\n' },
 			{ type: 'FINISH', status: 'error', error: 'Failed' }
 		);
-		expect( getLastSeenDocument( messages ) ).toEqual( { known: 'First.\n', shown: 'Zero.\n' } );
+		expect( getLastSeenDocument( messages ) ).toEqual( {
+			known: 'First.\n',
+			shown: 'Zero.\n',
+			added: [],
+		} );
+	} );
+
+	it( 'returns the reference IDs the model was told for the blocks its edits added', () => {
+		const { messages } = run(
+			{ type: 'START', text: 'One', context: 'A', document: 'Zero.\n' },
+			{ type: 'EDIT', edit: EDIT, applied: true, refs: [ 'b2', 'b3' ] },
+			{ type: 'EDIT', edit: EDIT, applied: true },
+			{ type: 'FINISH', status: 'done', documentAfter: 'First.\n' }
+		);
+		expect( getLastSeenDocument( messages ) ).toEqual( {
+			known: 'First.\n',
+			shown: 'Zero.\n',
+			added: [ 'b2', 'b3' ],
+		} );
+		expect( toAiMessages( messages )[ 1 ] ).toEqual( {
+			role: 'assistant',
+			text: '',
+			edits: [ EDIT, EDIT ],
+			editRefs: [ [ 'b2', 'b3' ], [] ],
+		} );
 	} );
 
 	it( 'returns null without a document', () => {
