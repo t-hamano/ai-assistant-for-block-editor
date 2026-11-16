@@ -79,7 +79,8 @@ export type TurnResult = {
 	request: string;
 	applied: number;
 	/**
-	 * Edits the editor sent back to the model to fix, with why.
+	 * Edits the editor sent back to the model to fix: the action and the
+	 * reference ID, why, and the markup.
 	 */
 	failures: string[];
 	dropped: number;
@@ -312,7 +313,10 @@ async function sendMessage(
 				}
 				const result: AiEditResult = target.apply( event.edit );
 				if ( result.status === 'failed' ) {
-					turn.failures.push( result.reason );
+					// Which edit failed, with its markup, to tell why the model sent it.
+					const { action, markup } = event.edit;
+					const ref = 'ref' in event.edit && event.edit.ref ? ` "${ event.edit.ref }"` : '';
+					turn.failures.push( `${ action }${ ref }: ${ result.reason }\n${ markup }` );
 					return result;
 				}
 				if ( result.status === 'applied' ) {
