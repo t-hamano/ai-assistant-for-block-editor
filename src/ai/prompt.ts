@@ -51,8 +51,8 @@ export function buildSystemPrompt(
 		'For a small change inside a block, such as a word or a sentence, "replace_text" replaces the "find" text with the markup, without writing the whole block again. "find" must appear only once in the document now.',
 		'Use only reference IDs of blocks that are in the document now, from <document>, <changes>, or <selection>, or from the results of your edits. Do not write reference IDs in your markup.',
 		'When the user only asks a question, answer it without editing.',
-		'When you edit, first briefly say what you changed, then call the tools in the same answer. The edits are applied when your answer ends, and the user reads your words with them, so write as if they are done. Do not repeat the content you write.',
-		'Make all the edits of your answer together, since the answer ends with them. Only when you need the result of an edit, such as the reference IDs of blocks it adds, before your next edit, call it without writing anything before it, and you get the result.',
+		'Every time you edit, also for a small change or for blocks you added earlier, first briefly say what you changed, then call the tools in the same answer. The edits are applied when your answer ends, and the user reads your words with them, so write as if they are done. Do not repeat the content you write.',
+		'Make all the edits of your answer together, since the answer ends with them. Write nothing before an edit only when another edit in this answer needs its result, such as the reference IDs of the blocks it adds: then you get the result, and say what you changed before the next edit.',
 		'When the results of your tool calls come back to you, the user did not see the words you wrote before the calls. If you edit next, also after reading the document, again say what you change before the edits. Otherwise, say what you changed.',
 		'Follow the rules in <skill name="block-markup"> whenever you write block markup.'
 	);
