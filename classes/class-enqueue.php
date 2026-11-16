@@ -59,7 +59,6 @@ class Enqueue {
 			array( 'in_footer' => true )
 		);
 
-		// Without an API key the sidebar still opens, and links to the Connectors screen.
 		wp_add_inline_script(
 			AI_CONTENT_EDITING_ASSISTANT_NAMESPACE,
 			sprintf(
