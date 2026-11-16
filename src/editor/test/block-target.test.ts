@@ -8,7 +8,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 /**
  * WordPress dependencies
  */
-import { store as blockEditorStore } from '@wordpress/block-editor';
+import { InnerBlocks, store as blockEditorStore } from '@wordpress/block-editor';
 import { createBlock, registerBlockType, serialize } from '@wordpress/blocks';
 import { dispatch, select } from '@wordpress/data';
 import { createElement } from '@wordpress/element';
@@ -32,6 +32,35 @@ beforeAll( () => {
 		},
 		edit: () => null,
 		save: ( { attributes } ) => createElement( 'p', {}, attributes.content as string ),
+	} );
+	registerBlockType( 'test/list', {
+		apiVersion: 3,
+		title: 'List',
+		category: 'text',
+		allowedBlocks: [ 'test/list-item' ],
+		edit: () => null,
+		attributes: {},
+		save: () => createElement( 'ul', {}, createElement( InnerBlocks.Content ) ),
+	} );
+	registerBlockType( 'test/list-item', {
+		apiVersion: 3,
+		title: 'List item',
+		category: 'text',
+		parent: [ 'test/list' ],
+		attributes: {
+			content: { type: 'string', source: 'html', selector: 'li' },
+		},
+		edit: () => null,
+		save: ( { attributes } ) => createElement( 'li', {}, attributes.content as string ),
+	} );
+	registerBlockType( 'test/footnote', {
+		apiVersion: 3,
+		title: 'Footnote',
+		category: 'text',
+		ancestor: [ 'test/list' ],
+		attributes: {},
+		edit: () => null,
+		save: () => createElement( 'small' ),
 	} );
 } );
 
@@ -186,6 +215,49 @@ describe( 'createBlockTarget', () => {
 			[ 'One', 'Second', 'After', 'Before', 'End' ].map( paragraph ).join( '\n\n' )
 		);
 		expect( select( blockEditorStore ).getSelectedBlockClientId() ).toBe( first );
+	} );
+
+	it( 'tells where a block that is not allowed can go', () => {
+		const item = createBlock( 'test/list-item', { content: 'Item' } );
+		dispatch( blockEditorStore ).resetBlocks( [
+			createBlock( 'test/paragraph', { content: 'One' } ),
+			createBlock( 'test/list', {}, [ item ] ),
+		] );
+		const before = documentNow();
+		const target = createBlockTarget();
+
+		expect(
+			target.apply( {
+				action: 'append',
+				markup: '<!-- wp:test/list-item -->\n<li>New</li>\n<!-- /wp:test/list-item -->',
+			} )
+		).toEqual( {
+			status: 'failed',
+			reason:
+				'The "test/list-item" block is not allowed here. It can only be placed directly inside "test/list".',
+		} );
+		expect(
+			target.apply( {
+				action: 'append',
+				markup: '<!-- wp:test/footnote -->\n<small></small>\n<!-- /wp:test/footnote -->',
+			} )
+		).toEqual( {
+			status: 'failed',
+			reason:
+				'The "test/footnote" block is not allowed here. It can only be placed somewhere inside "test/list".',
+		} );
+		expect(
+			target.apply( {
+				action: 'insert_after',
+				ref: getRef( item.clientId ),
+				markup: paragraph( 'New' ),
+			} )
+		).toEqual( {
+			status: 'failed',
+			reason:
+				'The "test/paragraph" block is not allowed here. The parent "test/list" block only accepts "test/list-item" inside it.',
+		} );
+		expect( documentNow() ).toBe( before );
 	} );
 
 	it( 'strips reference IDs from the markup', () => {

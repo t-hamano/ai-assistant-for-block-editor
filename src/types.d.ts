@@ -9,3 +9,11 @@ declare module '*?raw' {
 declare module '@wordpress/block-library' {
 	export function registerCoreBlocks(): void;
 }
+
+// Set by the plugin when it enqueues the editor script.
+interface Window {
+	aiContentEditingAssistant: {
+		hasApiKey: boolean;
+		connectorsUrl: string;
+	};
+}

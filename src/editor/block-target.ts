@@ -3,7 +3,7 @@
  */
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import type { Block } from '@wordpress/blocks';
-import { serialize } from '@wordpress/blocks';
+import { getBlockType, serialize } from '@wordpress/blocks';
 import { dispatch, select } from '@wordpress/data';
 
 /**
@@ -77,7 +77,36 @@ export function createBlockTarget(): EditTarget {
 		const notAllowed = blocks.find(
 			( block ) => ! editor().canInsertBlockType( block.name, rootClientId )
 		);
-		return notAllowed ? `The "${ notAllowed.name }" block is not allowed here.` : null;
+		return notAllowed ? explainNotAllowed( notAllowed.name, rootClientId ) : null;
+	}
+
+	/**
+	 * Explains why a block cannot be inserted, with the rules for where it
+	 * can go from its block.json and the block.json of the parent, so that
+	 * the model can find a place it can go.
+	 *
+	 * @param name         The name of the block.
+	 * @param rootClientId The parent the block was inserted into.
+	 * @return The explanation.
+	 */
+	function explainNotAllowed( name: string, rootClientId: string | undefined ): string {
+		const quote = ( names: string[] ) => names.map( ( item ) => `"${ item }"` ).join( ' or ' );
+		const reasons = [ `The "${ name }" block is not allowed here.` ];
+		const { parent, ancestor } = getBlockType( name ) ?? {};
+		if ( parent?.length ) {
+			reasons.push( `It can only be placed directly inside ${ quote( parent ) }.` );
+		}
+		if ( ancestor?.length ) {
+			reasons.push( `It can only be placed somewhere inside ${ quote( ancestor ) }.` );
+		}
+		const rootName = rootClientId ? editor().getBlockName( rootClientId ) : null;
+		const allowedBlocks = rootName ? getBlockType( rootName )?.allowedBlocks : undefined;
+		if ( rootName && allowedBlocks?.length && ! allowedBlocks.includes( name ) ) {
+			reasons.push(
+				`The parent "${ rootName }" block only accepts ${ quote( allowedBlocks ) } inside it.`
+			);
+		}
+		return reasons.join( ' ' );
 	}
 
 	function applied( blocks: Block[] ): AiEditResult {

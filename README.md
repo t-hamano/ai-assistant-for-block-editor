@@ -30,7 +30,7 @@ The plugin uses the API keys registered on the Connectors screen in WordPress co
 
 * WordPress 7.1 or later
 * PHP 8.3 or later
-* An AI provider plugin, such as AI Provider for Anthropic, with an API key on the Connectors screen. The AI assistant does not appear until a key is set
+* An AI provider plugin, such as AI Provider for Anthropic, with an API key on the Connectors screen
 
 ## Usage
 
