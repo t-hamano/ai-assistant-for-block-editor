@@ -2,11 +2,11 @@
  * WordPress dependencies
  */
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useState } from '@wordpress/element';
+import { Fragment, useEffect, useState } from '@wordpress/element';
 import { __, isRTL } from '@wordpress/i18n';
 import { chevronLeft, chevronRight } from '@wordpress/icons';
 import { store as preferencesStore } from '@wordpress/preferences';
-import { IconButton, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
+import { IconButton, Link, Notice, SelectControl, Spinner, Stack, Text } from '@wordpress/ui';
 
 /**
  * Internal dependencies
@@ -127,9 +127,17 @@ export function ModelSettings( { onClose }: Props ) {
 				) }
 				<Text variant="body-sm" className="ai-content-editing-assistant-settings__note">
 					{ __(
-						"The provider bills for usage. Check the exact usage on the provider's dashboard.",
+						"The provider bills for usage. Check the exact usage on the provider's dashboard:",
 						'ai-content-editing-assistant'
-					) }
+					) }{ ' ' }
+					{ ( provider ? [ provider ] : providers ).map( ( option, index ) => (
+						<Fragment key={ option.id }>
+							{ index > 0 && ', ' }
+							<Link href={ option.usageUrl } openInNewTab>
+								{ option.name }
+							</Link>
+						</Fragment>
+					) ) }
 				</Text>
 			</>
 		);

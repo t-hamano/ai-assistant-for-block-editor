@@ -169,8 +169,13 @@ describe( 'listProviderOptions', () => {
 		} );
 
 		expect( await listProviderOptions() ).toEqual( [
-			{ id: 'openai', name: 'OpenAI', models: [ openai.recommended[ 1 ], 'gpt-7' ] },
-			{ id: 'google', name: 'Google', models: google.recommended },
+			{
+				id: 'openai',
+				name: 'OpenAI',
+				usageUrl: openai.usageUrl,
+				models: [ openai.recommended[ 1 ], 'gpt-7' ],
+			},
+			{ id: 'google', name: 'Google', usageUrl: google.usageUrl, models: google.recommended },
 		] );
 	} );
 } );
