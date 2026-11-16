@@ -32,6 +32,12 @@ The plugin uses the API keys registered on the Connectors screen in WordPress. I
 
 Only users with administrator privileges can use this plugin, and only super admins on a multisite network, because requests are sent with the site's API keys.
 
+**Source Code**
+
+The JavaScript in the `build` folder is compiled from the `src` folder. The full source code, with the build configuration, is on GitHub: https://github.com/t-hamano/ai-content-editing-assistant
+
+To build it, clone the repository and run `npm ci && npm run build`.
+
 == Installation ==
 1. Upload the `ai-content-editing-assistant` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
@@ -42,6 +48,8 @@ Only users with administrator privileges can use this plugin, and only super adm
 
 == External services ==
 This plugin sends content to an AI provider to edit it. It connects only to the provider whose API key is set on the Connectors screen, and only when an administrator or a super admin uses the AI assistant in the block editor.
+
+For Anthropic, OpenAI, and Google, the plugin connects to the provider directly, so that the answer appears as it is written. The AI Client in WordPress returns the whole answer at once, so it is not used for these providers. The requests still go through the WordPress HTTP API, and the site's settings that turn AI off still apply. Other providers go through the AI Client.
 
 When you send a message, the following data is sent to the provider: your message and the conversation so far, the selected blocks or text, an outline or parts of the post being edited, and a list of the blocks and theme presets available on the site. The site's API key is sent with each request. To show the models you can choose, the plugin also asks the provider for its list of models.
 
