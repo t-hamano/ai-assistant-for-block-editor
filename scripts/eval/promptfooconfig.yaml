@@ -133,3 +133,24 @@ tests:
         config:
           blocks: [core/list, core/list-item]
           text: [headlamp, rain jacket]
+
+  - description: Edit blocks the model added in the turn before
+    vars:
+      request: Add three short paragraphs at the end, each with one tip for teams trying a four-day week.
+      followUp: Make the first of the paragraphs you just added start with "Start small:".
+      document: file://documents/short-article.html
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          # The edited paragraph is the first of the three added after the last
+          # paragraph: two more paragraphs follow it.
+          order:
+            [review it again next year, 'Start small:', '<!-- wp:paragraph', '<!-- wp:paragraph']
+          # The four paragraphs and the three added, so the follow-up edited one
+          # of them rather than adding another.
+          count: { '<!-- wp:paragraph': 7, 'Start small:': 1 }
