@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# Evaluates the AI assistant with a real model. See README.md in this folder.
+
+description: AI assistant evaluation
+
+# The case is in the variables. The prompt is only the label promptfoo shows.
+prompts:
+  - '{{request}}'
+
+providers:
+  - id: exec:node run.mjs
+    label: claude-sonnet-5-5
+    config:
+      model: claude-sonnet-5-5
+
+evaluateOptions:
+  # One case at a time, so the prompt cache is used the same way in every run.
+  maxConcurrency: 1
+  # The exec provider's cache only looks at the prompt, so it would mix up cases.
+  cache: false
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions.mjs:validMarkup
+      metric: validMarkup
+    - type: javascript
+      value: file://assertions.mjs:firstTry
+      metric: firstTry
+    - type: javascript
+      value: file://assertions.mjs:usage
+      weight: 0
+
+tests:
+  - description: Rewrite a short paragraph
+    vars:
+      request: Rewrite this paragraph to be shorter and friendlier.
+      document: file://documents/four-day-week.html
+      select:
+        block: [1]
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          blocks: [core/paragraph]
+          absent: [Nobody was sure it would work.]
+
+  - description: Edit selected text
+    vars:
+      request: Change this to "twelve weeks".
+      document: file://documents/four-day-week.html
+      select:
+        block: [1]
+        text: three months
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          text: [twelve weeks, Last spring]
+          absent: [three months]
+
+  - description: Put selected blocks in columns
+    vars:
+      request: Put these two paragraphs side by side in two columns.
+      document: file://documents/plans.html
+      select:
+        block: [1]
+        to: [2]
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          blocks: [core/columns, core/column]
+          text: [Basic plan, Pro plan]
+
+  - description: Add blocks without a selection
+    vars:
+      request: Add a "Summary" heading and a two-sentence summary at the end.
+      document: file://documents/four-day-week.html
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          text: ['>Summary</h']
+
+  - description: Edit a long document sent as an outline
+    vars:
+      request: In the section about tomatoes, add a short paragraph with tips on mulching after the paragraph about watering.
+      document: file://documents/kitchen-garden.html
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:sentOutline
+        metric: outline
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          text: [mulch]
+
+  - description: Follow up in a second turn
+    vars:
+      request: Turn this into a bulleted list.
+      followUp: Add one more item to the list, a headlamp.
+      document: file://documents/packing-list.html
+      select:
+        block: [1]
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:edited
+        metric: edited
+      - type: javascript
+        value: file://assertions.mjs:expected
+        metric: expected
+        config:
+          blocks: [core/list, core/list-item]
+          text: [headlamp, rain jacket]
+
+  - description: Answer a question without editing
+    vars:
+      request: What is this post about? Answer in one sentence.
+      document: file://documents/four-day-week.html
+    assert:
+      - type: javascript
+        value: file://assertions.mjs:notEdited
+        metric: notEdited
